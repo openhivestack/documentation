@@ -1,0 +1,32 @@
+{
+  "root": true,
+  "title": "Protocol",
+  "description": "Protocol specification",
+  "icon": "BookText",
+  "pages": [
+    "---Overview---",
+    "introduction",
+    "architecture",
+    "specification",
+    "implementations",
+    "---Layers---",
+    "layers/transport",
+    "layers/discovery-identity",
+    "layers/interaction-trust",
+    "---Structure---",
+    "structure/discovery-flow",
+    "structure/message-formats",
+    "structure/error-codes",
+    "structure/did-methods",
+    "structure/capability-advertisement",
+    "structure/contract",
+    "structure/negotiation-protocol",
+    "structure/lifecycle",
+    "structure/security-considerations",
+    "structure/best-practices",
+    "structure/glossary",
+    "---Guidelines---",
+    "guidelines/conformance",
+    "guidelines/versioning"
+  ]
+}

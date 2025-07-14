@@ -1,0 +1,264 @@
+---
+title: Glossary
+description: Key terms and definitions used throughout the H.I.V.E. Protocol specification.
+icon: BookOpen
+---
+
+A glossary of terms and acronyms used within the H.I.V.E. Protocol documentation. This provides quick definitions for
+key concepts, ensuring a shared understanding for all developers and implementers.
+
+---
+
+### A
+
+**Acceptance**: A message in the H.I.V.E. Negotiation Protocol signifying formal agreement to a `Proposal` or
+`CounterProposal`.
+
+**Agent**: An autonomous software entity capable of perceiving its environment, making decisions, and acting to
+achieve its goals, often by interacting with other agents.
+
+**Authentication**: The process of verifying the identity of an agent. In H.I.V.E., primarily achieved through DIDs
+and cryptographic signatures.
+
+**Authorization**: The process of determining what an authenticated agent is permitted to do.
+
+---
+
+### B
+
+**Best Practices**: Recommended guidelines for implementing H.I.V.E. agents to enhance reliability, performance,
+and security.
+
+---
+
+### C
+
+**Cancellation Policy**: Terms defined in a `HIVE_Contract` outlining conditions and consequences of contract
+termination before completion.
+
+**CapabilityAdvertisement**: A H.I.V.E. message containing an agent's DID, network address, and a signed HSDL
+document, used to advertise its services.
+
+**Communication Transport Layer**: The lowest layer of the H.I.V.E. Protocol, responsible for secure, reliable,
+and ordered message exchange.
+
+**Completed**: A [Task Lifecycle](task-lifecycle.mdx) state indicating successful task execution, with results
+ready for delivery.
+
+**Confidentiality**: The security principle ensuring that message content is protected from unauthorized access.
+
+**Contract Ontology**: The predefined semantic schema (JSON-LD) used to structure and understand `HIVE_Contract` terms.
+
+**Contract Negotiation**: The process by which agents propose, counter-propose, and agree upon the terms of a
+collaboration.
+
+**CounterProposal**: A message in the H.I.V.E. Negotiation Protocol suggesting modifications to a `Proposal` or a
+previous `CounterProposal`.
+
+**Cryptographic Hash**: A fixed-size string of bytes (e.g., SHA-256) computed from a block of data, used to
+ensure data integrity.
+
+---
+
+### D
+
+**Decentralized Identifier (DID)**: A globally unique identifier that does not require a centralized registration
+authority. Used by H.I.V.E. agents for self-sovereign identity.
+
+**DeliveryConfirmation**: A H.I.V.E. message sent by a receiving agent upon successful verification of delivered
+task results.
+
+**DID Document**: A JSON-LD document associated with a DID, containing public keys, service endpoints, and other
+verifiable information about the DID subject.
+
+**`did:key`**: A DID method where the DID is derived directly from a cryptographic public key, commonly Ed25519
+or secp256k1.
+
+**Discovery & Identity Layer**: The H.I.V.E. layer responsible for agent identification, capability advertisement,
+and initial secure channel establishment.
+
+**Discovery Registry (DR) Service**: A centralized service (mandatory for H.I.V.E. agents) where agents can register
+their DIDs, network addresses, and capabilities for lookup.
+
+---
+
+### E
+
+**Ed25519**: A public-key signature system used in the `did:key` method for agent identification and message signing.
+
+**Error Code**: A standardized identifier for specific types of errors encountered within the H.I.V.E. Protocol.
+
+**Execution Management**: The process of overseeing the lifecycle and progress of an agreed-upon task.
+
+---
+
+### F
+
+**Failed**: A [Task Lifecycle](task-lifecycle.mdx) state indicating that a task encountered an unrecoverable error
+during execution.
+
+**Fumadocs**: The documentation framework used to publish the H.I.V.E. Protocol specification.
+
+---
+
+### H
+
+**H.I.V.E. Protocol**: **H**ybrid **I**nter-Agent **V**erification & **E**xecution Protocol. The overarching protocol
+defining inter-agent communication.
+
+**H.I.V.E. Contract**: A formal, cryptographically signed agreement between H.I.V.E. agents for collaboration,
+based on the [Contract Ontology](contract-ontology.mdx).
+
+**H.I.V.E. Negotiation Protocol (HNP)**: The structured process for agents to negotiate and agree upon contract terms.
+
+**H.I.V.E. Service Description Language (HSDL)**: A subset of OpenAPI 3.1 Specification used by H.I.V.E. agents to
+describe their capabilities.
+
+**H.I.V.E. Task Lifecycle**: The defined states and transitions that a task progresses through, from proposal to
+completion or failure.
+
+---
+
+### I
+
+**IK Handshake Pattern**: A specific handshake pattern within the Noise Protocol Framework used by H.I.V.E. for
+mutually authenticated key exchange.
+
+**In-Progress**: A [Task Lifecycle](task-lifecycle.mdx) state indicating that an agent has commenced execution of a
+task.
+
+**Integrity**: The security principle ensuring that data has not been altered or corrupted.
+
+**Interaction & Trust Layer**: The H.I.V.E. layer governing secure negotiation, task execution, and verifiable task
+completion.
+
+**IPFS**: InterPlanetary File System. A distributed network protocol often recommended for out-of-band transfer of
+large results.
+
+---
+
+### J
+
+**JSON-LD**: JavaScript Object Notation for Linked Data. A method for encoding Linked Data using JSON, used in
+H.I.V.E. for `HIVE_Contract` semantics.
+
+---
+
+### M
+
+**Message Framing**: The process of encapsulating application data into protocol-specific units for transmission,
+as per WebSockets.
+
+**`message_id`**: A unique identifier for each H.I.V.E. message, typically a UUID v4.
+
+**Mutual Authentication**: A process where both parties in a communication session cryptographically verify each
+other's identity.
+
+---
+
+### N
+
+**Negotiation ID**: A unique identifier linking all messages within a specific contract negotiation session.
+
+**Noise Protocol Framework**: A framework for building cryptographic protocols, used by H.I.V.E. for secure channel
+establishment and key exchange.
+
+**Non-Repudiation**: The assurance that someone cannot deny the validity of something
+(e.g., sending a message, signing a contract).
+
+---
+
+### O
+
+**OpenAPI 3.1 Specification**: A standard for describing RESTful APIs, used as the foundation for H.I.V.E.'s HSDL.
+
+---
+
+### P
+
+**Paused**: A [Task Lifecycle](task-lifecycle.mdx) state indicating temporary suspension of task execution.
+
+**Perfect Forward Secrecy (PFS)**: A property of key agreement protocols that ensures compromise of long-term keys
+does not compromise past session keys.
+
+**Peer-to-Peer (P2P) Discovery**: An optional mechanism for agents to discover each other directly without a
+central registry.
+
+**Private Key**: A secret cryptographic key paired with a public key, used for signing data and proving identity.
+
+**Proposal**: The initial offer or set of terms sent by an agent to start a contract negotiation.
+
+**Proposed**: A [Task Lifecycle](task.mdx) state indicating that a task is awaiting acceptance of its associated contract.
+
+**Public Key**: A cryptographic key publicly associated with a DID, used for verifying signatures and encrypting
+data for the owner of the paired private key.
+
+---
+
+### R
+
+**Rejection**: A message in the H.I.V.E. Negotiation Protocol signifying refusal of a `Proposal` or `CounterProposal`.
+
+**Reliable Delivery**: A property of a communication channel ensuring messages are delivered completely, without
+loss or duplication, and in the correct order.
+
+**Result Transmission**: The process of delivering the output data or service results of a completed task.
+
+---
+
+### S
+
+**S3-compatible storage**: Cloud storage services compatible with Amazon S3 API, often recommended for out-of-band
+transfer of large results.
+
+**secp256k1**: A specific elliptic curve used in cryptography, supported by the `did:key` method.
+
+**Secure Channel Establishment**: The process of setting up an encrypted and authenticated communication link
+between agents.
+
+**`sender_did`**: The Decentralized Identifier of the agent sending a H.I.V.E. message.
+
+**Signed Capabilities (e.g., UCANs)**: Cryptographically signed tokens that delegate specific permissions, used
+for granular authorization in H.I.V.E.
+
+**`signature`**: A cryptographic value appended to a H.I.V.E. message or contract, generated using a private key
+to ensure authenticity and integrity.
+
+**Specification**: The normative document detailing the requirements for the H.I.V.E. Protocol.
+
+---
+
+### T
+
+**TaskInitiation**: A H.I.V.E. message sent by the initiating agent to commence execution of an agreed-upon task.
+**Task Lifecycle**: See H.I.V.E. Task Lifecycle.
+**TaskResult**: A H.I.V.E. message delivering the output or outcome of a completed task.
+**TaskStatusUpdate**: A H.I.V.E. message reporting the current state and progress of an executing task.
+**TLS (Transport Layer Security)**: A cryptographic protocol designed to provide communication security over a
+computer network, mandated for H.I.V.E. WebSockets.
+**Trust**: The assurance that an agent or its communication can be relied upon.
+
+---
+
+### U
+
+**UCANs (User Controlled Authorization Networks)**: A type of signed capability often recommended for granular
+authorization within H.I.V.E. (See [Signed Capabilities](#signed-capabilities-e.g.-ucans)).
+
+---
+
+### V
+
+**Value Agreement**: The process within contract negotiation where agents define and agree upon economic terms for
+services or resources.
+**Verifiable Delivery**: The process of ensuring that results are delivered completely, correctly, and with
+cryptographic proof of integrity and receipt.
+
+---
+
+### W
+
+**WebSockets Protocol (RFC 6455)**: The primary full-duplex communication protocol mandated for the H.I.V.E.
+Communication Transport Layer.
+
+---

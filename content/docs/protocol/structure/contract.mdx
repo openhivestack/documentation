@@ -1,0 +1,309 @@
+---
+title: Contract Ontology
+description: Defining the semantic structure and schema for H.I.V.E. Contracts using JSON-LD.
+icon: Scale
+---
+
+The H.I.V.E. Contract Ontology provides a standardized, semantically rich framework for defining agreements between
+agents. By leveraging JSON-LD, H.I.V.E. Contracts enable machine-readable and verifiable commitments, ensuring clear
+understanding and execution of terms.
+
+## Contract Format: JSON-LD
+
+- **Standard**: H.I.V.E. Contracts `MUST` be represented as [JSON-LD 1.1](https://www.w3.org/TR/json-ld11/) documents.
+- **Purpose**: JSON-LD enhances standard JSON with semantic context, enabling:
+  - Universal understanding of terms across different agents
+  - Unambiguous interpretation of contract fields
+  - Machine-readable semantics for automated processing
+- **`@context`**: All H.I.V.E. Contracts `MUST` include a `@context` property referencing the official H.I.V.E.
+Contract Ontology URI (e.g., `https://hive.protocol/contexts/contract/v1`).
+
+## HIVE_Contract Schema
+
+The core H.I.V.E. Contract schema defines the normative fields for all agreements.
+
+```json
+{
+  "@context": "https://hive.protocol/contexts/contract/v1",
+  "id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+  "type": "HIVE_Contract",
+  "parties": [
+    {
+      "did": "did:key:z6MkpTHR...",
+      "role": "initiator"
+    },
+    {
+      "did": "did:key:z6Mkpa4...",
+      "role": "responder"
+    }
+  ],
+  "contractTerms": {
+    "title": "Data Processing Service Agreement",
+    "description": "Agreement for processing XYZ data using ABC algorithm.",
+    "effectiveDate": "2024-07-01T00:00:00Z",
+    "expirationDate": "2024-07-31T23:59:59Z",
+    "serviceScope": {
+      "serviceType": "ImageProcessing",
+      "intent": "applyImageFilter",
+      "hsdlReference": "did:key:z...#cap_adv_id",
+      "inputParametersSchema": {
+        "type": "object",
+        "properties": {
+          "image_data": {
+            "type": "string",
+            "format": "byte"
+          },
+          "filter_type": {
+            "type": "string",
+            "enum": ["blur", "sharpen", "grayscale"]
+          }
+        },
+        "required": ["image_data", "filter_type"]
+      },
+      "outputParametersSchema": {
+        "type": "object",
+        "properties": {
+          "processed_image": {
+            "type": "string",
+            "format": "byte"
+          }
+        },
+        "required": ["processed_image"]
+      }
+    },
+    "valueAgreement": {
+      "value_amount": 100.0,
+      "value_type": "hive_credits",
+      "billing_model": "per_task",
+      "payment_terms": {
+        "method": "upon_delivery",
+        "due_days": 7,
+        "payment_endpoint": "https://payment.example.com/receive"
+      }
+    },
+    "sla": {
+      "responseTimeMs": 1000,
+      "uptimePercentage": 0.99
+    },
+    "governance": {
+      "disputeResolutionMechanism": "arbitration",
+      "applicableLaw": "country_x"
+    },
+    "cancellable": true,
+    "cancellationPolicy": "full_refund_if_not_started"
+  },
+  "signatures": [
+    {
+      "signer": "did:key:z6MkpTHR...",
+      "signatureValue": "base64url-encoded-signature-1",
+      "timestamp": "2024-07-01T00:00:00Z"
+    },
+    {
+      "signer": "did:key:z6Mkpa4...",
+      "signatureValue": "base64url-encoded-signature-2",
+      "timestamp": "2024-07-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+### Core Fields
+
+- `id`: A unique identifier for the contract (UUID v4 as URN recommended).
+- `type`: `MUST` be "HIVE_Contract".
+- `parties`: Array of participating agents:
+  - `did`: The agent's Decentralized Identifier.
+  - `role`: Either "initiator" (contract creator) or "responder" (service provider).
+
+### Contract Terms
+
+- `contractTerms`: The core agreement details:
+  - `title`: Short, descriptive name of the agreement.
+  - `description`: Detailed explanation of the contract purpose.
+  - `effectiveDate`: When the contract becomes active (ISO 8601 UTC timestamp).
+  - `expirationDate`: When the contract expires (ISO 8601 UTC timestamp).
+
+### Service Definition
+
+- `serviceScope`: Detailed specification of the service:
+  - `serviceType`: Category of service (e.g., "ImageProcessing").
+  - `intent`: Specific capability from the provider's HSDL.
+  - `hsdlReference`: Reference to the capability advertisement.
+  - `inputParametersSchema`: JSON Schema defining required inputs.
+  - `outputParametersSchema`: JSON Schema defining expected outputs.
+
+### Value Exchange
+
+- `valueAgreement`: Payment and compensation terms:
+  - `value_amount`: Numeric value of compensation.
+  - `value_type`: Currency or token type (e.g., "hive_credits").
+  - `billing_model`: How value is calculated (e.g., "per_task", "subscription", "usage_based").
+  - `payment_terms`: When and how payment occurs.
+
+### Optional Terms
+
+- `sla`: Service Level Agreement metrics.
+- `governance`: Dispute resolution and legal framework.
+- `cancellable`: Whether the contract can be cancelled.
+- `cancellationPolicy`: Terms for cancellation.
+
+### Signatures
+
+- `signatures`: Cryptographic proof of agreement:
+  - `signer`: DID of the signing agent.
+  - `signatureValue`: Base64url-encoded cryptographic signature.
+  - `timestamp`: When the signature was created.
+
+All parties `MUST` sign the final contract by creating signatures over the canonicalized JSON of the `id`, `type`, and `contractTerms`.
+
+## Contract Canonicalization and Signatures
+
+To ensure consistent signature generation and verification:
+
+1. **Canonicalization**: Before signing, the contract `MUST` be canonicalized using the [JSON Canonicalization Scheme (JCS)](https://tools.ietf.org/html/rfc8785).
+
+2. **Signature Generation**:
+   - Create a JSON object containing only the `id`, `type`, and `contractTerms` fields
+   - Canonicalize this object using JCS
+   - Sign the resulting byte string using the agent's private key
+   - Encode the signature using base64url format
+   - Add the signature to the `signatures` array with the agent's DID and timestamp
+
+3. **Verification Process**:
+   - Extract the `id`, `type`, and `contractTerms` fields
+   - Apply the same canonicalization process
+   - Verify each signature against the canonicalized data using the respective signer's public key
+
+## Semantic Annotations and Extensibility
+
+- **Standardized Vocabulary**: The `@context` links contract terms to defined vocabulary, ensuring that `value_amount`
+  means the same thing to all agents.
+- **Extensibility**: Agents `MAY` include additional, non-normative fields within the `contractTerms` object or
+  define their own custom contexts and types, provided they do not conflict with the core H.I.V.E. ontology.
+  Such extensions `SHOULD` use a distinct namespace or prefix (e.g., myOrg:customTerm).
+
+## Common Contract Patterns
+
+H.I.V.E. Contracts support several standard patterns for agent collaboration:
+
+### One-time Task Execution
+
+The simplest pattern where one agent requests a single task execution:
+
+- `valueAgreement.billing_model`: "per_task"
+- `valueAgreement.payment_terms.method`: "upon_delivery"
+- Single input/output defined in schemas
+
+### Subscription-based Service
+
+For ongoing access to agent capabilities over a period:
+
+- `valueAgreement.billing_model`: "subscription"
+- `valueAgreement.payment_terms.method`: "recurring"
+- `valueAgreement.payment_terms.interval`: "monthly"
+- Longer time period between `effectiveDate` and `expirationDate`
+
+### Multi-agent Collaboration
+
+For complex tasks requiring coordination among several agents:
+
+- Multiple entries in the `parties` array
+- Each party assigned specific roles beyond "initiator"/"responder"
+- Structured workflow defined in additional contract terms
+
+## Contract Verification and Security
+
+### Verification Process
+
+Upon receipt of an Acceptance message containing a signed contract, agents `MUST` perform these verification steps in sequence:
+
+1. **Structural Validation**:
+   - Verify the JSON-LD document is well-formed and valid
+   - Confirm all required fields are present with appropriate data types
+   - Validate against the H.I.V.E. Contract schema
+
+2. **Semantic Validation**:
+   - Ensure the contract terms are logically consistent
+   - Verify that the `serviceScope` references valid capabilities
+   - Confirm `inputParametersSchema` and `outputParametersSchema` are compatible with the referenced capabilities
+   - Validate temporal constraints (`effectiveDate` is before `expirationDate`, etc.)
+
+3. **Signature Verification**:
+   - Confirm all parties listed in the contract have provided signatures
+   - Resolve each signer's DID to obtain their public key
+   - Verify each signature using the correct cryptographic algorithm (e.g., Ed25519)
+   - Ensure signatures were created over the canonicalized contract data
+   - Verify signature timestamps are valid and in chronological order
+
+4. **Policy Validation**:
+   - Confirm the terms are acceptable according to the agent's policies
+   - Verify the agent has the capabilities necessary to fulfill its role
+   - Check that value exchange terms meet minimum requirements
+   - Validate that any referenced external resources or identifiers exist
+
+### Security Considerations
+
+#### Preventing Contract Tampering
+
+To protect against modification of contracts after signing:
+
+1. **Contract Hash Binding**:
+   - The Acceptance message `MUST` include a `contract_hash` field
+   - This hash must be computed over the canonicalized contract JSON
+   - Both parties must verify this hash matches their copy of the contract
+
+2. **Immutable Contract Storage**:
+   - Agents `SHOULD` store signed contracts in tamper-evident storage
+   - Any contract modifications require a new negotiation process
+   - Contract history `SHOULD` be preserved for audit purposes
+
+3. **Non-Repudiation**:
+   - The combination of DID-based signatures and contract hash provides cryptographic non-repudiation
+   - Evidence of contract acceptance `SHOULD` be preserved indefinitely
+
+#### Authorization Controls
+
+To ensure only authorized parties can establish contracts:
+
+1. **DID Verification**:
+   - Agents `MUST` verify that contract signers own the DIDs they claim
+   - The Noise Protocol handshake provides initial authentication
+   - Contract signatures provide additional proof of identity
+
+2. **Role-Based Authorization**:
+   - Verify that signers have authority to commit to the specified terms
+   - For agents representing organizations, validate organizational authority
+   - When delegation is used, verify the delegation chain
+
+3. **Capability Validation**:
+   - Verify that agents only commit to capabilities they actually possess
+   - Check that the `hsdlReference` points to a valid, current capability advertisement
+
+### Handling Verification Failures
+
+When verification fails, agents `MUST`:
+
+1. Reject the contract with an appropriate error message
+2. Log the specific verification failure for audit purposes
+3. Consider implementing progressive remediation before final rejection:
+   - For minor schema issues, propose corrections via CounterProposal
+   - For signature issues, request re-signing
+   - For policy conflicts, suggest alternative terms
+
+### Contract Revocation
+
+In exceptional circumstances, signed contracts may need to be revoked:
+
+1. **Mutual Revocation**:
+   - Both parties agree to terminate the contract before its natural conclusion
+   - A formal revocation record should be created and signed by all parties
+
+2. **Breach-Based Revocation**:
+   - In case of contract term violations, the injured party may initiate revocation
+   - Evidence of the breach should be documented
+   - Dispute resolution mechanisms specified in the contract should be followed
+
+3. **Emergency Revocation**:
+   - For security emergencies (e.g., compromised keys), immediate revocation may be necessary
+   - Emergency revocation should follow pre-established security protocols
+   - All dependent tasks should be immediately paused or terminated

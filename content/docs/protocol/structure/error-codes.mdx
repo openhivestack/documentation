@@ -1,0 +1,93 @@
+---
+title: Error Codes
+description: Standardized H.I.V.E. error codes and their meanings for robust error handling.
+icon: Bug
+---
+
+H.I.V.E. defines a set of standardized error codes to facilitate consistent and robust error handling across agent
+implementations. When an agent encounters an issue, it `SHOULD` communicate it using the most appropriate error code.
+
+## General Error Structure
+
+Errors are typically communicated within message payloads (e.g., `Rejection`, `TaskStatusUpdate`) using a structure
+like this:
+
+```json
+{
+  "code": "HIVE_ERROR_CODE",
+  "message": "A human-readable description of the error.",
+  "details": { /* Optional, additional context */ }
+}
+```
+
+- `code`: A unique, standardized H.I.V.E. error identifier.
+- `message`: A concise, human-readable description of the error.
+- `details`: (Optional) A JSON object providing further context, such as specific validation failures, resource
+identifiers, or internal error messages (for debugging, not for general propagation).
+
+## Standardized Error Codes
+
+Error codes are prefixed to indicate the component they originate from, aligning with the H.I.V.E. architecture.
+
+### Protocol-wide Errors (HIVE_GEN)
+
+General errors applicable across the entire protocol.
+
+| Code         | Description                  | Suggested Remediation                                    |
+|--------------|------------------------------|----------------------------------------------------------|
+| HIVE_GEN_001 | UNKNOWN_MESSAGE_TYPE         | Check message_type field. Upgrade H.I.V.E. client.       |
+| HIVE_GEN_002 | INVALID_MESSAGE_FORMAT       | Check JSON syntax, required fields, and data types.      |
+| HIVE_GEN_003 | MESSAGE_EXPIRED              | Check timestamp and agent's clock synchronization.       |
+| HIVE_GEN_004 | UNSUPPORTED_PROTOCOL_VERSION | Upgrade H.I.V.E. client or negotiate compatible version. |
+| HIVE_GEN_005 | INVALID_SIGNATURE            | Re-verify message signing process, sender's public key.  |
+| HIVE_GEN_006 | AUTHORIZATION_DENIED         | Review agent's access policies or delegated capabilities.|
+
+### Transport Errors (HIVE_TP)
+
+Errors related to WebSocket connections and TLS.
+
+| Code        | Description              | Suggested Remediation                                        |
+|-------------|--------------------------|--------------------------------------------------------------|                                        
+| HIVE_TP_001 | CONNECTION_FAILED        | Check network reachability, firewall, target agent's status. |
+| HIVE_TP_002 | TLS_CERTIFICATE_INVALID  | Verify peer's TLS certificate chain and hostname.            |
+| HIVE_TP_003 | WEBSOCKET_PROTOCOL_ERROR | Inspect WebSocket frame/header issues. Internal client error.|
+| HIVE_TP_004 | MESSAGE_TOO_LARGE        | Use out-of-band transfer for large payloads.                 |
+
+### Discovery & Identity Component Errors (HIVE_DI)
+
+Errors pertaining to agent discovery, identity verification, and secure connection establishment.
+
+| Code        | Description                      | Suggested Remediation                                        |
+|-------------|----------------------------------|------------------------------------------------------------|                                        
+| HIVE_DI_001 | DID_RESOLUTION_FAILED            | Check DID method or Discovery Registry availability.        |
+| HIVE_DI_002 | AGENT_NOT_FOUND                  | Verify DID is registered or agent is discoverable.          |
+| HIVE_DI_003 | INVALID_CAPABILITY_ADVERTISEMENT | Check HSDL syntax or advertisement message format.          |
+| HIVE_DI_004 | NOISE_HANDSHAKE_FAILED           | Check public keys, Noise protocol implementation.           |
+| HIVE_DI_005 | DID_AUTHENTICATION_FAILED        | Peer's public key does not match DID. Potential spoofing.   |
+| HIVE_DI_006 | SERVICE_UNAVAILABLE              | Agent found but not accepting connections.                  |
+| HIVE_DI_007 | DISCOVERY_REGISTRY_UNAVAILABLE   | DR service is unreachable. Try alternative registry or P2P discovery. |
+| HIVE_DI_008 | NO_MATCHING_AGENTS               | No agents found with requested capabilities. Modify requirements or try later. |
+| HIVE_DI_009 | CAPABILITY_SCHEMA_INCOMPATIBLE   | Agent's capability schema doesn't match requirements. Check compatibility. |
+| HIVE_DI_010 | AGENT_REGISTRATION_FAILED        | Failed to register with Discovery Registry. Check credentials and registry status. |
+| HIVE_DI_011 | CAPABILITY_QUERY_INVALID         | Discovery query format or parameters are invalid. Check query structure. |
+| HIVE_DI_012 | DISCOVERY_RATE_LIMIT_EXCEEDED    | Too many discovery requests. Implement backoff strategy and caching. |
+| HIVE_DI_013 | AGENT_UNREACHABLE                | Found agent cannot be contacted. Network issue or agent offline. |
+| HIVE_DI_014 | HSDL_VALIDATION_FAILED           | HSDL document doesn't meet schema requirements. Fix format issues. |
+
+### Interaction & Trust Component Errors (HIVE_IT)
+
+Errors related to contract negotiation, task execution, and result delivery.
+
+| Code        | Description                          | Suggested Remediation                                       |
+|-------------|--------------------------------------|-------------------------------------------------------------|                                        
+| HIVE_IT_001 | CONTRACT_REJECTED                    | Modify proposal terms (value, payment, scope).              |
+| HIVE_IT_002 | CAPABILITIES_MISMATCH                | Agent lacks requested capabilities. Update HSDL lookup.     |
+| HIVE_IT_003 | INVALID_INPUT                        | Review input_parameters against HSDL specification.         |
+| HIVE_IT_004 | RESOURCE_UNAVAILABLE                 | Agent lacks compute, storage, or network resources.         |
+| HIVE_IT_005 | EXTERNAL_SERVICE_ERROR               | Upstream dependency failed. May require intervention.       |
+| HIVE_IT_006 | TASK_CANCELLED                       | Task cancelled by the initiating agent.                     |
+| HIVE_IT_007 | EXECUTION_TIMEOUT                    | Task took too long to complete. Review timeout settings.    |
+| HIVE_IT_008 | INTEGRITY_CHECK_FAILED               | Hash mismatch. Data corrupted or tampered.                  |
+| HIVE_IT_009 | CONTRACT_VIOLATION                   | Breach of agreed-upon contract terms.                       |
+| HIVE_IT_010 | NEGOTIATION_TIMEOUT                  | Negotiation session expired without agreement.              |
+| HIVE_IT_011 | UNSUPPORTED_VALUE_TYPE               | Agent does not support the specified value_type.            |

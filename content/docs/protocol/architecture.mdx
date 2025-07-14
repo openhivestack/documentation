@@ -1,0 +1,101 @@
+---
+title: Architecture
+description: A layered overview of the H.I.V.E. Protocol's design.
+icon: Hexagon
+---
+
+import { Cards, Card } from "fumadocs-ui/components/card";
+import { Callout } from "fumadocs-ui/components/callout";
+import { Mermaid } from "@/components/mdx/mermaid";
+import {
+  PackageSearchIcon,
+  InfinityIcon,
+} from "lucide-react";
+
+The H.I.V.E. Protocol operates as a focused architecture, abstracting complexities and ensuring modularity.
+Its core goal is to enable autonomous agents to seamlessly discover, connect, agree upon, and complete tasks with
+built-in cryptographic security. This design facilitates independent development and evolution of each
+component while maintaining overall protocol coherence and [conformance](/docs/protocol/guidelines/conformance).
+
+## H.I.V.E. Protocol Components
+
+<Mermaid
+  chart={`
+flowchart LR
+    A[WebSockets Transport] --> B[Discovery & Identity]
+    B --> C[Interaction & Trust]
+`}
+/>
+
+The protocol has standardized on WebSockets as the transport layer and focuses on two primary components, each with distinct responsibilities:
+
+<Cards>
+  <Card
+    title="Discovery & Identity"
+    description="Facilitates agent identification via Decentralized Identifiers (DIDs), enables capability
+    advertisement."
+    icon={<PackageSearchIcon />}
+    href="/docs/protocol/layers/discovery-identity"
+  />
+  <Card
+    title="Interaction & Trust"
+    description="Manages secure and verifiable lifecycle of agent collaborations."
+    icon={<InfinityIcon />}
+    href="/docs/protocol/layers/interaction-trust"
+  />
+</Cards>
+
+By adhering to this specification, agents can achieve unprecedented levels of interoperability, autonomy, and
+trust, fostering a new era of collaborative AI ecosystems. The protocol also defines clear
+[versioning](/docs/protocol/guidelines/versioning) to manage future evolution.
+
+## 1. Transport Foundation: WebSockets
+
+The H.I.V.E. Protocol has standardized on WebSockets as the transport layer. This provides a reliable, secure, and ordered transmission foundation for all H.I.V.E. messages.
+
+- **Standardized Protocol**: H.I.V.E. implementations `MUST` use the [WebSockets Protocol (RFC 6455)](https://datatracker.ietf.org/doc/html/rfc6455) for transport.
+- **Security**: [Transport Layer Security (TLS) v1.3 or higher](/docs/protocol/layers/transport#security--reliability) `MUST` be used for all WebSocket connections.
+- **Network Addressing**: Agents are identified by a WebSocket URI resolved via their [DID](/docs/protocol/structure/did-methods) through the [Discovery Service](/docs/protocol/layers/discovery-identity#discovery-mechanisms).
+
+For implementation details on the transport configuration, refer to the [Transport Layer](/docs/protocol/layers/transport) page.
+
+## 2. Discovery & Identity Component
+
+This first primary component enables agents to discover capabilities, establish verifiable identities, and initiate secure communication.
+It is crucial for agents to find each other and establish a foundation of trust before any meaningful interaction
+can occur.
+
+- **Agent Identification**:
+  - Agents `MUST` identify themselves using [W3C Decentralized Identifiers (DIDs)](/docs/protocol/structure/did-methods), primarily using the [`did:key` method](/docs/protocol/structure/did-methods#didkey-method) with Ed25519 keys.
+- **Discovery Mechanisms**:
+  - H.I.V.E. agents `MUST` support a [Discovery Registry (DR) Service](/docs/protocol/layers/discovery-identity#discovery-mechanisms) for centralized lookup.
+  - Implementations `MAY` support Peer-to-Peer (P2P) Discovery.
+- **Capability Advertisement**:
+  - Agent capabilities `MUST` be described using [H.I.V.E. Service Description Language (HSDL)](/docs/protocol/structure/capability-advertisement#hive-service-description-language-hsdl).
+  - These descriptions are conveyed in a [signed `CapabilityAdvertisement` message](/docs/protocol/structure/message-formats#capabilityadvertisement).
+- **Initial Secure Connection**:
+  - Agents `MUST` establish a mutually authenticated, end-to-end encrypted session using the [Noise Protocol Framework (IK handshake pattern)](/docs/protocol/layers/discovery-identity#initial-secure-connection-establishment).
+
+<Callout type="info">
+    For an in-depth understanding, see the [Discovery & Identity Component](/docs/protocol/layers/discovery-identity) page.
+</Callout>
+
+## 3. Interaction & Trust Component
+
+This second primary component governs secure negotiation, execution, and verifiable task completion between agents. It ensures that
+collaborations are conducted with integrity, authorization, and clear agreements on value and results.
+
+- **Message Authentication & Authorization**:
+  - All messages exchanged within an established session `MUST` be [signed by the sender's private key](/docs/protocol/layers/interaction-trust#message-authentication-and-authorization) and verified by the recipient.
+  - Access control policies `MUST` be enforced, with [Signed Capabilities (e.g., UCANs)](/docs/protocol/structure/security-considerations#interaction--trust-layer-security) recommended for granular authorization.
+- **Contract Negotiation & Agreement**:
+  - Agents `MUST` use a structured [H.I.V.E. Negotiation Protocol (HNP)](/docs/protocol/layers/interaction-trust#contract-negotiation).
+  - Contracts `MUST` be [JSON-LD documents](/docs/protocol/structure/contract#contract-format-json-ld) using the H.I.V.E. Contract Ontology and cryptographically signed by all participating agents.
+- **Execution Management**:
+  - Tasks `MUST` be executed and monitored through a defined [H.I.V.E. Task Lifecycle](/docs/protocol/structure/lifecycle), which includes standard states (`PROPOSED`, `ACCEPTED`, `IN_PROGRESS`, `COMPLETED`, `FAILED`, etc.) and status updates.
+- **Delivery & Verification**:
+  - Results `MUST` be delivered and verified for integrity using [cryptographic hashes](/docs/protocol/layers/interaction-trust#delivery--verification) and confirmed via a [DeliveryConfirmation message](/docs/protocol/structure/message-formats#deliveryconfirmation).
+
+<Callout type="info">
+    Find more details on this component in the [Interaction & Trust Component](/docs/protocol/layers/interaction-trust) page.
+</Callout>

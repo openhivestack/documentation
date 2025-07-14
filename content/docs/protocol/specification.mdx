@@ -1,0 +1,83 @@
+---
+title: Specification
+description: Hybrid Inter-Agent Verification & Execution Protocol
+icon: NotebookText
+---
+
+The H.I.V.E. Protocol establishes a framework for the entire lifecycle of inter-agent collaboration, from discovery and
+secure communication to task execution and verification. This specification details the core requirements for
+implementing H.I.V.E.-compliant systems.
+
+## Overview
+
+The H.I.V.E. Protocol uses a layered architecture with two primary components:
+
+- **Discovery & Identity**: Enables agent identification using DIDs, capability advertisement, and secure communication channels
+- **Interaction & Trust**: Manages secure negotiations, task execution, and result verification
+
+All components operate over WebSockets as the standardized transport layer. This modular design allows for
+independent implementation and evolution while maintaining interoperability between compliant agents.
+
+## 1. Transport Layer
+
+H.I.V.E. uses WebSockets (RFC 6455) as its transport layer, providing secure, reliable, full-duplex communication.
+All implementations `MUST` use WebSockets with TLS 1.3+ for secure message exchange. For details, see the
+[Transport Layer](/docs/protocol/layers/transport) documentation.
+
+## 2. Discovery & Identity Component
+
+This component enables agents to discover capabilities, establish verifiable identities, and initiate secure communication.
+
+### 2.1. Agent Identification
+
+- Agents `MUST` identify themselves using W3C Decentralized Identifiers (DIDs)
+- The `did:key` method with Ed25519 keys `IS REQUIRED`
+- Each agent `MUST` securely manage its cryptographic key pair
+
+### 2.2. Discovery
+
+- Agents `MUST` support a Discovery Registry (DR) Service for centralized lookup
+- The DR Service exposes a RESTful API for registration and capability advertisement
+- Agents `MAY` optionally support Peer-to-Peer discovery methods
+- Agents `MUST` implement graceful fallback mechanisms when discovery services are unavailable
+- Discovery queries `MUST` support filtering by capability intent and service type
+- Agents `SHOULD` cache discovery results to improve performance and resilience
+
+### 2.3. Capability Advertisement
+
+- Capabilities `MUST` be described using H.I.V.E. Service Description Language (HSDL)
+- HSDL documents use YAML or JSON format
+- Advertisements include the agent's DID, network address, and signed HSDL document
+
+### 2.4. Secure Connection
+
+- Agents `MUST` establish mutually authenticated, encrypted sessions using the Noise Protocol Framework (IK pattern)
+- Connections provide mutual authentication and perfect forward secrecy
+
+## 3. Interaction & Trust Component
+
+This component governs secure negotiation, execution, and verifiable task completion between agents.
+
+### 3.1. Authentication and Authorization
+
+- All messages `MUST` be cryptographically signed by the sender and verified by the recipient
+- Access control policies `MUST` be enforced based on the sender's identity
+- Signed Capabilities (e.g., UCANs) are `RECOMMENDED` for granular authorization
+
+### 3.2. Contract Negotiation
+
+- Agents `MUST` use the H.I.V.E. Negotiation Protocol (HNP) with Proposal, Counter-Proposal, and Acceptance/Rejection phases
+- Contracts use JSON-LD format with the H.I.V.E. Contract Ontology
+- All contracts `MUST` be cryptographically signed by participating agents
+
+### 3.3. Task Execution
+
+- Tasks follow a defined lifecycle with standard states: PROPOSED, ACCEPTED, IN_PROGRESS, PAUSED, COMPLETED, FAILED, and CANCELLED
+- Agents provide status updates through TaskStatusUpdate messages
+- Standardized error codes are used for execution failures
+
+### 3.4. Result Verification
+
+- Results include cryptographic hashes for integrity verification
+- Large results use out-of-band transfer mechanisms with secure references
+- Recipients send DeliveryConfirmation messages after successful verification

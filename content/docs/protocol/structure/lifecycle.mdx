@@ -1,0 +1,634 @@
+---
+title: Lifecycle
+description: Detailed states and transitions for task execution and management within H.I.V.E.
+icon: TrendingUp
+---
+
+import { Mermaid } from "components/mdx/mermaid";
+
+# Task Lifecycle
+
+The H.I.V.E. Task Lifecycle provides a standardized state machine for task progression from proposal to completion. This ensures:
+
+1. **Consistent Understanding**: All agents share a common view of task states
+2. **Clear Responsibilities**: Defined roles at each execution stage
+3. **Structured Monitoring**: Standardized status updates
+4. **Robust Error Handling**: Clear paths for failures and recovery
+
+This model applies to all tasks executed under H.I.V.E. contracts.
+
+## Task States
+
+H.I.V.E. tasks progress through defined states communicated via `TaskStatusUpdate` messages:
+
+### Primary States
+
+- **`PROPOSED`**: Initial state when task is suggested (via `Proposal` message)
+- **`ACCEPTED`**: Contract is agreed upon and signed by all parties
+- **`IN_PROGRESS`**: Active execution following a `TaskInitiation` message
+- **`COMPLETED`**: Successfully finished according to contract terms
+
+### Secondary States
+
+- **`PAUSED`**: Temporary suspension with ability to resume
+- **`FAILED`**: Unrecoverable error prevented completion (requires error details)
+- **`CANCELLED`**: Explicit termination by a participating agent (requires reason)
+
+## Task State Transitions
+
+The following diagram illustrates the complete state machine for H.I.V.E. tasks, showing all possible transitions
+and the messages that trigger them:
+
+<Mermaid
+  chart={`
+stateDiagram-v2
+    [*] --> PROPOSED: Proposal message
+
+    PROPOSED --> ACCEPTED: Acceptance message
+    PROPOSED --> CANCELLED: Rejection message
+    PROPOSED --> CANCELLED: Timeout
+
+    ACCEPTED --> IN_PROGRESS: TaskInitiation message
+    ACCEPTED --> CANCELLED: Cancellation before start
+
+    IN_PROGRESS --> PAUSED: TaskStatusUpdate(PAUSED)
+    IN_PROGRESS --> COMPLETED: TaskStatusUpdate(COMPLETED)
+    IN_PROGRESS --> FAILED: TaskStatusUpdate(FAILED) + error
+    IN_PROGRESS --> CANCELLED: TaskStatusUpdate(CANCELLED) + reason
+
+    PAUSED --> IN_PROGRESS: TaskStatusUpdate(IN_PROGRESS)
+    PAUSED --> CANCELLED: TaskStatusUpdate(CANCELLED) + reason
+
+    COMPLETED --> [*]: After DeliveryConfirmation
+    FAILED --> [*]: Terminal state
+    CANCELLED --> [*]: Terminal state
+`}
+/>
+
+### State Transition Rules
+
+1. **Initial State**: All tasks begin in the `PROPOSED` state during contract negotiation
+
+2. **Progression to Active Execution**:
+   - `PROPOSED` → `ACCEPTED`: Requires formal contract agreement
+   - `ACCEPTED` → `IN_PROGRESS`: Requires explicit `TaskInitiation` message
+
+3. **Active Execution Transitions**:
+   - `IN_PROGRESS` ↔ `PAUSED`: Allows temporary suspension and resumption
+   - `IN_PROGRESS` → `COMPLETED`/`FAILED`/`CANCELLED`: Terminal state transitions
+
+4. **Terminal States**:
+   - `COMPLETED`: Successful execution
+   - `FAILED`: Unsuccessful due to errors
+   - `CANCELLED`: Deliberately terminated
+
+5. **No Backwards Transition**: Once a task leaves a state, it cannot return to earlier states (except `PAUSED` → `IN_PROGRESS`)
+
+### Key Transitions and Messages
+
+Each state transition is triggered by specific message types:
+
+#### Contract Phase Transitions
+
+- **`PROPOSED` → `ACCEPTED`**:
+  - **Message**: `Acceptance` message with signed contract
+  - **Sender**: Responding agent
+  - **Content**: Final agreed contract with all required signatures
+  - **Validation**: Contract meets all requirements and signatures are valid
+
+- **`PROPOSED` → `CANCELLED`**:
+  - **Message**: `Rejection` message or timeout
+  - **Sender**: Responding agent or system
+  - **Content**: Optional reason for rejection
+
+#### Execution Phase Transitions
+
+- **`ACCEPTED` → `IN_PROGRESS`**:
+  - **Message**: `TaskInitiation` message
+  - **Sender**: Initiating agent
+  - **Content**: Task identifier and any runtime parameters
+  - **Effect**: Authorizes the executing agent to begin work
+
+- **`IN_PROGRESS` ↔ `PAUSED`**:
+  - **Message**: `TaskStatusUpdate` with status="PAUSED" or "IN_PROGRESS"
+  - **Sender**: Typically the executing agent
+  - **Content**: Reason for pause or estimated duration
+
+#### Completion Phase Transitions
+
+- **`IN_PROGRESS` → `COMPLETED`**:
+  - **Messages**: `TaskStatusUpdate` followed by `TaskResult` and `DeliveryConfirmation`
+  - **Process**:
+    1. Executing agent sends `TaskStatusUpdate` with status="COMPLETED"
+    2. Executing agent sends `TaskResult` with output data or reference
+    3. Initiating agent verifies and sends `DeliveryConfirmation`
+
+- **`IN_PROGRESS` → `FAILED`**:
+  - **Message**: `TaskStatusUpdate` with status="FAILED"
+  - **Sender**: Executing agent
+  - **Content**: `MUST` include `error` object with:
+    - `error_code`: Standardized error code
+    - `error_message`: Human-readable description
+    - `error_details`: Additional diagnostic information
+
+- **`IN_PROGRESS`/`PAUSED` → `CANCELLED`**:
+  - **Message**: `TaskStatusUpdate` with status="CANCELLED"
+  - **Sender**: Either agent (typically initiator)
+  - **Content**: `MUST` include `reason` for cancellation
+
+## Agent Responsibilities by State
+
+Each task state defines specific responsibilities for the participating agents:
+
+| State         | Initiating Agent Responsibilities                                                                                                                                    | Executing Agent Responsibilities                                                                                                                                                  | Timeouts                                                                    |
+|---------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| `PROPOSED`    | - Send detailed `Proposal` with contract terms<br />- Handle negotiation with any `CounterProposal` messages<br />- Set reasonable negotiation timeout               | - Evaluate proposal against capabilities<br />- Send `Acceptance`, `Rejection`, or `CounterProposal`<br />- Complete evaluation within negotiation timeout                        | Negotiation timeout (recommended: 1-5 minutes)                              |
+| `ACCEPTED`    | - Allocate resources for task<br />- Send `TaskInitiation` with any runtime parameters<br />- Be prepared to handle task results                                     | - Reserve necessary resources<br />- Prepare execution environment<br />- Be ready to start upon `TaskInitiation`                                                                 | Initiation timeout (recommended: 1-30 minutes depending on task complexity) |
+| `IN_PROGRESS` | - Monitor `TaskStatusUpdate` messages<br />- Process interim updates (if any)<br />- Be prepared to handle `PAUSED`, `FAILED`, or `CANCELLED` states                 | - Execute task according to contract<br />- Send periodic `TaskStatusUpdate` messages<br />- Report progress percentage for long-running tasks<br />- Handle errors appropriately | Execution timeout (as specified in contract)                                |
+| `PAUSED`      | - Acknowledge pause state<br />- Decide whether to wait or cancel<br />- Send `CANCELLED` status if needed                                                           | - Preserve task state during pause<br />- Send `IN_PROGRESS` when resuming<br />- Provide estimated resume time if possible                                                       | Pause timeout (recommended: as specified in pause message)                  |
+| `COMPLETED`   | - Receive and verify `TaskResult`<br />- Validate results against contract requirements<br />- Send `DeliveryConfirmation` if valid<br />- Process results as needed | - Prepare and send complete `TaskResult`<br />- Include any necessary metadata<br />- Await `DeliveryConfirmation`<br />- Handle any result verification requests                 | Result verification timeout (recommended: 1-15 minutes)                     |
+| `FAILED`      | - Process error information<br />- Initiate dispute resolution if needed<br />- Decide whether to retry or abandon task                                              | - Include detailed error information<br />- Provide diagnostic data when possible<br />- Clean up allocated resources<br />- Be prepared to handle retry requests                 | Error handling timeout (recommended: 1-5 minutes)                           |
+| `CANCELLED`   | - Document cancellation reason<br />- Handle any partial results<br />- Clean up allocated resources                                                                 | - Stop task execution immediately<br />- Release all allocated resources<br />- Document state at cancellation time                                                               | Cancellation acknowledgment (recommended: 1 minute)                         |
+
+## Status Reporting and Monitoring
+
+### TaskStatusUpdate Message Structure
+
+The `TaskStatusUpdate` message is the primary mechanism for communicating state changes and providing execution insights:
+
+```json
+{
+  "message_type": "TaskStatusUpdate",
+  "task_id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+  "contract_id": "urn:uuid:a81c6be5-8dca-12e0-b765-00a0c91e6bf6",
+  "status": "IN_PROGRESS",
+  "timestamp": "2024-07-12T15:30:00Z",
+  "progress_percentage": 45,  // Optional
+  "estimated_completion": "2024-07-12T16:15:00Z",  // Optional
+  "status_details": {  // Optional
+    "current_stage": "processing_batch_2_of_5",
+    "items_processed": 250,
+    "items_remaining": 300
+  },
+  "error": {  // Required for FAILED status
+    "error_code": "TASK_FAILED_RESOURCE_UNAVAILABLE",
+    "error_message": "Required GPU resources unavailable",
+    "error_details": { "requested_gpu_memory": "8GB", "available_gpu_memory": "2GB" }
+  },
+  "reason": "Resource contention requires cancellation"  // Required for CANCELLED status
+}
+```
+
+### TaskResult Message Structure
+
+When a task reaches the `COMPLETED` state, the executing agent sends a `TaskResult` message:
+
+```json
+{
+  "message_type": "TaskResult",
+  "task_id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+  "contract_id": "urn:uuid:a81c6be5-8dca-12e0-b765-00a0c91e6bf6",
+  "timestamp": "2024-07-12T16:15:00Z",
+  "result_type": "direct",  // "direct" or "reference"
+  "result_data": {  // For small results (direct)
+    // Result data conforming to outputParametersSchema in the contract
+  },
+  "result_reference": {  // For large results
+    "uri": "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+    "content_hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+    "content_type": "application/json",
+    "content_length": 1048576
+  },
+  "execution_metrics": {  // Optional
+    "computation_time_ms": 145000,
+    "resources_used": {
+      "cpu_seconds": 120,
+      "memory_mb": 256,
+      "storage_bytes": 1048576
+    }
+  }
+}
+```
+
+### DeliveryConfirmation Message Structure
+
+After verifying the result, the initiating agent sends a `DeliveryConfirmation` message:
+
+```json
+{
+  "message_type": "DeliveryConfirmation",
+  "task_id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+  "contract_id": "urn:uuid:a81c6be5-8dca-12e0-b765-00a0c91e6bf6",
+  "timestamp": "2024-07-12T16:16:00Z",
+  "verified_content_hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+  "confirmation_id": "urn:uuid:c92d3fae-9dec-11d0-a765-00a0c91e6bf6"
+}
+```
+
+### Reporting Requirements
+
+1. **Mandatory State Change Reporting**:
+   - Agents `MUST` send `TaskStatusUpdate` messages for all transitions to: `IN_PROGRESS`, `PAUSED`, `COMPLETED`, `FAILED`, and `CANCELLED` states
+   - Status changes `MUST` be reported immediately (within 100ms of the state change)
+
+2. **Progress Reporting for Long-Running Tasks**:
+   - For tasks with execution time > 1 minute, agents `SHOULD` send periodic updates
+   - Recommended interval: Every 5 minutes or at 10% progress increments
+   - Include `progress_percentage` (0-100) when deterministic progress can be measured
+   - Include `estimated_completion` timestamp when completion time can be reasonably estimated
+
+3. **Detailed Status Information**:
+   - Use the optional `status_details` object to provide task-specific contextual information
+   - For complex multi-stage tasks, include information about current stage and progression
+
+4. **Error and Cancellation Reporting**:
+   - `FAILED` status `MUST` include an `error` object with standardized `error_code` from [Error Codes](/docs/protocol/structure/error-codes)
+   - `CANCELLED` status `MUST` include a `reason` string explaining the cancellation
+   - Diagnostic information `SHOULD` be included to aid troubleshooting
+
+## Implementation Considerations and Edge Cases
+
+### Timeouts and Error Recovery
+
+1. **Negotiation Timeouts**:
+    - Initiating agents `SHOULD` set a timeout for awaiting responses to proposals (recommended: 1-5 minutes)
+    - If no response is received, the task `SHOULD` transition to `CANCELLED` with reason "negotiation_timeout"
+
+2. **Execution Timeouts**:
+    - Contracts `SHOULD` specify maximum execution duration in the SLA terms
+    - If exceeded, initiating agents `MAY` send a `TaskStatusUpdate` with status="CANCELLED" and reason="execution_timeout"
+
+3. **Communication Failures**:
+    - If an agent loses connectivity during task execution:
+        - It `SHOULD` attempt to re-establish communication
+        - After reconnection, it `MUST` verify the current task state before proceeding
+        - If reconnection fails within a reasonable timeframe (recommended: 5 minutes), treat as failure
+
+### Idempotency and Consistency
+
+1. **Message Idempotency**:
+    - All state transition messages `MUST` be idempotent to handle potential message duplication
+    - Include unique message identifiers to detect and handle duplicates
+
+2. **State Consistency**:
+    - Agents `MUST` maintain a consistent view of task state
+    - When inconsistency is detected, agents `SHOULD` reconcile by accepting the most recent valid state
+    - If reconciliation fails, transition to `FAILED` with error_code="STATE_INCONSISTENCY"
+
+### Partial Results and Checkpoints
+
+1. **Checkpointing**:
+    - For long-running tasks, executing agents `SHOULD` implement checkpointing mechanisms
+    - When transitioning to `PAUSED`, include checkpoint information in the status_details
+
+2. **Partial Results**:
+    - For divisible tasks, executing agents `MAY` provide partial results before full completion
+    - Partial results `MUST` be clearly marked as such in the TaskResult message
+
+## Best Practices for Implementation
+
+### Effective State Management
+
+1. **Persistent State Storage**:
+    - Agents `SHOULD` persist task state to survive restarts or crashes
+    - Use a durable storage mechanism (database, persistent key-value store)
+    - Include all critical metadata, not just the current state
+
+2. **Clean State Transitions**:
+    - Validate state transitions for correctness before processing
+    - Implement state machines using a pattern that prevents invalid transitions
+    - Log all state transitions with timestamps for audit purposes
+
+3. **Graceful Degradation**:
+    - Design agents to handle unexpected failures gracefully
+    - Implement automatic recovery mechanisms where possible
+    - Provide detailed context in error messages to facilitate debugging
+
+### Optimization for Different Task Types
+
+1. **Short-lived Tasks** (< 1 second):
+    - Minimize overhead by reducing status updates
+    - Consider batching similar short tasks
+    - Focus on result delivery efficiency
+
+2. **Medium Tasks** (seconds to minutes):
+    - Send initial `IN_PROGRESS` update and final status
+    - Include progress information when half-complete
+    - Implement basic error recovery
+
+3. **Long-running Tasks** (minutes to hours):
+    - Implement comprehensive checkpointing
+    - Send regular status updates (every 5 minutes recommended)
+    - Include detailed progress information and estimates
+    - Consider partial result delivery
+
+4. **Very Long Tasks** (hours to days):
+    - Break into sub-tasks when possible
+    - Implement robust persistence and recovery
+    - Send heartbeat messages even when progress is minimal
+    - Support task hibernation and migration
+
+## Task Replication and Verification
+
+For critical tasks requiring high reliability or verification of results, H.I.V.E. supports task replication patterns:
+
+### Redundant Execution
+
+1. **Multi-Agent Verification**:
+    - The same task can be assigned to multiple executing agents simultaneously
+    - Results are compared to ensure correctness through consensus
+    - Implementation requires additional contract terms for verification protocol
+
+2. **Progressive Verification**:
+    - For complex tasks, incorporate verification checkpoints
+    - Executing agents provide proof of correct execution at defined intervals
+    - Initiating agents validate proofs before continuing
+
+### Verification Protocol
+
+When implementing result verification, the contract `SHOULD` specify:
+
+1. **Verification Method**:
+    - **Deterministic**: Direct comparison of results
+    - **Probabilistic**: Statistical analysis for approximate tasks
+    - **Proof-based**: Cryptographic proofs (e.g., zero-knowledge proofs)
+
+2. **Dispute Resolution**:
+    - Process for handling disagreements between multiple executing agents
+    - Criteria for accepting or rejecting disputed results
+    - Penalties for incorrect results or false disputes
+
+3. **Required Evidence**:
+    - Execution logs
+    - Intermediate states
+    - Resource utilization metrics
+    - Cryptographic attestations
+
+## Task Delegation and Composition
+
+H.I.V.E. supports complex workflows through task delegation and composition patterns:
+
+### Delegation Model
+
+1. **Explicit Delegation**:
+    - An executing agent may delegate a task to one or more sub-agents
+    - The original executing agent remains responsible for the overall task
+    - The initiating agent may require notification of delegation via TaskStatusUpdate
+
+2. **Delegation Chain**:
+    - A delegated task follows the same lifecycle as any H.I.V.E. task
+    - The delegating agent acts as the initiating agent for the delegated task
+    - Sub-contracts `MUST` be compatible with the original contract terms
+
+### Workflow Patterns
+
+1. **Sequential Tasks**:
+    - Tasks executed in sequence, where each depends on previous task results
+    - State transition: Task N+1 moves to `PROPOSED` when Task N reaches `COMPLETED`
+    - Result passing between tasks `SHOULD` use standardized formats
+
+2. **Parallel Tasks**:
+    - Multiple independent tasks executed simultaneously
+    - Coordinating agent manages the overall workflow state
+    - Aggregation of results into a unified response
+
+3. **Conditional Execution**:
+    - Branching logic based on intermediate results
+    - Decision points `SHOULD` be explicitly defined in contracts
+    - Clear conditions for task initiation and cancellation
+
+## Security Considerations
+
+Task lifecycle implementation requires specific security controls to prevent attacks and ensure integrity:
+
+### State Transition Attacks
+
+1. **Unauthorized State Changes**:
+    - Validate the sender has authority to change the task state
+    - For example, only the executing agent should send `IN_PROGRESS` → `COMPLETED` transitions
+    - Cryptographically sign all state transitions with the agent's private key
+
+2. **Replay Protection**:
+    - Include timestamps and unique message IDs in all TaskStatusUpdate messages
+    - Reject status updates with timestamps older than the current task state
+    - Maintain a log of processed message IDs to prevent replay
+
+### Data Protection
+
+1. **Sensitive Task Data**:
+    - Apply encryption to sensitive task parameters and results
+    - Use the established secure channel for all task-related communication
+    - Consider out-of-band transmission for highly sensitive data
+
+2. **Execution Isolation**:
+    - Execute tasks in isolated environments (containers, VMs, etc.)
+    - Prevent cross-task data leakage
+    - Apply principle of least privilege to task execution context
+
+### Denial-of-Service Prevention
+
+1. **Rate Limiting**:
+    - Implement rate limits for TaskStatusUpdate messages
+    - Set reasonable timeouts for state transitions
+    - Detect and block excessive status update floods
+
+2. **Resource Constraints**:
+    - Define clear resource limits in contracts
+    - Monitor resource usage during execution
+    - Cancel tasks that exceed agreed-upon limits
+
+## Compliance and Auditing
+
+H.I.V.E. task lifecycle includes mechanisms for compliance verification and auditing:
+
+### Audit Trail
+
+1. **Immutable History**:
+    - All state transitions `SHOULD` be recorded in an immutable log
+    - Include timestamps, agent identifiers, and cryptographic signatures
+    - Preserve the complete sequence of TaskStatusUpdate messages
+
+2. **Evidence Collection**:
+    - Gather and preserve evidence of task execution
+    - Store execution logs, resource usage metrics, and output validation results
+    - Enable reconstruction of the execution process for verification
+
+### Regulatory Compliance
+
+1. **Data Processing Records**:
+    - For tasks involving personal or regulated data, maintain processing records
+    - Include purpose, legal basis, data categories, and retention periods
+    - Enable data subject access requests and right to be forgotten compliance
+
+2. **Geographic Constraints**:
+    - Support specification of geographic execution constraints in contracts
+    - Verify and enforce data sovereignty requirements
+    - Provide attestation of execution location when required
+
+3. **Retention Policies**:
+    - Define data retention requirements in contracts
+    - Implement secure data deletion procedures for task data
+    - Support verification of data deletion
+
+## Future Extensions
+
+The H.I.V.E. Task Lifecycle specification is designed to evolve with future needs. Planned extensions include:
+
+### Extended State Model
+
+1. **Intermediate States**:
+    - Support for more granular execution states
+    - Examples: `QUEUED`, `VALIDATING`, `DELIVERING`, etc.
+    - Enable more precise monitoring of complex workflows
+
+2. **Custom States**:
+    - Extension mechanism for domain-specific states
+    - Namespace for custom states to prevent conflicts
+    - Standard for communicating custom state semantics
+
+### Enhanced Verification
+
+1. **Formal Verification**:
+    - Support for formal verification of task execution
+    - Proofs of correct execution for critical tasks
+    - Integration with trusted execution environments (TEEs)
+
+2. **Multi-Party Verification**:
+    - Consensus-based verification protocols
+    - Third-party verifier roles
+    - Stake-based incentive mechanisms for honest verification
+
+### Adaptive Execution
+
+1. **Dynamic Resource Allocation**:
+    - Real-time adjustment of resources based on task progress
+    - Negotiation protocol for resource changes during execution
+    - Graceful handling of resource constraints
+
+2. **Learning-Based Optimization**:
+    - Performance profiling across multiple executions
+    - Automatic optimization of execution parameters
+    - Predictive models for task completion and resource requirements
+
+## Contract Governance of Task Lifecycle
+
+The task lifecycle is fundamentally governed by the contract established during negotiation. This section explains how contract terms directly influence and constrain task execution.
+
+### Contract Terms Enforcement
+
+Various sections of the H.I.V.E. Contract directly impact task execution:
+
+1. **Service Scope Enforcement**:
+   - The `serviceScope.inputParametersSchema` defines valid task inputs
+   - The `serviceScope.outputParametersSchema` defines required result format
+   - The executing agent `MUST` validate inputs against the schema before proceeding
+   - The initiating agent `MUST` validate results against the output schema
+
+2. **SLA Enforcement**:
+   - Contract's `sla` terms establish performance requirements
+   - Agents `MUST` monitor execution against these SLA terms
+   - SLA violations `SHOULD` trigger appropriate task state transitions
+   - For example, if execution time exceeds the SLA limit, task may transition to `CANCELLED`
+
+3. **Value Agreement Binding**:
+   - The `valueAgreement` determines compensation and payment timing
+   - For `per_task` billing model, successful completion triggers payment obligation
+   - For `usage_based` billing, resource utilization metrics must be tracked
+   - Payment terms may dictate when the `DeliveryConfirmation` message triggers payment
+
+4. **Cancellation Rules**:
+   - The `cancellable` and `cancellationPolicy` terms govern when tasks can be cancelled
+   - Tasks cannot be cancelled if the contract specifies `"cancellable": false`
+   - Cancellation penalties or refunds follow the specified policy
+
+### Contract-Task Binding
+
+To ensure proper governance:
+
+1. **Contract Reference**:
+   - All task-related messages `MUST` include the `contract_id`
+   - This explicitly binds the task to its governing contract
+
+2. **Terms Verification**:
+   - Before state transitions, agents `SHOULD` verify compatibility with contract terms
+   - For example, before sending `TaskStatusUpdate` with status="CANCELLED", verify cancellation is permitted
+
+3. **Dispute Evidence**:
+   - All task lifecycle messages serve as evidence in potential disputes
+   - Signed `TaskStatusUpdate` messages provide non-repudiable proof of execution progress
+   - The `TaskResult` and `DeliveryConfirmation` exchange fulfills contract obligations
+
+### Example: SLA-Driven Task Execution
+
+Consider a contract with these SLA terms:
+
+```json
+"sla": {
+  "responseTimeMs": 500,
+  "executionTimeMaxSec": 3600,
+  "uptimePercentage": 0.99
+}
+```
+
+This impacts the task lifecycle in several ways:
+
+1. After receiving `TaskInitiation`, the executing agent must begin processing within 500ms
+2. The executing agent must complete the task within 3600 seconds (1 hour)
+3. If execution will exceed the time limit, the agent should either:
+   - Request a contract amendment for extended execution time
+   - Transition to `FAILED` with an appropriate error code
+4. The initiating agent may monitor these SLA terms and cancel the task if violated
+
+### Governance of Multi-Task Contracts
+
+Some contracts may govern multiple related tasks:
+
+1. **Task Sequencing**:
+   - Contract terms may specify dependencies between tasks
+   - Subsequent tasks can only begin after prerequisites complete successfully
+
+2. **Aggregated SLAs**:
+   - Some SLA terms may apply to the entire sequence of tasks
+   - For example, total execution time across all related tasks
+
+3. **Shared Value Terms**:
+   - Payment might depend on completion of all related tasks
+   - Value calculation may aggregate across the task set
+
+### Contract Amendment Impact
+
+In some cases, contracts may be amended during task execution:
+
+1. **Amendment Process**:
+   - Requires a new negotiation cycle with existing contract as starting point
+   - Both parties must agree to the changes
+
+2. **Task Continuity**:
+   - Running tasks continue under the original contract terms
+   - May transition to `PAUSED` during amendment process
+   - New or modified tasks follow the amended contract
+
+3. **Amendment Triggers**:
+   - Unexpected resource requirements
+   - Changed execution parameters
+   - Extended timeframes
+   - Modified deliverables
+
+## Summary
+
+The H.I.V.E. Task Lifecycle provides a comprehensive framework for managing the entire execution process of agent
+tasks. By adhering to these standards and their governing contracts, agents can achieve:
+
+- **Consistent Behavior**: Predictable state transitions across all implementations
+- **Reliable Monitoring**: Standardized status reporting for effective observation
+- **Robust Error Handling**: Clear protocols for managing failures and cancellations
+- **Verifiable Execution**: Mechanisms for validating task results and performance
+- **Secure Operations**: Protection against common attacks and vulnerabilities
+- **Contract Compliance**: Execution that honors the negotiated agreement terms
+
+Implementations `MUST` adhere to the core state model and transition rules while following the recommended best
+practices for their specific use cases and honoring the constraints established in the governing contract.
+
+---
+
+*This specification is subject to enhancement proposals through the H.I.V.E. Protocol Improvement Process.*

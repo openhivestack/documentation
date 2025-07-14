@@ -1,0 +1,52 @@
+---
+title: Transport
+description: Deep dive into secure and reliable message exchange.
+icon: MessageSquareText
+---
+
+The H.I.V.E. Transport Layer is responsible for establishing and maintaining secure, reliable, and ordered message
+exchange between agents. It abstracts underlying network complexities, providing a robust channel for all higher-layer
+interactions.
+
+## Core Transport Protocol
+
+- **WebSockets Protocol**:
+  - Agents `MUST` use WebSockets (RFC 6455) for full-duplex communication
+  - Standard WebSocket framing handles message segmentation
+  - All H.I.V.E. messages use binary or UTF-8 encoding
+- **Connection Management**:
+  - Connections initiated by agents connecting to resolved network addresses
+  - Proper closure uses WebSocket close frames with appropriate status codes
+  - Implementations handle network errors and propagate information to higher layers
+
+## Network Addressing & Resolution
+
+- **Agent Network Address**:
+  - **Resolution**: Obtained by resolving an Agent `DID` (see [Discovery & Identity Layer](/docs/protocol/layers/discovery-identity)) via a Discovery
+    Service or P2P lookup.
+  - **Format**: Network addresses `MUST` be valid URIs, primarily using the `wss://` scheme
+    (e.g., `wss://agent.example.com:8443/hive`).
+- **Connection Initiation**:
+  - **Process**: An agent initiates a WebSocket connection to the resolved `wss://` URI.
+  - **Retries**: Connection attempts `SHOULD` incorporate exponential backoff and a configurable maximum number of
+    retries to accommodate transient network issues.
+- **Service Paths**:
+  - Agents `MAY` expose services on specific WebSocket paths (e.g., `wss://agent.example.com/hive/v1/main`). The
+    path `SHALL` be included in the agent's Capability Advertisement (see [Capability Advertisement](/docs/protocol/structure/capability-advertisement)).
+
+## Security & Reliability
+
+- **Transport Layer Security (TLS)**:
+  - **Mandatory Encryption**: TLS v1.3 or higher `MUST` be used for all `wss://` connections. This provides
+    confidentiality and integrity for data in transit.
+  - **Certificate Verification**: Receiving agents `MUST` perform rigorous TLS certificate validation, including
+    chain trust, expiration, and hostname matching against the connected endpoint.
+- **Reliable Delivery**:
+  - **TCP Foundation**: WebSockets leverage TCP, inherently providing ordered, reliable, full-duplex communication.
+    Message retransmission and ordering are managed by the underlying TCP stack.
+- **Session Persistence**:
+  - While the transport ensures reliable delivery of individual messages, higher layers
+    (`Interaction & Trust Layer`) `ARE RESPONSIBLE` for maintaining logical session state across potential connection
+    disruptions or re-establishments.
+  - **Keep-Alives**: Agents `SHOULD` implement WebSocket ping/pong frames (RFC 6455, Section 5.5.2) to detect stale
+    connections and prevent timeouts.

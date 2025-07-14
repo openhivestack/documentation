@@ -1,0 +1,55 @@
+---
+title: Implementations
+description: Plans for official and community-driven tools to speed up H.I.V.E. Protocol adoption.
+icon: Puzzle
+---
+
+To foster widespread adoption and ease of development, the H.I.V.E. Protocol community plans to develop and maintain
+reference implementations and Software Development Kits (SDKs) in various programming languages.
+These resources will serve as practical guides and foundational libraries for building H.I.V.E. agents.
+
+## Purpose
+
+Reference implementations provide concrete examples of how to apply the H.I.V.E. Protocol specification.
+They serve several key purposes:
+
+- **Accelerated Development**: Provide developers with pre-built components for common H.I.V.E. functionalities
+  (e.g., DID management, message serialization/deserialization, Noise protocol integration).
+- **Interoperability Assurance**: Act as a "golden standard" to demonstrate correct protocol behavior, aiding in
+  cross-implementation compatibility testing.
+- **Learning Resource**: Offer executable code that clarifies abstract concepts presented in the specification.
+- **Community Collaboration**: Serve as a collaborative hub for best practices and pattern development.
+
+## Planned SDKs and Libraries
+
+The H.I.V.E. Protocol community aims to support SDKs in popular programming environments. Initial efforts will focus on:
+
+- **Python SDK**: Providing a comprehensive library for Python developers to build H.I.V.E. agents.
+- **JavaScript/TypeScript SDK**: Enabling H.I.V.E. agent development for Node.js and potentially browser-based
+  environments.
+- **Rust Crate**: A high-performance, secure library for Rust developers.
+- **Go Module**: For efficient and scalable agent implementations in Go.
+
+Each SDK `WILL AIM` to provide:
+
+- **DID Management**: Utilities for `did:key` generation, resolution, and key pair management.
+- **Message Handling**: Functions for constructing, signing, verifying, and parsing all defined H.I.V.E. message types.
+- **Secure Communication**: Wrappers for Noise Protocol (IK handshake) and WebSocket/TLS integration.
+- **Contract Negotiation**: Helper functions for managing the H.I.V.E. Negotiation Protocol flow.
+- **Discovery Integration**: Client libraries for interacting with a Discovery Registry Service.
+
+## Contribution & Community Efforts
+
+The development of these implementations will be an open, community-driven effort.
+
+- **Open Source**: All official reference implementations `WILL BE` open-source under a permissive license.
+- **Contribution Guidelines**: Clear contribution guidelines `WILL BE PROVIDED` for developers wishing to
+  contribute to SDK development or create their own compatible libraries.
+- **Community Examples**: The documentation `WILL FEATURE` community-contributed agent examples demonstrating
+  various use cases and implementation patterns.
+
+## Getting Started
+
+Once available, details on accessing, installing, and using these SDKs will be provided on the main H.I.V.E.
+Protocol website and within their respective project repositories. Developers are encouraged to monitor these
+channels for updates.

@@ -1,0 +1,51 @@
+---
+title: Discovery & Identity
+description: Enabling agent identification, capability advertisement, and secure connection establishment.
+icon: SearchCheck
+---
+
+The H.I.V.E. Discovery & Identity Layer defines how agents identify themselves, advertise their capabilities,
+and initiate mutually authenticated, encrypted communication channels.
+
+## Agent Identification
+
+- Agents use W3C Decentralized Identifiers (DIDs) for verifiable identity
+- The `did:key` method with Ed25519 keys is required
+- Agents must securely manage their cryptographic key pairs
+- Each agent generates its own DID Document with public keys and service endpoints
+
+## Discovery Mechanisms
+
+- **Discovery Registry Service**:
+  - Agents must support a centralized Discovery Registry for initial lookup
+  - The Registry exposes a RESTful API for registration and queries
+  - Agents register their DID, network address, and capability advertisement
+  - Queries can filter by service type, capabilities, or agent ID
+- **Optional P2P Discovery**:
+  - Agents may implement peer-to-peer discovery methods
+  - P2P systems should use rendezvous points for initial network joining
+
+## Capability Advertisement
+
+- **H.I.V.E. Service Description Language (HSDL)**:
+  - **Standard**: Agent capabilities `MUST` be described using HSDL, a subset of OpenAPI 3.1 Specification.
+    (See [Capability Advertisement](capability-advertisement.mdx) for detailed HSDL definition).
+  - **Format**: HSDL documents `MUST` be serialized in YAML or JSON.
+- **`CapabilityAdvertisement` Message**:
+  - **Structure**: This signed message `MUST` contain the agent's DID, network address, timestamp, and the
+    cryptographically signed HSDL document.
+  - **Purpose**: Enables other agents to understand available services and their interface details.
+
+## Initial Secure Connection Establishment
+
+- **Mutually Authenticated, End-to-End Encrypted Session**:
+  - **Requirement**: Agents `MUST` establish a secure session before any H.I.V.E. protocol messages are exchanged
+    over the `Communication Transport Layer`.
+- **Noise Protocol Framework (IK Handshake)**:
+  - **Protocol**: The Noise Protocol Framework (IK handshake pattern) `IS REQUIRED` for key exchange and session
+    establishment.
+  - **Key Exchange**: Ensures mutual public key authentication and perfect forward secrecy.
+  - **Authentication**: Agents `MUST` verify the authenticity of the peer's DID during the Noise handshake by binding
+    their respective public keys to the established session. This cryptographically links the transport session to the
+    agent's DID.
+  - **Re-keying**: Sessions `SHOULD` support periodic re-keying to enhance forward secrecy.

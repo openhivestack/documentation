@@ -1,0 +1,156 @@
+---
+title: Capability Advertisement
+description: Standardizing how H.I.V.E. agents describe and advertise their capabilities using HSDL.
+icon: Briefcase
+---
+
+The H.I.V.E. Protocol utilizes a standardized mechanism for agents to describe and advertise their functional
+capabilities. This enables other agents to programmatically discover, understand, and interact with available services.
+
+## H.I.V.E. Service Description Language (HSDL)
+
+- **Standard**: Agent capabilities `MUST` be described using H.I.V.E. Service Description Language (HSDL).
+- **Foundation**: While inspired by OpenAPI 3.1, HSDL is a simpler, custom specification tailored for the H.I.V.E.
+  protocol. It avoids the complexity of OpenAPI while providing a clear contract for agent interaction.
+- **Purpose**: HSDL documents detail an agent's available services, expected inputs, anticipated outputs, and terms
+  for engagement, serving as a machine-readable contract.
+- **Format**: HSDL documents `MUST` be serialized in either **YAML** or **JSON**.
+
+### HSDL Schema Profile
+
+An HSDL document is structured with the following key sections:
+
+- **`hsdl_version`** (required): The semantic version of the HSDL specification itself. This ensures backward
+  compatibility as the schema evolves.
+- **`info`** (required): An object containing essential metadata about the services offered.
+    - `title`, `version` (of the service implementation), and `description`.
+- **`agent`** (required): An object containing identification and connection details for the agent.
+    - `did`: The Decentralized Identifier of the agent.
+    - `network_address`: The primary WebSocket URI for the agent.
+- **`capabilities`** (required): An array of objects, where each object defines a specific, callable function or
+  service the agent provides.
+    - `intent`: A unique string to programmatically identify the capability.
+    - `prompts`: An array of prompt templates for invoking this capability.
+    - `description`: Human-readable details about the capability.
+    - `input_schema`, `output_schema`, `error_schema`: References to schemas defining the structure of requests,
+      successful responses, and errors.
+- **`components`** (optional): Contains reusable objects, primarily for defining data schemas (`schemas`) that can
+  be referenced elsewhere in the document to avoid duplication. It uses standard JSON Schema definitions.
+
+### HSDL Example
+
+Here is an example of an HSDL document for an agent providing image processing services:
+
+```yaml
+# The version of the HSDL specification being used.
+hsdl_version: "1.0.0"
+
+# General information about the agent's service offerings.
+info:
+  title: "Image Processing Agent"
+  version: "2.1.0" # Version of this specific service implementation
+  description: "An agent that can resize and apply watermarks to images."
+  contact:
+    name: "Maintainer Team"
+    email: "contact@images.agent"
+
+# Identity and connection details for the agent.
+agent:
+  did: "did:key:z6Mkp..."
+  network_address: "wss://agent.images.com/hive"
+
+# Core list of capabilities offered by the agent.
+capabilities:
+  - intent: "resizeImage"
+    prompts:
+      - ""
+    description: "Accepts a base64-encoded image and returns a resized version. Supports PNG and JPEG."
+    input_schema:
+      $ref: "#/components/schemas/ImageResizeRequest"
+    output_schema:
+      $ref: "#/components/schemas/ImageResizeResponse"
+    error_schema:
+      $ref: "#/components/schemas/StandardError"
+
+  - intent: "getHealth"
+    prompts:
+      - ""
+    description: "Returns the operational status of the agent and its services."
+    input_schema: {} # No input required for this service
+    output_schema:
+      $ref: "#/components/schemas/HealthStatus"
+    error_schema:
+      $ref: "#/components/schemas/StandardError"
+
+# Reusable data structures (JSON Schema).
+components:
+  schemas:
+    ImageResizeRequest:
+      type: "object"
+      properties:
+        image_data:
+          type: "string"
+          format: "byte"
+          description: "Base64 encoded image data."
+        width:
+          type: "integer"
+        height:
+          type: "integer"
+      required: ["image_data", "width", "height"]
+
+    ImageResizeResponse:
+      type: "object"
+      properties:
+        resized_image_data:
+          type: "string"
+          format: "byte"
+          description: "Base64 encoded resized image data."
+      required: ["resized_image_data"]
+
+    HealthStatus:
+      type: "object"
+      properties:
+        status:
+          type: "string"
+          enum: ["ok", "degraded", "error"]
+        timestamp:
+          type: "string"
+          format: "date-time"
+      required: ["status", "timestamp"]
+
+    StandardError:
+      type: "object"
+      properties:
+        error_code:
+          type: "integer"
+          description: "A H.I.V.E. standard error code."
+        message:
+          type: "string"
+          description: "A human-readable error message."
+      required: ["error_code", "message"]
+```
+
+### CapabilityAdvertisement Message
+
+- **Purpose**: The `CapabilityAdvertisement` message (as defined in Message Formats) is the vehicle for
+  disseminating an agent's HSDL.
+- **Content**: This message `MUST` contain:
+  - The agent's `DID`.
+  - Its primary agent_network_address (wss:// URI).
+  - A timestamp of advertisement creation.
+  - The cryptographically signed HSDL document.
+- **Validation**: The HSDL document `MUST` be validated against the HSDL schema before being advertised. The DID in the HSDL document `MUST` match the sender's DID in the message.
+- **Signing**: The HSDL document itself `MUST` be signed by the agent's `DID` to ensure its authenticity and
+  integrity before being included in the `CapabilityAdvertisement` message payload.
+- **Dissemination**: Agents `MUST` register this message with a Discovery Registry (DR) Service. They `MAY` also share
+  it directly with known peer agents.
+
+### Discovery Lookup
+
+- **Querying DR**: Other agents `MAY` query a Discovery Registry Service using parameters like service_type
+  (e.g., "Image Processing"), `required_capabilities` (e.g., specific intents or schema properties), or a
+  target `agent_id` (`DID`).
+- **Matching**: The DR Service or peer agents will match queries against registered `CapabilityAdvertisement` messages,
+  facilitating the discovery of suitable service providers.
+- **Capability Selection**: When multiple agents with similar capabilities are found, selecting agents may involve considering factors such as response time, reliability metrics, or user preferences.
+- **Caching**: Agents `SHOULD` cache capability advertisements they receive to minimize network traffic and improve performance during subsequent interactions.

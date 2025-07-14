@@ -1,0 +1,330 @@
+---
+title: Message Formats
+description: Standardized structure and examples for all H.I.V.E. protocol messages.
+icon: MessageSquare
+---
+
+The H.I.V.E. protocol relies on a set of standardized message formats for all inter-agent communication.
+All messages are JSON-encoded objects, cryptographically signed where required, and exchanged over the
+established secure transport channel.
+
+## General Message Structure
+
+To simplify implementation and reduce complexity, H.I.V.E. messages adopt a flattened structure. All messages share a
+common set of top-level fields for consistent routing, authentication, and context, with message-specific fields at
+the same level.
+
+```json
+{
+  "protocol_version": "1.0.0",
+  "message_id": "uuid-v4-string",
+  "sender_did": "did:key:z...",
+  "recipient_did": "did:key:z...",
+  "timestamp": "ISO 8601 UTC string",
+  "message_type": "MessageType",
+  // ... other message-type-specific fields
+  "signature": "base64url-encoded-signature"
+}
+```
+
+**Common Fields:**
+
+- `protocol_version`: The semantic version of the H.I.V.E. protocol (e.g., "1.0.0").
+- `message_id`: A unique identifier for this message (UUID v4 recommended).
+- `sender_did`: The Decentralized Identifier of the sending agent.
+- `recipient_did`: The Decentralized Identifier of the intended recipient agent.
+- `timestamp`: The UTC timestamp of message creation in ISO 8601 format (e.g., `2024-07-01T14:30:00Z`).
+- `message_type`: A string identifying the type of the message.
+- `signature`: A JWS Compact (base64url-encoded) signature of the canonicalized JSON message object (excluding the
+  `signature` field itself), signed using the `sender_did`'s private key.
+
+## Core Message Types
+
+### CapabilityAdvertisement
+
+An agent advertises its capabilities to a Discovery Registry or directly to other agents. The payload is the agent's
+HSDL document.
+
+- **`message_type`**: `CapabilityAdvertisement`
+- **Fields**:
+  - `hsdl_document` (object): The H.I.V.E. Service Description Language (HSDL) document describing the agent's services.
+    The `sender_did` `MUST` match the `did` within the `hsdl_document`.
+- **Example**:
+    ```json
+    {
+      "protocol_version": "1.0.0",
+      "message_id": "...",
+      "sender_did": "did:key:z6Mkp...",
+      "recipient_did": "did:key:z... (DR or other agent)",
+      "timestamp": "...",
+      "message_type": "CapabilityAdvertisement",
+      "hsdl_document": {
+        "hsdl_version": "1.0.0",
+        "info": {
+          "title": "Image Processing Agent",
+          "version": "2.1.0"
+        },
+        "agent": {
+          "did": "did:key:z6Mkp...",
+          "network_address": "wss://agent.images.com/hive"
+        },
+        "capabilities": [
+          // ... list of capabilities
+        ]
+      },
+      "signature": "..."
+    }
+    ```
+
+### Negotiation Messages
+
+These messages are used for the [H.I.V.E. Negotiation Protocol (HNP)](/docs/protocol/layers/interaction-trust#contract-negotiation).
+All messages within a negotiation share a `negotiation_id`.
+
+#### Proposal
+
+Initiates a contract negotiation with an offer.
+
+- **`message_type`**: `Proposal`
+- **Fields**:
+  - `negotiation_id` (string): A unique identifier (UUID v4) for this negotiation session.
+  - `contract_offer` (object): The proposed H.I.V.E. Contract in JSON-LD format.
+
+#### CounterProposal
+
+Responds to a `Proposal` with a modified offer.
+
+- **`message_type`**: `CounterProposal`
+- **Fields**:
+  - `negotiation_id` (string): The identifier of the negotiation session being responded to.
+  - `contract_offer` (object): The new proposed H.I.V.E. Contract.
+
+#### Acceptance
+
+Formally accepts the last contract offer in a negotiation.
+
+- **`message_type`**: `Acceptance`
+- **Fields**:
+  - `negotiation_id` (string): The identifier of the negotiation session.
+  - `contract_hash` (string): The SHA-256 hash of the canonicalized JSON of `contract_offer` the accepted to
+    prevent ambiguity.
+
+#### Rejection
+
+Terminates a negotiation.
+
+- **`message_type`**: `Rejection`
+- **Fields**:
+  - `negotiation_id` (string): The identifier of the negotiation session.
+  - `reason` (string, optional): A human-readable explanation for the rejection.
+
+### Task Execution Messages
+
+These messages govern the task execution process according to the [Task Lifecycle](/docs/protocol/structure/lifecycle).
+
+#### TaskInitiation
+
+Triggers the start of task execution after a contract has been accepted.
+
+- **`message_type`**: `TaskInitiation`
+- **Fields**:
+  - `task_id` (string): The unique identifier for this task execution.
+  - `contract_id` (string): The ID of the contract governing this task.
+  - `runtime_parameters` (object, optional): Additional parameters that weren't specified in the contract but are needed for execution.
+
+```json
+{
+  "protocol_version": "1.0.0",
+  "message_id": "uuid-v4-string",
+  "sender_did": "did:key:z6MkpTHR...",
+  "recipient_did": "did:key:z6Mkpa4...",
+  "timestamp": "2024-07-12T15:00:00Z",
+  "message_type": "TaskInitiation",
+  "task_id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+  "contract_id": "urn:uuid:a81c6be5-8dca-12e0-b765-00a0c91e6bf6",
+  "runtime_parameters": {
+    "priority": "high",
+    "callback_address": "wss://callback.initiator.example.com/task-updates"
+  },
+  "signature": "base64url-encoded-signature"
+}
+```
+
+#### TaskStatusUpdate
+
+Communicates changes in task state and provides execution progress information.
+
+- **`message_type`**: `TaskStatusUpdate`
+- **Fields**:
+  - `task_id` (string): The unique identifier of the task.
+  - `contract_id` (string): The ID of the governing contract.
+  - `status` (string): The new status of the task from the defined task states (e.g., `IN_PROGRESS`, `PAUSED`, `COMPLETED`, `FAILED`, `CANCELLED`).
+  - `progress_percentage` (number, optional): Numeric indication of task completion (0-100).
+  - `estimated_completion` (string, optional): ISO 8601 timestamp of predicted completion time.
+  - `status_details` (object, optional): Additional context-specific information about the current state.
+  - `error` (object, required for FAILED status): Error information including code, message, and details.
+  - `reason` (string, required for CANCELLED status): Explanation for why the task was cancelled.
+
+```json
+{
+  "protocol_version": "1.0.0",
+  "message_id": "uuid-v4-string",
+  "sender_did": "did:key:z6Mkpa4...",
+  "recipient_did": "did:key:z6MkpTHR...",
+  "timestamp": "2024-07-12T15:30:00Z",
+  "message_type": "TaskStatusUpdate",
+  "task_id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+  "contract_id": "urn:uuid:a81c6be5-8dca-12e0-b765-00a0c91e6bf6",
+  "status": "IN_PROGRESS",
+  "progress_percentage": 45,
+  "estimated_completion": "2024-07-12T16:15:00Z",
+  "status_details": {
+    "current_stage": "processing_batch_2_of_5",
+    "items_processed": 250,
+    "items_remaining": 300
+  },
+  "signature": "base64url-encoded-signature"
+}
+```
+
+Example of a FAILED status update:
+
+```json
+{
+  "protocol_version": "1.0.0",
+  "message_id": "uuid-v4-string",
+  "sender_did": "did:key:z6Mkpa4...",
+  "recipient_did": "did:key:z6MkpTHR...",
+  "timestamp": "2024-07-12T15:45:00Z",
+  "message_type": "TaskStatusUpdate",
+  "task_id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+  "contract_id": "urn:uuid:a81c6be5-8dca-12e0-b765-00a0c91e6bf6",
+  "status": "FAILED",
+  "error": {
+    "error_code": "TASK_FAILED_RESOURCE_UNAVAILABLE",
+    "error_message": "Required GPU resources unavailable",
+    "error_details": { 
+      "requested_gpu_memory": "8GB", 
+      "available_gpu_memory": "2GB",
+      "retry_recommended": true
+    }
+  },
+  "signature": "base64url-encoded-signature"
+}
+```
+
+#### TaskResult
+
+Delivers the output of a successfully completed task.
+
+- **`message_type`**: `TaskResult`
+- **Fields**:
+  - `task_id` (string): The unique identifier of the task.
+  - `contract_id` (string): The ID of the governing contract.
+  - `result_type` (string): Either "direct" (embedded in message) or "reference" (stored externally).
+  - `result_data` (object, for direct results): The actual result data conforming to the contract's outputParametersSchema.
+  - `result_reference` (object, for external results): Information about where and how to access the result.
+  - `execution_metrics` (object, optional): Performance and resource usage information.
+
+```json
+{
+  "protocol_version": "1.0.0",
+  "message_id": "uuid-v4-string",
+  "sender_did": "did:key:z6Mkpa4...",
+  "recipient_did": "did:key:z6MkpTHR...",
+  "timestamp": "2024-07-12T16:15:00Z",
+  "message_type": "TaskResult",
+  "task_id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+  "contract_id": "urn:uuid:a81c6be5-8dca-12e0-b765-00a0c91e6bf6",
+  "result_type": "reference",
+  "result_reference": {
+    "uri": "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+    "content_hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+    "content_type": "application/json",
+    "content_length": 1048576,
+    "access_credentials": {
+      "type": "bearer_token",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    }
+  },
+  "execution_metrics": {
+    "computation_time_ms": 145000,
+    "resources_used": {
+      "cpu_seconds": 120,
+      "memory_mb": 256,
+      "storage_bytes": 1048576
+    }
+  },
+  "signature": "base64url-encoded-signature"
+}
+```
+
+Example with direct result data:
+
+```json
+{
+  "protocol_version": "1.0.0",
+  "message_id": "uuid-v4-string",
+  "sender_did": "did:key:z6Mkpa4...",
+  "recipient_did": "did:key:z6MkpTHR...",
+  "timestamp": "2024-07-12T16:15:00Z",
+  "message_type": "TaskResult",
+  "task_id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+  "contract_id": "urn:uuid:a81c6be5-8dca-12e0-b765-00a0c91e6bf6",
+  "result_type": "direct",
+  "result_data": {
+    "processed_image": "iVBORw0KGgoAAAANSUhEUgAA...",
+    "metadata": {
+      "width": 800,
+      "height": 600,
+      "format": "png",
+      "filter_applied": "grayscale"
+    }
+  },
+  "execution_metrics": {
+    "computation_time_ms": 350,
+    "resources_used": {
+      "cpu_seconds": 0.3,
+      "memory_mb": 24
+    }
+  },
+  "signature": "base64url-encoded-signature"
+}
+```
+
+#### DeliveryConfirmation
+
+Acknowledges successful receipt and verification of task results.
+
+- **`message_type`**: `DeliveryConfirmation`
+- **Fields**:
+  - `task_id` (string): The unique identifier of the task.
+  - `contract_id` (string): The ID of the governing contract.
+  - `verified_content_hash` (string): The hash value that was verified against the received content.
+  - `confirmation_id` (string): A unique identifier for this confirmation (UUID v4 recommended).
+
+```json
+{
+  "protocol_version": "1.0.0",
+  "message_id": "uuid-v4-string",
+  "sender_did": "did:key:z6MkpTHR...",
+  "recipient_did": "did:key:z6Mkpa4...",
+  "timestamp": "2024-07-12T16:16:00Z",
+  "message_type": "DeliveryConfirmation",
+  "task_id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+  "contract_id": "urn:uuid:a81c6be5-8dca-12e0-b765-00a0c91e6bf6",
+  "verified_content_hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+  "confirmation_id": "urn:uuid:c92d3fae-9dec-11d0-a765-00a0c91e6bf6",
+  "signature": "base64url-encoded-signature"
+}
+```
+
+### Error
+
+Communicates a protocol-level or application-level error.
+
+- **`message_type`**: `Error`
+- **Fields**:
+  - `in_reply_to_message_id` (string, optional): The `message_id` of the message that caused the error.
+  - `error_code` (string): A unique code from the H.I.V.E. error code registry.
+  - `error_message` (string): A descriptive, human-readable error message.
