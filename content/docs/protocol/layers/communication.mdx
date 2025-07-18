@@ -1,0 +1,149 @@
+---
+title: Communication Layer
+description: How agents connect, identify themselves, and exchange information
+icon: Network
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Mermaid } from "@/components/mdx/mermaid";
+
+The Communication Layer forms the foundation of the H.I.V.E. Protocol, enabling secure and reliable connections
+between AI agents. This layer handles the fundamental aspects of agent connectivity, identity verification, and
+capability sharing.
+
+## Layer Overview
+
+<Mermaid
+  chart={`
+flowchart LR
+    A[Transport Protocol] --> B[Message Formats]
+    B --> C[Security & Authentication]
+`}
+/>
+
+## Transport Protocols
+
+The H.I.V.E. Protocol supports multiple transport protocols to accommodate different deployment scenarios:
+
+### HTTP/HTTPS
+
+HTTP/HTTPS is the primary protocol for request-response interactions between agents.
+
+- **RESTful API**: Agents expose RESTful endpoints for discovery, capability sharing, and task management
+- **Request/Response Pattern**: Suitable for discrete, transactional interactions
+- **Status Codes**: Standard HTTP status codes are used to indicate success or failure
+
+```http
+POST /api/tasks HTTP/1.1
+Host: agent.example.com
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "taskType": "text-processing",
+  "inputs": {
+    "text": "Process this text for sentiment analysis"
+  }
+}
+```
+
+### WebSockets
+
+WebSockets provide real-time, bidirectional communication for scenarios requiring ongoing connections.
+
+- **Persistent Connections**: Enables real-time updates and notifications
+- **Streaming Updates**: Ideal for long-running tasks that require progress updates
+- **Lower Overhead**: Reduces handshake overhead compared to repeated HTTP requests
+
+```javascript
+// Client-side WebSocket connection example
+const socket = new WebSocket('wss://agent.example.com/ws');
+
+socket.onopen = () => {
+  socket.send(JSON.stringify({
+    type: 'TASK_UPDATE',
+    taskId: 'task-123',
+    status: 'IN_PROGRESS',
+    progress: 0.75
+  }));
+};
+
+socket.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+  console.log('Received:', message);
+};
+```
+
+## Message Formats
+
+All communications in the H.I.V.E. Protocol use a standardized message format to ensure consistency and interoperability.
+
+### Base Message Structure
+
+```json
+{
+  "messageId": "msg-123456",
+  "timestamp": "2025-07-18T12:30:45Z",
+  "sender": {
+    "id": "agent-abc123",
+    "publicKey": "..."
+  },
+  "recipient": {
+    "id": "agent-xyz789",
+    "publicKey": "..."
+  },
+  "messageType": "TASK_REQUEST",
+  "payload": { /* message-specific content */ },
+  "signature": "..."
+}
+```
+
+<Callout type="info">
+  See the [Message Formats](/docs/protocol/structure/message-formats) page for detailed specifications of all message types.
+</Callout>
+
+## Security & Authentication
+
+The Communication Layer incorporates robust security measures to ensure the integrity and confidentiality of agent
+interactions.
+
+### Message Signing
+
+- All messages are signed using the sender's private key
+- Recipients verify the signature using the sender's public key
+- Ensures message authenticity and non-repudiation
+
+### Transport Security
+
+- TLS encryption for all HTTP and WebSocket connections
+- Mutual TLS (mTLS) supported for enhanced security in high-sensitivity deployments
+- Certificate validation to prevent man-in-the-middle attacks
+
+### Authentication Methods
+
+- **Public Key**: Primary authentication mechanism using agent's public/private key pair
+- **JWT Tokens**: Optional for environments requiring additional context or authorization claims
+- **API Keys**: Simplified authentication for controlled environments
+
+## Integration with Other Layers
+
+The Communication Layer works seamlessly with other H.I.V.E. Protocol components:
+
+- Provides the foundation for [Agent Identity & Discovery](/docs/protocol/layers/discovery-identity)
+- Enables secure message exchange for [Agent Collaboration](/docs/protocol/layers/collaboration)
+- Supports the execution of the [Task Lifecycle](/docs/protocol/structure/lifecycle)
+
+## Implementation Considerations
+
+When implementing the Communication Layer, developers should consider:
+
+- Network reliability and latency requirements
+- Message size limitations
+- Rate limiting and throttling strategies
+- Error handling and retry mechanisms
+- Logging and monitoring capabilities
+
+<Callout type="warning">
+  The Communication Layer must handle network failures gracefully. Implement proper error handling and retry
+    mechanisms to ensure reliable agent interactions.
+</Callout>

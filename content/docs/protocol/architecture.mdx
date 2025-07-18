@@ -1,6 +1,6 @@
 ---
 title: Architecture
-description: A layered overview of the H.I.V.E. Protocol's design.
+description: A simple overview of the H.I.V.E. Protocol's design.
 icon: Hexagon
 ---
 
@@ -12,90 +12,74 @@ import {
   InfinityIcon,
 } from "lucide-react";
 
-The H.I.V.E. Protocol operates as a focused architecture, abstracting complexities and ensuring modularity.
-Its core goal is to enable autonomous agents to seamlessly discover, connect, agree upon, and complete tasks with
-built-in cryptographic security. This design facilitates independent development and evolution of each
-component while maintaining overall protocol coherence and [conformance](/docs/protocol/guidelines/conformance).
+The H.I.V.E. Protocol uses a streamlined architecture that enables AI agents to discover each other, communicate
+securely, and collaborate on tasks. Its simple design focuses on essential functionality while maintaining
+flexibility for different implementations.
 
 ## H.I.V.E. Protocol Components
 
 <Mermaid
   chart={`
 flowchart LR
-    A[WebSockets Transport] --> B[Discovery & Identity]
-    B --> C[Interaction & Trust]
+    A[Communication Layer] --> B[Agent Collaboration]
 `}
 />
 
-The protocol has standardized on WebSockets as the transport layer and focuses on two primary components, each with distinct responsibilities:
+The protocol consists of two essential components:
 
 <Cards>
   <Card
-    title="Discovery & Identity"
-    description="Facilitates agent identification via Decentralized Identifiers (DIDs), enables capability
-    advertisement."
+    title="Communication Layer"
+    description="Handles agent connections, identity verification, and capability sharing"
     icon={<PackageSearchIcon />}
-    href="/docs/protocol/layers/discovery-identity"
+    href="/docs/protocol/layers/communication"
   />
   <Card
-    title="Interaction & Trust"
-    description="Manages secure and verifiable lifecycle of agent collaborations."
+    title="Agent Collaboration"
+    description="Manages task negotiation, execution, and completion between agents"
     icon={<InfinityIcon />}
-    href="/docs/protocol/layers/interaction-trust"
+    href="/docs/protocol/layers/collaboration"
   />
 </Cards>
 
-By adhering to this specification, agents can achieve unprecedented levels of interoperability, autonomy, and
-trust, fostering a new era of collaborative AI ecosystems. The protocol also defines clear
-[versioning](/docs/protocol/guidelines/versioning) to manage future evolution.
+This simplified architecture enables AI agents to work together effectively while maintaining security and reliability.
 
-## 1. Transport Foundation: WebSockets
+## 1. Communication Layer
 
-The H.I.V.E. Protocol has standardized on WebSockets as the transport layer. This provides a reliable, secure, and ordered transmission foundation for all H.I.V.E. messages.
+The Communication Layer handles secure connections between agents and identity verification.
 
-- **Standardized Protocol**: H.I.V.E. implementations `MUST` use the [WebSockets Protocol (RFC 6455)](https://datatracker.ietf.org/doc/html/rfc6455) for transport.
-- **Security**: [Transport Layer Security (TLS) v1.3 or higher](/docs/protocol/layers/transport#security--reliability) `MUST` be used for all WebSocket connections.
-- **Network Addressing**: Agents are identified by a WebSocket URI resolved via their [DID](/docs/protocol/structure/did-methods) through the [Discovery Service](/docs/protocol/layers/discovery-identity#discovery-mechanisms).
+- **Connections**: Agents use standard web protocols (HTTP/WebSockets) to communicate
+- **Identity**: Agents identify themselves using simple public/private key pairs
+- **Discovery**: Agents can find each other through a central registry or direct connections
+- **Capabilities**: Agents share what they can do using standardized descriptions
 
-For implementation details on the transport configuration, refer to the [Transport Layer](/docs/protocol/layers/transport) page.
+## 2. Agent Collaboration
 
-## 2. Discovery & Identity Component
+The Agent Collaboration component enables agents to work together on tasks effectively.
 
-This first primary component enables agents to discover capabilities, establish verifiable identities, and initiate secure communication.
-It is crucial for agents to find each other and establish a foundation of trust before any meaningful interaction
-can occur.
-
-- **Agent Identification**:
-  - Agents `MUST` identify themselves using [W3C Decentralized Identifiers (DIDs)](/docs/protocol/structure/did-methods), primarily using the [`did:key` method](/docs/protocol/structure/did-methods#didkey-method) with Ed25519 keys.
-- **Discovery Mechanisms**:
-  - H.I.V.E. agents `MUST` support a [Discovery Registry (DR) Service](/docs/protocol/layers/discovery-identity#discovery-mechanisms) for centralized lookup.
-  - Implementations `MAY` support Peer-to-Peer (P2P) Discovery.
-- **Capability Advertisement**:
-  - Agent capabilities `MUST` be described using [H.I.V.E. Service Description Language (HSDL)](/docs/protocol/structure/capability-advertisement#hive-service-description-language-hsdl).
-  - These descriptions are conveyed in a [signed `CapabilityAdvertisement` message](/docs/protocol/structure/message-formats#capabilityadvertisement).
-- **Initial Secure Connection**:
-  - Agents `MUST` establish a mutually authenticated, end-to-end encrypted session using the [Noise Protocol Framework (IK handshake pattern)](/docs/protocol/layers/discovery-identity#initial-secure-connection-establishment).
+- **Task Negotiation**: 
+  - Simple message exchange to agree on what needs to be done
+  - Basic contract format with task details and requirements
+- **Task Execution**:
+  - Standardized task states: PROPOSED, ACCEPTED, IN_PROGRESS, COMPLETED, FAILED
+  - Regular status updates during long-running tasks
+- **Results Delivery**:
+  - Secure transfer of task results
+  - Simple verification of completed work
 
 <Callout type="info">
-    For an in-depth understanding, see the [Discovery & Identity Component](/docs/protocol/layers/discovery-identity) page.
+    See the [Agent Collaboration](/docs/protocol/layers/collaboration) page for more details.
 </Callout>
 
-## 3. Interaction & Trust Component
+## Summary
 
-This second primary component governs secure negotiation, execution, and verifiable task completion between agents. It ensures that
-collaborations are conducted with integrity, authorization, and clear agreements on value and results.
+The H.I.V.E. Protocol provides a simple yet powerful framework for AI agents to work together. By focusing on
+essential functionality and reducing complexity, H.I.V.E. makes it easier to:
 
-- **Message Authentication & Authorization**:
-  - All messages exchanged within an established session `MUST` be [signed by the sender's private key](/docs/protocol/layers/interaction-trust#message-authentication-and-authorization) and verified by the recipient.
-  - Access control policies `MUST` be enforced, with [Signed Capabilities (e.g., UCANs)](/docs/protocol/structure/security-considerations#interaction--trust-layer-security) recommended for granular authorization.
-- **Contract Negotiation & Agreement**:
-  - Agents `MUST` use a structured [H.I.V.E. Negotiation Protocol (HNP)](/docs/protocol/layers/interaction-trust#contract-negotiation).
-  - Contracts `MUST` be [JSON-LD documents](/docs/protocol/structure/contract#contract-format-json-ld) using the H.I.V.E. Contract Ontology and cryptographically signed by all participating agents.
-- **Execution Management**:
-  - Tasks `MUST` be executed and monitored through a defined [H.I.V.E. Task Lifecycle](/docs/protocol/structure/lifecycle), which includes standard states (`PROPOSED`, `ACCEPTED`, `IN_PROGRESS`, `COMPLETED`, `FAILED`, etc.) and status updates.
-- **Delivery & Verification**:
-  - Results `MUST` be delivered and verified for integrity using [cryptographic hashes](/docs/protocol/layers/interaction-trust#delivery--verification) and confirmed via a [DeliveryConfirmation message](/docs/protocol/structure/message-formats#deliveryconfirmation).
+- Connect agents through standard communication channels
+- Share agent capabilities in a standard format
+- Negotiate and execute tasks between agents
+- Verify successful task completion
 
-<Callout type="info">
-    Find more details on this component in the [Interaction & Trust Component](/docs/protocol/layers/interaction-trust) page.
-</Callout>
+This streamlined approach ensures compatibility between different implementations while keeping the barrier to
+entry low for developers.

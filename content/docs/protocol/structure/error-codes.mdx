@@ -1,93 +1,330 @@
 ---
 title: Error Codes
-description: Standardized H.I.V.E. error codes and their meanings for robust error handling.
+description: Standardized error codes and handling in the H.I.V.E. Protocol
 icon: Bug
 ---
 
-H.I.V.E. defines a set of standardized error codes to facilitate consistent and robust error handling across agent
-implementations. When an agent encounters an issue, it `SHOULD` communicate it using the most appropriate error code.
+import { Callout } from "fumadocs-ui/components/callout";
 
-## General Error Structure
+The H.I.V.E. Protocol defines a standardized set of error codes to ensure consistent error reporting and handling
+across different agent implementations. This document catalogs these error codes, their meanings, and recommended
+handling strategies.
 
-Errors are typically communicated within message payloads (e.g., `Rejection`, `TaskStatusUpdate`) using a structure
-like this:
+## Error Message Format
+
+All error messages in the H.I.V.E. Protocol follow a consistent structure:
 
 ```json
 {
-  "code": "HIVE_ERROR_CODE",
-  "message": "A human-readable description of the error.",
-  "details": { /* Optional, additional context */ }
+  "messageType": "ERROR_RESPONSE",
+  "payload": {
+    "errorCode": "ERROR_CODE",
+    "message": "Human-readable error description",
+    "details": { /* Additional error-specific information */ },
+    "referenceId": "ID of the message that caused the error",
+    "timestamp": "2025-07-18T15:30:45Z",
+    "retryable": true,
+    "suggestedAction": "Suggested resolution steps"
+  }
 }
 ```
 
-- `code`: A unique, standardized H.I.V.E. error identifier.
-- `message`: A concise, human-readable description of the error.
-- `details`: (Optional) A JSON object providing further context, such as specific validation failures, resource
-identifiers, or internal error messages (for debugging, not for general propagation).
+### Error Object Fields
 
-## Standardized Error Codes
+| Field | Description |
+|-------|-------------|
+| `errorCode` | Standardized error code identifying the error type |
+| `message` | Human-readable description of the error |
+| `details` | Additional contextual information about the error |
+| `referenceId` | ID of the message that triggered the error (if applicable) |
+| `timestamp` | When the error occurred |
+| `retryable` | Whether the operation can be retried (boolean) |
+| `suggestedAction` | Recommended steps to resolve the issue |
 
-Error codes are prefixed to indicate the component they originate from, aligning with the H.I.V.E. architecture.
+## Error Categories
 
-### Protocol-wide Errors (HIVE_GEN)
+Errors in the H.I.V.E. Protocol are organized into several categories:
 
-General errors applicable across the entire protocol.
+### Protocol Errors (1000-1999)
 
-| Code         | Description                  | Suggested Remediation                                    |
-|--------------|------------------------------|----------------------------------------------------------|
-| HIVE_GEN_001 | UNKNOWN_MESSAGE_TYPE         | Check message_type field. Upgrade H.I.V.E. client.       |
-| HIVE_GEN_002 | INVALID_MESSAGE_FORMAT       | Check JSON syntax, required fields, and data types.      |
-| HIVE_GEN_003 | MESSAGE_EXPIRED              | Check timestamp and agent's clock synchronization.       |
-| HIVE_GEN_004 | UNSUPPORTED_PROTOCOL_VERSION | Upgrade H.I.V.E. client or negotiate compatible version. |
-| HIVE_GEN_005 | INVALID_SIGNATURE            | Re-verify message signing process, sender's public key.  |
-| HIVE_GEN_006 | AUTHORIZATION_DENIED         | Review agent's access policies or delegated capabilities.|
+Errors related to the protocol itself and message processing.
 
-### Transport Errors (HIVE_TP)
+| Code | Name | Description | Retryable |
+|------|------|-------------|-----------||
+| 1000 | `PROTOCOL_ERROR` | Generic protocol error | Depends |
+| 1001 | `INVALID_MESSAGE_FORMAT` | Message does not conform to protocol format | No |
+| 1002 | `INVALID_SIGNATURE` | Message signature verification failed | No |
+| 1003 | `EXPIRED_MESSAGE` | Message timestamp is outside acceptable range | No |
+| 1004 | `UNKNOWN_MESSAGE_TYPE` | Message type is not recognized | No |
+| 1005 | `MISSING_REQUIRED_FIELD` | Required field is missing from message | No |
+| 1006 | `INVALID_FIELD_VALUE` | Field contains an invalid value | No |
+| 1007 | `MESSAGE_TOO_LARGE` | Message exceeds size limits | No |
+| 1008 | `PROTOCOL_VERSION_MISMATCH` | Incompatible protocol versions | No |
+| 1009 | `DUPLICATE_MESSAGE` | Message with the same ID was already processed | No |
 
-Errors related to WebSocket connections and TLS.
+### Authentication Errors (2000-2999)
 
-| Code        | Description              | Suggested Remediation                                        |
-|-------------|--------------------------|--------------------------------------------------------------|                                        
-| HIVE_TP_001 | CONNECTION_FAILED        | Check network reachability, firewall, target agent's status. |
-| HIVE_TP_002 | TLS_CERTIFICATE_INVALID  | Verify peer's TLS certificate chain and hostname.            |
-| HIVE_TP_003 | WEBSOCKET_PROTOCOL_ERROR | Inspect WebSocket frame/header issues. Internal client error.|
-| HIVE_TP_004 | MESSAGE_TOO_LARGE        | Use out-of-band transfer for large payloads.                 |
+Errors related to agent identity and authentication.
 
-### Discovery & Identity Component Errors (HIVE_DI)
+| Code | Name | Description | Retryable |
+|------|------|-------------|-----------||
+| 2000 | `AUTHENTICATION_ERROR` | Generic authentication error | Depends |
+| 2001 | `UNKNOWN_AGENT` | Agent ID is not recognized | No |
+| 2002 | `INVALID_CREDENTIALS` | Provided credentials are invalid | No |
+| 2003 | `EXPIRED_CREDENTIALS` | Credentials have expired | Yes |
+| 2004 | `INSUFFICIENT_PRIVILEGES` | Agent lacks required privileges | No |
+| 2005 | `REVOKED_KEY` | Agent's key has been revoked | No |
+| 2006 | `AUTHENTICATION_REQUIRED` | Authentication is required for this operation | Yes |
+| 2007 | `INVALID_CHALLENGE_RESPONSE` | Challenge-response verification failed | Yes |
 
-Errors pertaining to agent discovery, identity verification, and secure connection establishment.
+### Authorization Errors (3000-3999)
 
-| Code        | Description                      | Suggested Remediation                                        |
-|-------------|----------------------------------|------------------------------------------------------------|                                        
-| HIVE_DI_001 | DID_RESOLUTION_FAILED            | Check DID method or Discovery Registry availability.        |
-| HIVE_DI_002 | AGENT_NOT_FOUND                  | Verify DID is registered or agent is discoverable.          |
-| HIVE_DI_003 | INVALID_CAPABILITY_ADVERTISEMENT | Check HSDL syntax or advertisement message format.          |
-| HIVE_DI_004 | NOISE_HANDSHAKE_FAILED           | Check public keys, Noise protocol implementation.           |
-| HIVE_DI_005 | DID_AUTHENTICATION_FAILED        | Peer's public key does not match DID. Potential spoofing.   |
-| HIVE_DI_006 | SERVICE_UNAVAILABLE              | Agent found but not accepting connections.                  |
-| HIVE_DI_007 | DISCOVERY_REGISTRY_UNAVAILABLE   | DR service is unreachable. Try alternative registry or P2P discovery. |
-| HIVE_DI_008 | NO_MATCHING_AGENTS               | No agents found with requested capabilities. Modify requirements or try later. |
-| HIVE_DI_009 | CAPABILITY_SCHEMA_INCOMPATIBLE   | Agent's capability schema doesn't match requirements. Check compatibility. |
-| HIVE_DI_010 | AGENT_REGISTRATION_FAILED        | Failed to register with Discovery Registry. Check credentials and registry status. |
-| HIVE_DI_011 | CAPABILITY_QUERY_INVALID         | Discovery query format or parameters are invalid. Check query structure. |
-| HIVE_DI_012 | DISCOVERY_RATE_LIMIT_EXCEEDED    | Too many discovery requests. Implement backoff strategy and caching. |
-| HIVE_DI_013 | AGENT_UNREACHABLE                | Found agent cannot be contacted. Network issue or agent offline. |
-| HIVE_DI_014 | HSDL_VALIDATION_FAILED           | HSDL document doesn't meet schema requirements. Fix format issues. |
+Errors related to permissions and access control.
 
-### Interaction & Trust Component Errors (HIVE_IT)
+| Code | Name | Description | Retryable |
+|------|------|-------------|-----------||
+| 3000 | `AUTHORIZATION_ERROR` | Generic authorization error | Depends |
+| 3001 | `PERMISSION_DENIED` | Agent does not have permission for the operation | No |
+| 3002 | `QUOTA_EXCEEDED` | Agent has exceeded their usage quota | Yes |
+| 3003 | `RATE_LIMITED` | Request rate limit exceeded | Yes |
+| 3004 | `RESOURCE_FORBIDDEN` | Access to the resource is forbidden | No |
+| 3005 | `EXPIRED_TOKEN` | Authorization token has expired | Yes |
+| 3006 | `INVALID_TOKEN` | Authorization token is invalid | No |
 
-Errors related to contract negotiation, task execution, and result delivery.
+### Task Errors (4000-4999)
 
-| Code        | Description                          | Suggested Remediation                                       |
-|-------------|--------------------------------------|-------------------------------------------------------------|                                        
-| HIVE_IT_001 | CONTRACT_REJECTED                    | Modify proposal terms (value, payment, scope).              |
-| HIVE_IT_002 | CAPABILITIES_MISMATCH                | Agent lacks requested capabilities. Update HSDL lookup.     |
-| HIVE_IT_003 | INVALID_INPUT                        | Review input_parameters against HSDL specification.         |
-| HIVE_IT_004 | RESOURCE_UNAVAILABLE                 | Agent lacks compute, storage, or network resources.         |
-| HIVE_IT_005 | EXTERNAL_SERVICE_ERROR               | Upstream dependency failed. May require intervention.       |
-| HIVE_IT_006 | TASK_CANCELLED                       | Task cancelled by the initiating agent.                     |
-| HIVE_IT_007 | EXECUTION_TIMEOUT                    | Task took too long to complete. Review timeout settings.    |
-| HIVE_IT_008 | INTEGRITY_CHECK_FAILED               | Hash mismatch. Data corrupted or tampered.                  |
-| HIVE_IT_009 | CONTRACT_VIOLATION                   | Breach of agreed-upon contract terms.                       |
-| HIVE_IT_010 | NEGOTIATION_TIMEOUT                  | Negotiation session expired without agreement.              |
-| HIVE_IT_011 | UNSUPPORTED_VALUE_TYPE               | Agent does not support the specified value_type.            |
+Errors related to task processing and execution.
+
+| Code | Name | Description | Retryable |
+|------|------|-------------|-----------||
+| 4000 | `TASK_ERROR` | Generic task processing error | Depends |
+| 4001 | `TASK_NOT_FOUND` | Specified task does not exist | No |
+| 4002 | `INVALID_TASK_STATE` | Operation not valid for current task state | Depends |
+| 4003 | `TASK_ALREADY_EXISTS` | Task with the same ID already exists | No |
+| 4004 | `TASK_EXECUTION_ERROR` | Error occurred during task execution | Depends |
+| 4005 | `TASK_TIMEOUT` | Task execution exceeded time limit | Depends |
+| 4006 | `TASK_CANCELED` | Task was canceled | No |
+| 4007 | `INVALID_TASK_PARAMETERS` | Task parameters are invalid | No |
+| 4008 | `TASK_REJECTED` | Task was rejected by the provider | No |
+| 4009 | `MAX_RETRIES_EXCEEDED` | Task failed after maximum retry attempts | No |
+
+### Capability Errors (5000-5999)
+
+Errors related to agent capabilities and discovery.
+
+| Code | Name | Description | Retryable |
+|------|------|-------------|-----------||
+| 5000 | `CAPABILITY_ERROR` | Generic capability error | Depends |
+| 5001 | `CAPABILITY_NOT_FOUND` | Requested capability does not exist | No |
+| 5002 | `CAPABILITY_UNAVAILABLE` | Capability exists but is currently unavailable | Yes |
+| 5003 | `INVALID_CAPABILITY_PARAMETERS` | Parameters for capability are invalid | No |
+| 5004 | `CAPABILITY_VERSION_MISMATCH` | Incompatible capability version | No |
+| 5005 | `CAPABILITY_DEPRECATED` | Capability is deprecated and may be removed soon | No |
+
+### Contract Errors (6000-6999)
+
+Errors related to task contracts and agreements.
+
+| Code | Name | Description | Retryable |
+|------|------|-------------|-----------||
+| 6000 | `CONTRACT_ERROR` | Generic contract error | Depends |
+| 6001 | `CONTRACT_NOT_FOUND` | Specified contract does not exist | No |
+| 6002 | `CONTRACT_ALREADY_EXISTS` | Contract with the same ID already exists | No |
+| 6003 | `CONTRACT_VALIDATION_FAILED` | Contract validation failed | No |
+| 6004 | `CONTRACT_EXPIRED` | Contract has expired | No |
+| 6005 | `CONTRACT_TERMINATED` | Contract was terminated | No |
+| 6006 | `INVALID_CONTRACT_STATE` | Operation not valid for current contract state | No |
+| 6007 | `CONTRACT_SIGNATURE_MISSING` | Required signature is missing | Yes |
+| 6008 | `CONTRACT_SIGNATURE_INVALID` | Contract signature is invalid | No |
+
+### Resource Errors (7000-7999)
+
+Errors related to resources and their availability.
+
+| Code | Name | Description | Retryable |
+|------|------|-------------|-----------||
+| 7000 | `RESOURCE_ERROR` | Generic resource error | Depends |
+| 7001 | `RESOURCE_NOT_FOUND` | Requested resource does not exist | No |
+| 7002 | `RESOURCE_UNAVAILABLE` | Resource exists but is currently unavailable | Yes |
+| 7003 | `RESOURCE_EXHAUSTED` | Resource limits have been reached | Yes |
+| 7004 | `INVALID_RESOURCE_FORMAT` | Resource format is invalid | No |
+| 7005 | `RESOURCE_CONFLICT` | Conflict in resource state | Yes |
+| 7006 | `RESOURCE_LOCKED` | Resource is locked by another operation | Yes |
+
+### Network Errors (8000-8999)
+
+Errors related to network operations and connectivity.
+
+| Code | Name | Description | Retryable |
+|------|------|-------------|-----------||
+| 8000 | `NETWORK_ERROR` | Generic network error | Yes |
+| 8001 | `CONNECTION_FAILED` | Failed to establish connection | Yes |
+| 8002 | `TIMEOUT` | Network operation timed out | Yes |
+| 8003 | `HOST_UNREACHABLE` | Host is unreachable | Yes |
+| 8004 | `CONNECTION_CLOSED` | Connection was closed unexpectedly | Yes |
+| 8005 | `DNS_RESOLUTION_FAILED` | Failed to resolve hostname | Yes |
+| 8006 | `TLS_ERROR` | TLS/SSL error occurred | Depends |
+
+### Internal Errors (9000-9999)
+
+Errors related to agent internal operations.
+
+| Code | Name | Description | Retryable |
+|------|------|-------------|-----------||
+| 9000 | `INTERNAL_ERROR` | Generic internal error | Depends |
+| 9001 | `NOT_IMPLEMENTED` | Requested functionality is not implemented | No |
+| 9002 | `SERVICE_UNAVAILABLE` | Service is temporarily unavailable | Yes |
+| 9003 | `DATABASE_ERROR` | Database operation failed | Depends |
+| 9004 | `CONFIGURATION_ERROR` | Misconfiguration detected | No |
+| 9005 | `DEPENDENCY_FAILURE` | Required dependency failed | Depends |
+| 9006 | `RESOURCE_EXHAUSTION` | System resources exhausted | Yes |
+| 9007 | `UNEXPECTED_ERROR` | Unexpected error occurred | Depends |
+
+## Error Handling Best Practices
+
+When implementing error handling in your H.I.V.E. Protocol agents:
+
+### For Error Producers
+
+1. **Use Specific Codes**: Always use the most specific error code available
+2. **Clear Messages**: Provide clear, actionable error messages
+3. **Include Details**: Add contextual details that help diagnose the issue
+4. **Set Retryable Flag**: Accurately indicate whether retry is possible
+5. **Suggest Actions**: When possible, suggest how to resolve the error
+
+### For Error Consumers
+
+1. **Retry Logic**: Implement exponential backoff for retryable errors
+2. **Error Categorization**: Handle errors based on their category
+3. **Logging**: Log detailed error information for troubleshooting
+4. **User Feedback**: Translate technical errors to user-friendly messages
+5. **Fallback Mechanisms**: Implement fallbacks for critical operations
+
+## Example Error Handling
+
+```javascript
+async function handleTaskRequest(taskRequest) {
+  try {
+    // Validate request format
+    if (!isValidFormat(taskRequest)) {
+      return createErrorResponse({
+        errorCode: "INVALID_MESSAGE_FORMAT",
+        message: "Task request does not conform to required format",
+        details: { validationErrors: getValidationErrors(taskRequest) },
+        referenceId: taskRequest.messageId,
+        retryable: false,
+        suggestedAction: "Correct the format and try again"
+      });
+    }
+
+    // Check if capability exists
+    const capability = findCapability(taskRequest.payload.capabilityId);
+    if (!capability) {
+      return createErrorResponse({
+        errorCode: "CAPABILITY_NOT_FOUND",
+        message: `Capability ${taskRequest.payload.capabilityId} is not supported`,
+        referenceId: taskRequest.messageId,
+        retryable: false,
+        suggestedAction: "Check available capabilities and try again with a supported capability"
+      });
+    }
+
+    // Check if capability is available
+    if (!isCapabilityAvailable(capability)) {
+      return createErrorResponse({
+        errorCode: "CAPABILITY_UNAVAILABLE",
+        message: `Capability ${capability.id} is temporarily unavailable`,
+        details: { 
+          estimatedAvailability: getEstimatedAvailabilityTime(capability),
+          alternatives: findAlternativeCapabilities(capability)
+        },
+        referenceId: taskRequest.messageId,
+        retryable: true,
+        suggestedAction: "Retry later or try an alternative capability"
+      });
+    }
+
+    // Process the task request
+    return processTaskRequest(taskRequest);
+  } catch (error) {
+    // Handle unexpected errors
+    return createErrorResponse({
+      errorCode: "INTERNAL_ERROR",
+      message: "An unexpected error occurred while processing the task request",
+      details: { errorType: error.name, errorMessage: error.message },
+      referenceId: taskRequest.messageId,
+      retryable: true,
+      suggestedAction: "Please report this issue and try again later"
+    });
+  }
+}
+```
+
+## Client-Side Error Handling
+
+```javascript
+async function sendTaskRequest(taskRequest) {
+  let retries = 0;
+  const maxRetries = 3;
+
+  while (retries <= maxRetries) {
+    try {
+      const response = await sendRequest(taskRequest);
+
+      if (response.messageType === "ERROR_RESPONSE") {
+        const error = response.payload;
+
+        // Handle non-retryable errors immediately
+        if (!error.retryable) {
+          logError(`Non-retryable error: ${error.errorCode} - ${error.message}`);
+          return handleNonRetryableError(error);
+        }
+
+        // Handle retryable errors with backoff
+        if (retries < maxRetries) {
+          const backoffTime = calculateBackoff(retries);
+          logWarning(`Retryable error: ${error.errorCode} - ${error.message}. Retrying in ${backoffTime}ms`);
+          await sleep(backoffTime);
+          retries++;
+          continue;
+        } else {
+          logError(`Max retries exceeded for error: ${error.errorCode} - ${error.message}`);
+          return handleMaxRetriesExceeded(error);
+        }
+      }
+
+      return response;
+    } catch (error) {
+      // Handle network or unexpected errors
+      if (retries < maxRetries) {
+        const backoffTime = calculateBackoff(retries);
+        logWarning(`Network error: ${error.message}. Retrying in ${backoffTime}ms`);
+        await sleep(backoffTime);
+        retries++;
+      } else {
+        logError(`Max retries exceeded for network error: ${error.message}`);
+        throw new Error(`Failed after ${maxRetries} retries: ${error.message}`);
+      }
+    }
+  }
+}
+
+function calculateBackoff(retryCount) {
+  // Exponential backoff with jitter
+  const baseDelay = 1000; // 1 second
+  const maxDelay = 30000; // 30 seconds
+  const exponentialDelay = baseDelay * Math.pow(2, retryCount);
+  const jitter = Math.random() * 0.3 * exponentialDelay; // 0-30% jitter
+  return Math.min(exponentialDelay + jitter, maxDelay);
+}
+```
+
+<Callout type="warning">
+  Always design your agents to handle errors gracefully. Never assume operations will always succeed, and implement
+    proper retry and fallback mechanisms for critical operations.
+</Callout>
+
+<Callout type="info">
+  When reporting errors, include as much context as possible without exposing sensitive information. This helps
+    debugging while maintaining security.
+</Callout>

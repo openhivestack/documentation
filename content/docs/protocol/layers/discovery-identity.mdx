@@ -1,51 +1,204 @@
 ---
 title: Discovery & Identity
-description: Enabling agent identification, capability advertisement, and secure connection establishment.
-icon: SearchCheck
+description: How agents identify themselves and discover each other
+icon: Search
 ---
 
-The H.I.V.E. Discovery & Identity Layer defines how agents identify themselves, advertise their capabilities,
-and initiate mutually authenticated, encrypted communication channels.
+import { Callout } from "fumadocs-ui/components/callout";
+import { Mermaid } from "@/components/mdx/mermaid";
 
-## Agent Identification
+The Discovery & Identity layer of the H.I.V.E. Protocol enables agents to establish their identity and discover other
+agents based on capabilities and requirements.
 
-- Agents use W3C Decentralized Identifiers (DIDs) for verifiable identity
-- The `did:key` method with Ed25519 keys is required
-- Agents must securely manage their cryptographic key pairs
-- Each agent generates its own DID Document with public keys and service endpoints
+## Layer Overview
 
-## Discovery Mechanisms
+<Mermaid
+  chart={`
+flowchart LR
+    A[Agent Identity] --> B[Key Management]
+    B --> C[Discovery Mechanisms]
+    C --> D[Capability Advertisement]
+`}
+/>
 
-- **Discovery Registry Service**:
-  - Agents must support a centralized Discovery Registry for initial lookup
-  - The Registry exposes a RESTful API for registration and queries
-  - Agents register their DID, network address, and capability advertisement
-  - Queries can filter by service type, capabilities, or agent ID
-- **Optional P2P Discovery**:
-  - Agents may implement peer-to-peer discovery methods
-  - P2P systems should use rendezvous points for initial network joining
+## Agent Identity
+
+In the H.I.V.E. Protocol, each agent has a unique identity established through cryptographic keys.
+
+### Identity Structure
+
+An agent's identity consists of:
+
+- **Agent ID**: A unique identifier for the agent
+- **Public Key**: Used for verification and encryption
+- **Metadata**: Optional information about the agent's purpose, owner, etc.
+
+```json
+{
+  "agentId": "agent-abc123",
+  "publicKey": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890...\n-----END PUBLIC KEY-----",
+  "metadata": {
+    "name": "Translation Agent",
+    "description": "Provides language translation services",
+    "owner": "company-xyz",
+    "created": "2025-01-15T08:30:00Z"
+  }
+}
+```
+
+### Key Pairs
+
+H.I.V.E. supports two primary types of cryptographic key pairs:
+
+1. **RSA**: Traditional asymmetric encryption providing strong security
+2. **Ed25519**: Modern elliptic curve cryptography offering better performance
+
+All agent communications are signed with the sender's private key and verified with the public key, ensuring
+message authenticity.
+
+<Callout type="warning">
+  Private keys must be securely stored and never shared. Compromise of a private key allows impersonation of the agent.
+</Callout>
+
+## Agent Discovery
+
+The H.I.V.E. Protocol provides multiple mechanisms for agents to discover each other.
+
+### Registry-Based Discovery
+
+The most common approach uses a central or federated registry service:
+
+1. **Registration**: Agents register their identity and capabilities with the registry
+2. **Lookup**: Agents query the registry to find others with specific capabilities
+3. **Connection**: Once discovered, agents connect directly to each other
+
+```http
+# Registration Example
+POST /registry/agents HTTP/1.1
+Host: registry.example.com
+Content-Type: application/json
+
+{
+  "agentId": "agent-abc123",
+  "publicKey": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----",
+  "endpoints": {
+    "http": "https://agent-abc123.example.com/api",
+    "websocket": "wss://agent-abc123.example.com/ws"
+  },
+  "capabilities": [
+    {
+      "id": "text-translation",
+      "supportedLanguages": ["en", "es", "fr", "de"],
+      "maxTextLength": 10000
+    }
+  ]
+}
+```
+
+```http
+# Lookup Example
+GET /registry/agents?capability=text-translation&language=es HTTP/1.1
+Host: registry.example.com
+```
+
+### Direct Discovery
+
+For known agents, direct discovery bypasses the registry:
+
+1. **Address Knowledge**: The agent already knows the endpoint of another agent
+2. **Direct Connection**: The agent connects directly to the known endpoint
+3. **Capability Query**: The agent can request capability details directly
+
+### Decentralized Discovery
+
+For decentralized deployments, H.I.V.E. supports peer-to-peer discovery:
+
+1. **Broadcast**: Agents broadcast discovery messages to the network
+2. **Response**: Agents with matching capabilities respond directly
+3. **Connection**: Agents establish direct connections based on responses
 
 ## Capability Advertisement
 
-- **H.I.V.E. Service Description Language (HSDL)**:
-  - **Standard**: Agent capabilities `MUST` be described using HSDL, a subset of OpenAPI 3.1 Specification.
-    (See [Capability Advertisement](capability-advertisement.mdx) for detailed HSDL definition).
-  - **Format**: HSDL documents `MUST` be serialized in YAML or JSON.
-- **`CapabilityAdvertisement` Message**:
-  - **Structure**: This signed message `MUST` contain the agent's DID, network address, timestamp, and the
-    cryptographically signed HSDL document.
-  - **Purpose**: Enables other agents to understand available services and their interface details.
+Agents advertise their capabilities to enable efficient discovery and collaboration.
 
-## Initial Secure Connection Establishment
+### Capability Format
 
-- **Mutually Authenticated, End-to-End Encrypted Session**:
-  - **Requirement**: Agents `MUST` establish a secure session before any H.I.V.E. protocol messages are exchanged
-    over the `Communication Transport Layer`.
-- **Noise Protocol Framework (IK Handshake)**:
-  - **Protocol**: The Noise Protocol Framework (IK handshake pattern) `IS REQUIRED` for key exchange and session
-    establishment.
-  - **Key Exchange**: Ensures mutual public key authentication and perfect forward secrecy.
-  - **Authentication**: Agents `MUST` verify the authenticity of the peer's DID during the Noise handshake by binding
-    their respective public keys to the established session. This cryptographically links the transport session to the
-    agent's DID.
-  - **Re-keying**: Sessions `SHOULD` support periodic re-keying to enhance forward secrecy.
+Capabilities are described in a standardized JSON format:
+
+```json
+{
+  "capabilities": [
+    {
+      "id": "text-translation",
+      "version": "1.0",
+      "description": "Translates text between languages",
+      "supportedLanguages": ["en", "es", "fr", "de", "zh", "ja"],
+      "parameters": {
+        "sourceLanguage": {
+          "type": "string",
+          "required": true,
+          "description": "Source language code"
+        },
+        "targetLanguage": {
+          "type": "string",
+          "required": true,
+          "description": "Target language code"
+        },
+        "text": {
+          "type": "string",
+          "required": true,
+          "maxLength": 10000,
+          "description": "Text to translate"
+        },
+        "preserveFormatting": {
+          "type": "boolean",
+          "required": false,
+          "default": true,
+          "description": "Whether to preserve formatting"
+        }
+      },
+      "returns": {
+        "translatedText": {
+          "type": "string",
+          "description": "The translated text"
+        },
+        "confidence": {
+          "type": "number",
+          "description": "Confidence score between 0 and 1"
+        }
+      },
+      "performanceMetrics": {
+        "averageResponseTime": 1.2,
+        "throughput": "5000 chars/second"
+      }
+    }
+  ]
+}
+```
+
+### Capability Updates
+
+Agents should update their capability advertisements when changes occur:
+
+- New capabilities are added
+- Existing capabilities are modified or removed
+- Performance characteristics change significantly
+
+<Callout type="info">
+  See the [Capability Advertisement](/docs/protocol/structure/capability-advertisement) page for detailed specifications.
+</Callout>
+
+## Implementation Considerations
+
+When implementing the Discovery & Identity layer, developers should consider:
+
+- Key rotation policies for long-lived agents
+- Registry redundancy for high availability
+- Cache strategies for frequently used discovery results
+- Rate limiting for discovery requests
+- Privacy implications of capability advertisements
+
+<Callout type="warning">
+  Registry services should implement proper authentication and authorization to prevent unauthorized capability
+    advertisements and discovery data tampering.
+</Callout>

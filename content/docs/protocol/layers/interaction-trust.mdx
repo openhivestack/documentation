@@ -1,60 +1,242 @@
 ---
 title: Interaction & Trust
-description: Governing secure negotiation, execution, and verifiable task completion between agents.
-icon: Handshake
+description: How agents establish trust and securely interact
+icon: ShieldCheck
 ---
 
-The H.I.V.E. Interaction & Trust Layer manages the secure and verifiable lifecycle of agent collaborations.
-It ensures message authenticity, defines contract negotiation, orchestrates task execution, and guarantees verifiable
-delivery of results.
+import { Callout } from "fumadocs-ui/components/callout";
+import { Mermaid } from "@/components/mdx/mermaid";
 
-## Message Authentication and Authorization
+The Interaction & Trust layer of the H.I.V.E. Protocol establishes the foundation for secure, verifiable
+interactions between agents. It defines how agents authenticate each other, maintain trust, and ensure the
+integrity of their communications.
 
-- **Authentication**:
-  - All messages must be cryptographically signed by the sender
-  - Recipients verify signatures using the sender's public key
-- **Authorization**:
-  - Agents enforce access control based on sender identity and requested action
-  - [Signed Capabilities](https://ucan.xyz/) (like UCANs) are recommended for granular, delegatable permissions
+## Layer Overview
 
-## Contract Negotiation
+<Mermaid
+  chart={`
+flowchart LR
+    A[Authentication] --> B[Authorization]
+    B --> C[Trust Establishment]
+    C --> D[Verification]
+`}
+/>
 
-- **H.I.V.E. Negotiation Protocol**:
-  - Structured protocol with three phases:
-    1. **Proposal**: Initiating agent sends offer
-    2. **Counter-Proposal**: Optional modifications (may be repeated)
-    3. **Acceptance/Rejection**: Final decision
-- **Contract Format**:
-  - JSON-LD documents using the H.I.V.E. Contract Ontology
-  - See [Contract Schema](/docs/protocol/structure/contract) for details
-- **Signatures**:
-  - All participants must cryptographically sign the final agreement
+## Authentication
 
-## Execution Management
+Authentication in the H.I.V.E. Protocol ensures that agents can verify the identity of other agents they interact with.
 
-- **H.I.V.E. Task Lifecycle**:
-  - **Standard**: Tasks `MUST` be executed and monitored through a defined H.I.V.E. Task Lifecycle.
-    (See [Task Lifecycle](/docs/protocol/structure/lifecycle) for detailed state transitions).
-  - **States**: The lifecycle `SHALL` include standard states: `PROPOSED`, `ACCEPTED`, `IN_PROGRESS`,
-    `PAUSED`, `COMPLETED`, `FAILED`, `CANCELLED`.
-- **Reporting**:
-  - **Status Updates**: Agents `MUST` provide status updates via `TaskStatusUpdate` messages at predefined intervals
-    or upon any significant state change.
-- **Error Handling**:
-  - **Standardized Codes**: Specific error codes and messages `MUST` be defined for common execution failures
-    (e.g., `TASK_FAILED_INPUT_INVALID`, `TASK_FAILED_RESOURCE_UNAVAILABLE`). (See [Error Codes](/docs/protocol/structure/error-codes)).
+### Authentication Methods
 
-## Delivery & Verification
+The protocol supports several authentication mechanisms:
 
-- **Result Transmission**:
-  - **Large Results**: `SHOULD` be transferred via out-of-band mechanisms (e.g., IPFS, S3-compatible storage)
-    with a secure link (URI) in the `TaskResult` message.
-  - **Small Results**: `MAY` be directly embedded in the `TaskResult` message.
-- **Integrity Checks**:
-  - **Cryptographic Hash**: All delivered results `MUST` include a cryptographic hash (e.g., SHA-256) of the content,
-    signed by the delivering agent.
-  - **Verification**: The receiving agent `MUST` verify this hash against the received content.
-- **Proof of Delivery**:
-  - **Confirmation Message**: The receiving agent `MUST` send a `DeliveryConfirmation` message upon successful
-    verification, including the verified hash and its own signature. This acts as the final verifiable proof of
-    task completion.
+1. **Signature-Based Authentication**
+   - Each message is signed with the sender's private key
+   - Recipients verify the signature using the sender's public key
+   - Provides non-repudiation and message integrity
+
+2. **Challenge-Response**
+   - Agent A sends a random challenge to Agent B
+   - Agent B signs the challenge with its private key
+   - Agent A verifies the signature using Agent B's public key
+   - Prevents replay attacks and confirms active possession of keys
+
+3. **Token-Based Authentication**
+   - JWT or similar tokens for session-based authentication
+   - Useful for repeated interactions in a session
+   - Can include claims about agent capabilities and permissions
+
+### Authentication Flow
+
+```javascript
+// Challenge-Response Example
+
+// Agent A generates and sends a challenge
+const challenge = generateRandomChallenge();
+send(agentB, {
+  messageType: 'AUTHENTICATION_CHALLENGE',
+  challenge: challenge
+});
+
+// Agent B signs the challenge and responds
+receive(message => {
+  if (message.messageType === 'AUTHENTICATION_CHALLENGE') {
+    const signature = signWithPrivateKey(message.challenge);
+    send(agentA, {
+      messageType: 'AUTHENTICATION_RESPONSE',
+      challenge: message.challenge,
+      signature: signature
+    });
+  }
+});
+
+// Agent A verifies the signature
+receive(message => {
+  if (message.messageType === 'AUTHENTICATION_RESPONSE') {
+    const isValid = verifySignature(message.challenge, message.signature, agentB.publicKey);
+    if (isValid) {
+      // Authentication successful
+      establishSecureChannel(agentB);
+    }
+  }
+});
+```
+
+## Authorization
+
+Once authenticated, authorization determines what actions an agent is permitted to perform.
+
+### Permission Models
+
+H.I.V.E. supports several authorization models:
+
+1. **Capability-Based Authorization**
+   - Agents present unforgeable tokens (capabilities) that grant specific permissions
+   - Follows the principle of least privilege
+   - Capabilities can be delegated and revoked
+
+2. **Role-Based Authorization**
+   - Agents are assigned roles that determine their permissions
+   - Simplifies permission management for groups of agents
+   - Supports hierarchical role structures
+
+3. **Attribute-Based Authorization**
+   - Permissions are granted based on agent attributes
+   - Enables fine-grained access control
+   - Supports complex authorization rules
+
+### Authorization Decision
+
+```json
+// Authorization Request
+{
+  "messageType": "AUTHORIZATION_REQUEST",
+  "resource": "data-processing-pipeline",
+  "action": "EXECUTE",
+  "context": {
+    "priority": "high",
+    "dataType": "financial"
+  }
+}
+
+// Authorization Response
+{
+  "messageType": "AUTHORIZATION_RESPONSE",
+  "resource": "data-processing-pipeline",
+  "action": "EXECUTE",
+  "decision": "PERMIT",
+  "constraints": {
+    "maxDataSize": 100000,
+    "timeLimit": 3600,
+    "auditRequired": true
+  }
+}
+```
+
+## Trust Establishment
+
+Trust establishment defines how agents build and maintain trust relationships over time.
+
+### Trust Models
+
+1. **Direct Trust**
+   - Trust is established directly between two agents
+   - Based on direct interactions and experience
+   - Strongest form of trust in the protocol
+
+2. **Delegated Trust**
+   - Trust is established through a trusted third party
+   - Useful when agents have no prior relationship
+   - Requires trust in the delegating authority
+
+3. **Reputation-Based Trust**
+   - Trust is established based on an agent's reputation
+   - Aggregates feedback from multiple agents
+   - Evolves over time based on behavior
+
+### Trust Metrics
+
+Agents can track various metrics to evaluate trustworthiness:
+
+- **Reliability**: Percentage of successfully completed tasks
+- **Timeliness**: Adherence to agreed-upon deadlines
+- **Quality**: Assessment of output quality compared to expectations
+- **Honesty**: Accuracy of capability advertisements and progress reports
+
+<Mermaid
+  chart={`
+stateDiagram-v2
+    [*] --> Unknown
+    Unknown --> Provisional: Initial verification
+    Provisional --> Trusted: Successful interactions
+    Provisional --> Untrusted: Failed verification/interactions
+    Trusted --> Verified: Long-term reliability
+    Trusted --> Provisional: Trust issues
+    Verified --> Trusted: Minor issues
+    Untrusted --> Provisional: Redemption period
+`}
+/>
+
+## Verification
+
+Verification ensures that interactions and outcomes can be validated.
+
+### Verification Methods
+
+1. **Cryptographic Verification**
+   - Digital signatures to verify message authenticity
+   - Hash validation for data integrity
+   - Zero-knowledge proofs for privacy-preserving verification
+
+2. **Consensus Verification**
+   - Multiple agents verify the same result
+   - Useful for critical tasks requiring high confidence
+   - Can detect malicious or faulty agents
+
+3. **Outcome Verification**
+   - Validation that task results meet the agreed requirements
+   - Can involve automated tests, sampling, or human review
+   - Essential for maintaining quality standards
+
+### Audit Trail
+
+The H.I.V.E. Protocol maintains a comprehensive audit trail of interactions:
+
+```json
+{
+  "auditRecords": [
+    {
+      "timestamp": "2025-07-18T12:30:45Z",
+      "eventType": "TASK_COMPLETED",
+      "taskId": "task-123",
+      "agentId": "agent-xyz789",
+      "outcome": "SUCCESS",
+      "verificationMethod": "digital-signature",
+      "verificationResult": "VERIFIED",
+      "evidence": {
+        "resultHash": "sha256:1234567890abcdef...",
+        "signature": "..."
+      }
+    }
+  ]
+}
+```
+
+## Implementation Considerations
+
+When implementing the Interaction & Trust layer, developers should consider:
+
+- Balancing security with performance requirements
+- Handling trust revocation and recovery processes
+- Implementing proper key management and rotation
+- Establishing clear verification criteria for different task types
+- Privacy implications of trust and audit information
+
+<Callout type="warning">
+  Trust is fragile and hard to rebuild. Implement robust security measures and verification processes to maintain
+    trust in your agent ecosystem.
+</Callout>
+
+<Callout type="info">
+  For more details on security implementation, see the [Security Considerations](/docs/protocol/structure/security-considerations) documentation.
+</Callout>

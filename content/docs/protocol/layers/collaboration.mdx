@@ -1,0 +1,230 @@
+---
+title: Agent Collaboration
+description: How agents negotiate, execute tasks, and deliver results
+icon: Users
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Mermaid } from "@/components/mdx/mermaid";
+
+The Agent Collaboration layer is the core component of the H.I.V.E. Protocol that enables AI agents to work together
+effectively. It defines how agents negotiate tasks, execute work, and deliver results in a standardized way.
+
+## Layer Overview
+
+<Mermaid
+  chart={`
+flowchart LR
+    A[Task Negotiation] --> B[Contract Formation]
+    B --> C[Task Execution]
+    C --> D[Results Delivery]
+`}
+/>
+
+## Task Negotiation
+
+Task negotiation is the process where agents agree on what needs to be done, establishing clear expectations for
+both parties.
+
+### Negotiation Flow
+
+1. **Task Proposal**: The requester agent sends a task proposal specifying requirements
+2. **Capability Matching**: The provider agent evaluates if it can fulfill the requirements
+3. **Proposal Response**: The provider accepts, rejects, or counter-proposes
+4. **Agreement**: Both parties reach consensus on task parameters
+
+```json
+// Task Proposal Example
+{
+  "messageType": "TASK_PROPOSAL",
+  "taskId": "task-123",
+  "requirements": {
+    "taskType": "text-translation",
+    "sourceLanguage": "English",
+    "targetLanguage": "Spanish",
+    "expectedCompletion": "2025-07-19T15:00:00Z",
+    "priority": "normal"
+  }
+}
+```
+
+## Task Contracts
+
+When agents agree on task parameters, they formalize the agreement in a task contract that serves as the reference
+for execution.
+
+### Contract Components
+
+A basic H.I.V.E. task contract includes:
+
+- **Task Identifier**: Unique ID for referencing the task
+- **Participating Agents**: Requester and provider identities
+- **Requirements**: Detailed specifications for the task
+- **Deliverables**: Expected outputs and formats
+- **Timeline**: Deadlines and milestones
+- **Verification Criteria**: How completion will be verified
+
+```json
+// Simplified Task Contract
+{
+  "contractId": "contract-456",
+  "taskId": "task-123",
+  "requester": {
+    "id": "agent-abc123",
+    "publicKey": "..."
+  },
+  "provider": {
+    "id": "agent-xyz789",
+    "publicKey": "..."
+  },
+  "requirements": {
+    "taskType": "text-translation",
+    "sourceLanguage": "English",
+    "targetLanguage": "Spanish",
+    "text": "Hello world, this is a test."
+  },
+  "deliverables": {
+    "format": "plain/text",
+    "verificationMethod": "manual-review"
+  },
+  "timeline": {
+    "deadline": "2025-07-19T15:00:00Z"
+  },
+  "signatures": {
+    "requester": "...",
+    "provider": "..."
+  }
+}
+```
+
+<Callout type="info">
+  See the [Task Contracts](/docs/protocol/structure/simplified-contract) page for detailed contract specifications.
+</Callout>
+
+## Task Execution
+
+Task execution is the process of carrying out the agreed-upon work according to the contract specifications.
+
+### Task States
+
+Tasks in the H.I.V.E. Protocol follow a standardized lifecycle with clear state transitions:
+
+<Mermaid
+  chart={`
+stateDiagram-v2
+    [*] --> PROPOSED
+    PROPOSED --> ACCEPTED: Provider accepts
+    PROPOSED --> REJECTED: Provider rejects
+    ACCEPTED --> IN_PROGRESS: Work begins
+    IN_PROGRESS --> COMPLETED: Work finished
+    IN_PROGRESS --> FAILED: Error occurs
+    COMPLETED --> [*]
+    FAILED --> [*]
+    REJECTED --> [*]
+`}
+/>
+
+- **PROPOSED**: Initial state when a task is first proposed
+- **ACCEPTED**: Provider has agreed to perform the task
+- **IN_PROGRESS**: Provider is actively working on the task
+- **COMPLETED**: Task has been successfully completed
+- **FAILED**: Task could not be completed due to errors
+
+### Progress Updates
+
+For long-running tasks, providers send regular status updates to requesters:
+
+```json
+{
+  "messageType": "TASK_UPDATE",
+  "taskId": "task-123",
+  "status": "IN_PROGRESS",
+  "progress": 0.75,
+  "message": "Translation 75% complete, estimated completion in 5 minutes",
+  "timestamp": "2025-07-18T14:45:30Z"
+}
+```
+
+## Results Delivery
+
+When a task is completed, the provider delivers the results to the requester in a standardized format.
+
+### Result Message
+
+```json
+{
+  "messageType": "TASK_RESULT",
+  "taskId": "task-123",
+  "status": "COMPLETED",
+  "result": {
+    "translatedText": "Hola mundo, esto es una prueba."
+  },
+  "metadata": {
+    "completionTime": "2025-07-18T15:00:00Z",
+    "qualityScore": 0.98
+  }
+}
+```
+
+### Handling Large Results
+
+For results too large to include directly in a message:
+
+1. Provider uploads results to secure storage
+2. Provider sends a result message with access details
+3. Requester downloads the results using provided access information
+
+```json
+{
+  "messageType": "TASK_RESULT",
+  "taskId": "task-123",
+  "status": "COMPLETED",
+  "resultReference": {
+    "storageType": "s3",
+    "location": "s3://results-bucket/task-123/output.zip",
+    "accessToken": "...",
+    "expiresAt": "2025-07-19T15:00:00Z"
+  }
+}
+```
+
+## Error Handling
+
+The Agent Collaboration layer includes standardized error handling to communicate issues clearly.
+
+### Error Response Format
+
+```json
+{
+  "messageType": "TASK_ERROR",
+  "taskId": "task-123",
+  "status": "FAILED",
+  "error": {
+    "code": "RESOURCE_UNAVAILABLE",
+    "message": "Required translation model is currently unavailable",
+    "details": {
+      "resourceId": "spanish-model-v2",
+      "retryAfter": "2025-07-18T16:00:00Z"
+    }
+  }
+}
+```
+
+<Callout type="warning">
+  Agents should implement retry logic with exponential backoff for transient errors, while handling permanent
+    failures gracefully.
+</Callout>
+
+## Implementation Considerations
+
+When implementing the Agent Collaboration layer, developers should consider:
+
+- Handling timeouts and unresponsive agents
+- Implementing proper error recovery mechanisms
+- Ensuring idempotent operations for reliability
+- Maintaining an audit trail of task interactions
+- Implementing verification checks for completed tasks
+
+<Callout type="info">
+  For a complete understanding of task workflows, see the [Task Lifecycle](/docs/protocol/structure/lifecycle) documentation.
+</Callout>

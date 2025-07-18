@@ -1,52 +1,229 @@
 ---
-title: Transport
-description: Deep dive into secure and reliable message exchange.
-icon: MessageSquareText
+title: Transport Layer
+description: Network protocols and connectivity for agent communication
+icon: Wifi
 ---
 
-The H.I.V.E. Transport Layer is responsible for establishing and maintaining secure, reliable, and ordered message
-exchange between agents. It abstracts underlying network complexities, providing a robust channel for all higher-layer
-interactions.
+import { Callout } from "fumadocs-ui/components/callout";
 
-## Core Transport Protocol
+The Transport Layer in the H.I.V.E. Protocol provides the foundation for network connectivity between agents.
+It defines the network protocols, connection mechanisms, and data transmission standards that enable reliable
+agent communication.
 
-- **WebSockets Protocol**:
-  - Agents `MUST` use WebSockets (RFC 6455) for full-duplex communication
-  - Standard WebSocket framing handles message segmentation
-  - All H.I.V.E. messages use binary or UTF-8 encoding
-- **Connection Management**:
-  - Connections initiated by agents connecting to resolved network addresses
-  - Proper closure uses WebSocket close frames with appropriate status codes
-  - Implementations handle network errors and propagate information to higher layers
+## Supported Protocols
 
-## Network Addressing & Resolution
+The H.I.V.E. Protocol is designed to work with standard web protocols, making it compatible with existing
+infrastructure and easy to implement across different platforms.
 
-- **Agent Network Address**:
-  - **Resolution**: Obtained by resolving an Agent `DID` (see [Discovery & Identity Layer](/docs/protocol/layers/discovery-identity)) via a Discovery
-    Service or P2P lookup.
-  - **Format**: Network addresses `MUST` be valid URIs, primarily using the `wss://` scheme
-    (e.g., `wss://agent.example.com:8443/hive`).
-- **Connection Initiation**:
-  - **Process**: An agent initiates a WebSocket connection to the resolved `wss://` URI.
-  - **Retries**: Connection attempts `SHOULD` incorporate exponential backoff and a configurable maximum number of
-    retries to accommodate transient network issues.
-- **Service Paths**:
-  - Agents `MAY` expose services on specific WebSocket paths (e.g., `wss://agent.example.com/hive/v1/main`). The
-    path `SHALL` be included in the agent's Capability Advertisement (see [Capability Advertisement](/docs/protocol/structure/capability-advertisement)).
+### HTTP/HTTPS
 
-## Security & Reliability
+HTTP/HTTPS serves as the primary protocol for request-response patterns in the H.I.V.E. Protocol.
 
-- **Transport Layer Security (TLS)**:
-  - **Mandatory Encryption**: TLS v1.3 or higher `MUST` be used for all `wss://` connections. This provides
-    confidentiality and integrity for data in transit.
-  - **Certificate Verification**: Receiving agents `MUST` perform rigorous TLS certificate validation, including
-    chain trust, expiration, and hostname matching against the connected endpoint.
-- **Reliable Delivery**:
-  - **TCP Foundation**: WebSockets leverage TCP, inherently providing ordered, reliable, full-duplex communication.
-    Message retransmission and ordering are managed by the underlying TCP stack.
-- **Session Persistence**:
-  - While the transport ensures reliable delivery of individual messages, higher layers
-    (`Interaction & Trust Layer`) `ARE RESPONSIBLE` for maintaining logical session state across potential connection
-    disruptions or re-establishments.
-  - **Keep-Alives**: Agents `SHOULD` implement WebSocket ping/pong frames (RFC 6455, Section 5.5.2) to detect stale
-    connections and prevent timeouts.
+**Key Features:**
+- RESTful API design for resource manipulation
+- Standard status codes for error handling
+- Content negotiation for different data formats
+- Caching mechanisms for performance optimization
+
+**Example HTTP Request:**
+
+```http
+POST /api/v1/tasks HTTP/1.1
+Host: agent.example.com
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...
+
+{
+  "taskType": "data-analysis",
+  "priority": "high",
+  "input": {
+    "dataUrl": "https://data.example.com/dataset123.json",
+    "analysisParameters": {
+      "algorithm": "clustering",
+      "features": ["age", "income", "location"]
+    }
+  }
+}
+```
+
+**Example HTTP Response:**
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+Location: /api/v1/tasks/task-456
+
+{
+  "taskId": "task-456",
+  "status": "ACCEPTED",
+  "estimatedCompletion": "2025-07-18T15:30:00Z",
+  "_links": {
+    "self": { "href": "/api/v1/tasks/task-456" },
+    "status": { "href": "/api/v1/tasks/task-456/status" },
+    "cancel": { "href": "/api/v1/tasks/task-456", "method": "DELETE" }
+  }
+}
+```
+
+### WebSockets
+
+WebSockets enable real-time, bidirectional communication for scenarios requiring continuous updates or
+event-driven interactions.
+
+**Key Features:**
+- Persistent connections for real-time updates
+- Reduced overhead compared to polling
+- Binary and text message support
+- Event-driven architecture
+
+**Example WebSocket Communication:**
+
+```javascript
+// Client-side connection establishment
+const socket = new WebSocket('wss://agent.example.com/ws');
+
+// Connection opened
+socket.addEventListener('open', (event) => {
+  socket.send(JSON.stringify({
+    messageType: 'SUBSCRIBE',
+    resource: 'task-456',
+    events: ['STATUS_CHANGE', 'PROGRESS_UPDATE']
+  }));
+});
+
+// Listen for messages
+socket.addEventListener('message', (event) => {
+  const message = JSON.parse(event.data);
+
+  if (message.messageType === 'TASK_UPDATE') {
+    console.log(`Task ${message.taskId} progress: ${message.progress * 100}%`);
+    updateProgressUI(message.progress);
+  }
+});
+```
+
+### MQTT
+
+MQTT (Message Queuing Telemetry Transport) is supported for lightweight publish-subscribe messaging, particularly
+useful for IoT and edge agent deployments.
+
+**Key Features:**
+- Lightweight protocol with minimal overhead
+- Publish-subscribe messaging pattern
+- Quality of Service (QoS) levels
+- Retained messages and last will and testament
+
+**Example MQTT Topics:**
+
+- `agents/discovery` - For agent capability advertisements
+- `agents/{agentId}/tasks/requests` - For task requests to a specific agent
+- `tasks/{taskId}/status` - For status updates on a specific task
+- `agents/{agentId}/heartbeat` - For agent availability monitoring
+
+## Connection Patterns
+
+The H.I.V.E. Protocol supports multiple connection patterns to accommodate different use cases and deployment scenarios.
+
+### Request-Response
+
+The standard pattern for discrete interactions where an agent makes a request and expects a response.
+
+- Typically implemented using HTTP/HTTPS
+- Suitable for task submission, capability queries, and result retrieval
+- Simple to implement and understand
+
+### Publish-Subscribe
+
+Enables agents to publish messages to topics and subscribe to topics of interest.
+
+- Implemented using WebSockets or MQTT
+- Ideal for event notifications, status updates, and broadcasts
+- Supports one-to-many communication
+
+### Stream Processing
+
+Enables continuous processing of data streams between agents.
+
+- Implemented using WebSockets or specialized streaming protocols
+- Suitable for real-time data processing, monitoring, and analytics
+- Supports backpressure mechanisms for flow control
+
+## Data Formats
+
+The H.I.V.E. Protocol primarily uses JSON for message serialization, with support for other formats when needed.
+
+### JSON
+
+The default data format for most H.I.V.E. Protocol messages.
+
+- Human-readable and widely supported
+- Schema validation using JSON Schema
+- Support for complex nested structures
+
+### Binary Data
+
+For efficient transmission of large datasets, binary formats are supported.
+
+- Base64 encoding for small binary data in JSON
+- Multipart messages for larger binary payloads
+- Protocol Buffers or MessagePack for efficient serialization
+
+## Transport Security
+
+All H.I.V.E. Protocol communications must be secured using industry-standard encryption and security practices.
+
+### TLS/SSL
+
+- Mandatory for all HTTP and WebSocket connections
+- Minimum TLS version 1.2, with 1.3 recommended
+- Strong cipher suites required
+- Certificate validation enforced
+
+### Mutual TLS (mTLS)
+
+- Optional but recommended for high-security environments
+- Both server and client authenticate using certificates
+- Prevents unauthorized connections and man-in-the-middle attacks
+
+<Callout type="warning">
+  Never transmit agent credentials or sensitive data over unencrypted connections. All H.I.V.E. Protocol
+    implementations must use TLS for transport security.
+</Callout>
+
+## Connection Management
+
+H.I.V.E. Protocol implementations must handle connection lifecycle management effectively.
+
+### Connection Establishment
+
+- Clear handshake procedures for initial connection
+- Capability negotiation during connection setup
+- Graceful handling of connection failures
+
+### Connection Maintenance
+
+- Heartbeat mechanisms to detect connection health
+- Automatic reconnection with exponential backoff
+- Connection pooling for performance optimization
+
+### Connection Termination
+
+- Graceful shutdown procedures
+- Proper resource cleanup
+- State persistence for reconnection
+
+## Implementation Considerations
+
+When implementing the Transport Layer, developers should consider:
+
+- Network reliability and fault tolerance
+- Bandwidth and latency constraints
+- Firewall and NAT traversal requirements
+- Load balancing and scalability needs
+- Connection pooling and resource management
+- Monitoring and diagnostics capabilities
+
+<Callout type="info">
+  The Transport Layer should be implemented with resilience in mind. Always assume network failures will occur and
+    implement proper retry and recovery mechanisms.
+</Callout>

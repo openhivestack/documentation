@@ -1,333 +1,349 @@
 ---
 title: Discovery Flow
-description: Comprehensive specification of agent discovery patterns and processes within H.I.V.E.
+description: How agents discover each other's capabilities
 icon: Search
 ---
 
-import { Mermaid } from "components/mdx/mermaid";
 import { Callout } from "fumadocs-ui/components/callout";
+import { Mermaid } from "@/components/mdx/mermaid";
 
-Agent discovery is a fundamental capability of the H.I.V.E. Protocol, enabling agents to find and connect with
-other agents that provide desired capabilities. This document details the complete discovery flow, from initial
-bootstrap to capability matching and connection establishment.
+The Discovery Flow in the H.I.V.E. Protocol defines how agents find each other and learn about their capabilities.
+This standardized process enables dynamic collaboration between previously unconnected agents.
 
-## Discovery Patterns
+## Discovery Methods
 
-H.I.V.E. supports multiple discovery patterns to accommodate different network topologies and trust models:
+The H.I.V.E. Protocol supports multiple discovery methods to accommodate different deployment scenarios:
 
-### 1. Centralized Discovery (Required)
+<Mermaid
+  chart={`
+flowchart TD
+    A[Agent Discovery] --> B[Registry-Based Discovery]
+    A --> C[Direct Discovery]
+    A --> D[Broadcast Discovery]
+    A --> E[Federation-Based Discovery]
+`}
+/>
 
-- Uses a **Discovery Registry (DR) Service** as a central lookup mechanism
-- All agents `MUST` support this pattern for baseline interoperability
-- Provides a reliable, efficient starting point for capability discovery
+### Registry-Based Discovery
 
-### 2. Peer-to-Peer Discovery (Optional)
-
-- Direct agent-to-agent discovery without central coordination
-- Uses techniques like multicast, DHT (Distributed Hash Table), or known rendezvous points
-- Enhances resilience in case central registry is unavailable
-
-### 3. Federated Discovery (Optional)
-
-- Multiple interconnected Discovery Registries sharing agent information
-- Enables discovery across organizational boundaries while maintaining some local control
-- Registry-to-registry communication follows standardized protocols
-
-## Discovery Registry Service
-
-### Core Functionality
-
-The Discovery Registry Service provides three essential functions:
-
-1. **Registration**: Allows agents to advertise their capabilities
-2. **Lookup**: Enables searching for agents by capability or identity
-3. **Health Monitoring**: Tracks agent availability and responsiveness
-
-### API Specification
-
-The DR Service exposes a RESTful API with the following endpoints:
-
-#### Agent Registration
-
-```
-POST /agents
-Content-Type: application/json
-
-{
-  "capability_advertisement": {
-    // Complete CapabilityAdvertisement message
-  }
-}
-```
-
-Response:
-
-```
-200 OK
-Content-Type: application/json
-
-{
-  "registration_id": "uuid-v4",
-  "timestamp": "2024-07-01T12:00:00Z",
-  "expiration": "2024-07-02T12:00:00Z"
-}
-```
-
-- Registrations have a default TTL of 24 hours
-- Agents `MUST` refresh their registration before expiration
-- The DR Service `MAY` perform validation of the capability advertisement
-
-#### Agent Lookup
-
-```
-GET /agents?capability=resizeImage&service_type=ImageProcessing
-Accept: application/json
-```
-
-Response:
-
-```
-200 OK
-Content-Type: application/json
-
-{
-  "results": [
-    {
-      "agent_did": "did:key:z6MkpTHR...",
-      "network_address": "wss://agent.example.com/hive",
-      "last_seen": "2024-07-01T11:55:00Z",
-      "capability_advertisement": {
-        // Full CapabilityAdvertisement message
-      }
-    },
-    // Additional matching agents
-  ],
-  "total_count": 3,
-  "timestamp": "2024-07-01T12:01:00Z"
-}
-```
-
-Lookup supports various query parameters:
-- `capability`: Specific capability intent (e.g., "resizeImage")
-- `service_type`: Category of service (e.g., "ImageProcessing")
-- `agent_did`: Exact DID to lookup
-- `input_schema`: JSON Schema properties required in input
-- `output_schema`: JSON Schema properties required in output
-
-#### Health Check
-
-```
-GET /agents/{agent_did}/health
-Accept: application/json
-```
-
-Response:
-
-```
-200 OK
-Content-Type: application/json
-
-{
-  "agent_did": "did:key:z6MkpTHR...",
-  "status": "active",
-  "last_seen": "2024-07-01T11:55:00Z",
-  "response_time_ms": 120,
-  "uptime_percentage": 99.8
-}
-```
-
-- The DR Service `SHOULD` periodically ping registered agents
-- Agents that fail to respond to health checks `MAY` be marked as inactive
-
-### Security Considerations
-
-- The DR Service `MUST` validate the signatures on all capability advertisements
-- Access control `SHOULD` be implemented to prevent unauthorized registration or de-registration
-- Rate limiting `SHOULD` be applied to prevent DoS attacks
-
-## Complete Discovery Flow
-
-The following sequence diagram illustrates the complete agent discovery and connection process:
+Registry-based discovery is the most common approach, using a central directory service where agents register their
+capabilities and can be found by others.
 
 <Mermaid
   chart={`
 sequenceDiagram
-    participant A as Agent A (Initiator)
-    participant DR as Discovery Registry
-    participant B as Agent B (Provider)
+    participant Agent A
+    participant Registry
+    participant Agent B
 
-    B->>DR: Register capabilities (CapabilityAdvertisement)
-    DR-->>B: Confirmation with registration_id
+    Agent A->>Registry: Register capabilities
+    Registry-->>Agent A: Registration confirmation
 
-    Note over A,B: Some time later...
+    Agent B->>Registry: Query for capabilities
+    Registry-->>Agent B: Agent A's details and capabilities
 
-    A->>DR: Lookup agents with specific capability
-    DR-->>A: List of matching agents with network addresses
-
-    A->>A: Evaluate and select appropriate agent
-
-    A->>B: Establish WebSocket connection
-    B-->>A: WebSocket connection accepted
-
-    A->>B: Initiate Noise Protocol handshake
-    Note over A,B: Mutual authentication via DIDs
-    B-->>A: Complete Noise handshake
-
-    A->>B: Begin Contract Negotiation (Proposal)
+    Agent B->>Agent A: Direct connection
 `}
 />
 
-## Discovery Bootstrap Process
+#### Registration Process
 
-### Initial DR Service Discovery
+1. **Agent Registration**: Agent sends its identity, endpoints, and capabilities to the registry
+2. **Verification**: Registry verifies the agent's signature and validates capability format
+3. **Storage**: Registry stores the agent's information in its directory
+4. **Confirmation**: Registry confirms successful registration to the agent
 
-To bootstrap the discovery process, agents need to locate a Discovery Registry Service. This can happen through:
+```http
+# Registration Request
+POST /registry/agents HTTP/1.1
+Host: registry.example.com
+Content-Type: application/json
 
-1. **Configuration**: Agents are configured with known DR Service URLs
-2. **DNS-Based Discovery**: Using DNS SRV records to locate DR Services
-3. **Well-Known URI**: Standard locations like `/.well-known/hive-discovery`
-4. **Multicast Discovery**: For local network scenarios
+{
+  "agentId": "agent-abc123",
+  "publicKey": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----",
+  "endpoints": {
+    "http": "https://agent-abc123.example.com/api",
+    "websocket": "wss://agent-abc123.example.com/ws"
+  },
+  "capabilities": [
+    {
+      "id": "text-translation",
+      "version": "1.0",
+      "supportedLanguages": ["en", "es", "fr", "de"],
+      "maxTextLength": 10000
+    }
+  ],
+  "timestamp": "2025-07-18T12:00:00Z",
+  "signature": "Base64-encoded signature"
+}
+```
 
-<Callout type="info">
-  At least one bootstrap method must be implemented to join the H.I.V.E. ecosystem.
-  Configuration with fallback to alternative methods is recommended for reliability.
+```http
+# Registration Response
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "status": "registered",
+  "registryId": "registry.example.com",
+  "agentId": "agent-abc123",
+  "registrationExpires": "2025-07-19T12:00:00Z"
+}
+```
+
+#### Discovery Process
+
+1. **Capability Query**: Agent queries the registry for agents with specific capabilities
+2. **Filtering**: Registry filters registered agents based on query criteria
+3. **Response**: Registry returns matching agents with their endpoints and capabilities
+4. **Direct Connection**: The querying agent connects directly to the discovered agent
+
+```http
+# Discovery Query
+GET /registry/agents?capability=text-translation&language=es HTTP/1.1
+Host: registry.example.com
+Accept: application/json
+```
+
+```http
+# Discovery Response
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "agents": [
+    {
+      "agentId": "agent-abc123",
+      "publicKey": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----",
+      "endpoints": {
+        "http": "https://agent-abc123.example.com/api",
+        "websocket": "wss://agent-abc123.example.com/ws"
+      },
+      "capabilities": [
+        {
+          "id": "text-translation",
+          "version": "1.0",
+          "supportedLanguages": ["en", "es", "fr", "de"],
+          "maxTextLength": 10000
+        }
+      ],
+      "lastSeen": "2025-07-18T12:00:00Z"
+    },
+    // Other matching agents...
+  ]
+}
+```
+
+### Direct Discovery
+
+Direct discovery is used when an agent already knows the endpoint of another agent and wants to learn about its
+capabilities.
+
+<Mermaid
+  chart={`
+sequenceDiagram
+    participant Agent A
+    participant Agent B
+
+    Agent A->>Agent B: Capability query
+    Agent B-->>Agent A: Capability advertisement
+`}
+/>
+
+#### Direct Query Process
+
+1. **Capability Query**: Agent sends a direct query to the known endpoint
+2. **Response**: The queried agent responds with its capabilities
+3. **Verification**: The querying agent verifies the response signature
+
+```json
+// Direct Capability Query
+{
+  "messageType": "CAPABILITY_QUERY",
+  "payload": {
+    "queryType": "ALL"
+  }
+}
+```
+
+```json
+// Direct Capability Response
+{
+  "messageType": "CAPABILITY_ADVERTISEMENT",
+  "payload": {
+    "capabilities": [
+      {
+        "id": "text-translation",
+        "version": "1.0",
+        "supportedLanguages": ["en", "es", "fr", "de"],
+        "maxTextLength": 10000
+      }
+    ]
+  }
+}
+```
+
+### Broadcast Discovery
+
+Broadcast discovery enables agents to announce their presence and capabilities to the network without a central registry.
+
+<Mermaid
+  chart={`
+sequenceDiagram
+    participant Agent A
+    participant Network
+    participant Agent B
+    participant Agent C
+
+    Agent A->>Network: Broadcast capability advertisement
+    Network-->>Agent B: Receive advertisement
+    Network-->>Agent C: Receive advertisement
+
+    Agent B->>Agent A: Direct connection
+`}
+/>
+
+#### Broadcast Process
+
+1. **Capability Broadcast**: Agent broadcasts its capabilities to the network
+2. **Multicast Receipt**: Other agents on the network receive the broadcast
+3. **Filtering**: Receiving agents filter broadcasts based on their needs
+4. **Direct Connection**: Interested agents connect directly to the broadcasting agent
+
+```json
+// Broadcast Advertisement
+{
+  "messageType": "CAPABILITY_BROADCAST",
+  "payload": {
+    "agentId": "agent-abc123",
+    "publicKey": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----",
+    "endpoints": {
+      "http": "https://agent-abc123.example.com/api",
+      "websocket": "wss://agent-abc123.example.com/ws"
+    },
+    "capabilities": [
+      {
+        "id": "text-translation",
+        "version": "1.0",
+        "supportedLanguages": ["en", "es", "fr", "de"]
+      }
+    ],
+    "broadcastId": "broadcast-123456",
+    "timestamp": "2025-07-18T12:00:00Z"
+  }
+}
+```
+
+### Federation-Based Discovery
+
+Federation-based discovery connects multiple registries to provide a broader view of available agents while
+maintaining administrative boundaries.
+
+<Mermaid
+  chart={`
+flowchart TD
+    A[Agent A] -->|Register| B[Registry 1]
+    C[Agent C] -->|Register| D[Registry 2]
+
+    B <-->|Federation| D
+
+    E[Agent B] -->|Query| B
+    B -->|Results include\nAgent A and Agent C| E
+`}
+/>
+
+#### Federation Process
+
+1. **Registry Federation**: Registries establish federation relationships
+2. **Cross-Registry Queries**: Queries to one registry can return results from federated registries
+3. **Aggregation**: Results from multiple registries are aggregated before returning to the querying agent
+
+## Discovery Protocols
+
+The H.I.V.E. Protocol supports multiple underlying discovery protocols:
+
+### HTTP-Based Discovery
+
+Using standard HTTP endpoints for registration and discovery:
+
+- `POST /registry/agents` for registration
+- `GET /registry/agents` for discovery queries
+- `GET /registry/agents/{agentId}` for specific agent lookup
+
+### DNS-Based Discovery
+
+Using DNS records for discovery in decentralized environments:
+
+- SRV records for service discovery
+- TXT records for capability advertisements
+- NAPTR records for service resolution
+
+### mDNS/DNS-SD
+
+For local network discovery without a central registry:
+
+- Multicast DNS for local name resolution
+- DNS Service Discovery for capability advertisement
+- Zero-configuration networking
+
+## Discovery Security
+
+The discovery process includes several security measures:
+
+1. **Signature Verification**: All registration and advertisement messages are signed
+2. **Timestamp Validation**: Messages include timestamps to prevent replay attacks
+3. **Registry Authentication**: Registries authenticate themselves to agents
+4. **Capability Validation**: Registries validate capability format before acceptance
+
+<Callout type="warning">
+  Always verify signatures on discovery responses to prevent malicious impersonation of agents.
 </Callout>
 
-### Example: DNS-Based DR Discovery
+## Registration Maintenance
 
-Agents can discover DR Services through DNS SRV records:
+Registration with discovery services requires ongoing maintenance:
 
+1. **Regular Renewal**: Agents must periodically renew their registration
+2. **Heartbeat Signals**: Optional heartbeat signals to indicate continued availability
+3. **Capability Updates**: Agents should update their registration when capabilities change
+4. **Deregistration**: Agents should deregister when shutting down gracefully
+
+```http
+# Registration Renewal
+PUT /registry/agents/agent-abc123 HTTP/1.1
+Host: registry.example.com
+Content-Type: application/json
+
+{
+  "agentId": "agent-abc123",
+  "timestamp": "2025-07-19T12:00:00Z",
+  "signature": "Base64-encoded signature"
+}
 ```
-_hive-discovery._wss.example.com. 86400 IN SRV 10 10 443 discovery.example.com.
-```
 
-This indicates a H.I.V.E. Discovery Registry Service is available at `wss://discovery.example.com:443/`.
+## Discovery Response Caching
 
-## Capability Advertisement and Matching
+To improve efficiency, discovery responses can be cached:
 
-### Advertisement Structure
+1. **TTL-Based Caching**: Responses include a time-to-live for caching
+2. **Conditional Requests**: Use ETags or Last-Modified headers for conditional requests
+3. **Capability Versioning**: Capability versions help determine cache invalidation
 
-Capability advertisements use the HSDL format to describe an agent's abilities. The critical elements for discovery matching are:
-
-1. **Capabilities Array**: Lists each distinct function the agent can perform
-2. **Intent Identifiers**: Standardized names for specific capabilities
-3. **Input/Output Schemas**: Define data formats for interoperability
-
-### Matching Algorithms
-
-When searching for agents, the DR Service employs matching algorithms to find appropriate providers:
-
-1. **Exact Intent Matching**: Finding agents that explicitly list a required intent
-2. **Schema Compatibility**: Ensuring input/output schemas are compatible
-3. **Constraint Satisfaction**: Checking that specific requirements (e.g., response time) can be met
-4. **Ranking**: Ordering results by relevance, performance metrics, or other criteria
-
-### Example: Capability Matching
-
-Agent A needs image processing with these requirements:
-- Intent: "resizeImage"
-- Input: Must accept PNG format
-- Output: Must return JPG format
-- Constraint: Max processing time < 500ms
-
-The DR Service would match against registered agents' capabilities to find those satisfying these requirements.
-
-## Peer-to-Peer Discovery
-
-For P2P discovery, H.I.V.E. recommends these approaches:
-
-### Local Network Discovery
-
-- **Multicast DNS (mDNS)**: For local network service advertisement
-- **DNS-SD**: Service discovery over DNS
-- **Simple Service Discovery Protocol (SSDP)**: UPnP-based discovery
-
-### Internet-Scale P2P Discovery
-
-- **Distributed Hash Tables (DHT)**: Kademlia-based approaches
-- **Rendezvous Points**: Known meeting locations for initial discovery
-- **Gossip Protocols**: Information spreading through the network
-
-## Federated Discovery
-
-In federated setups, Discovery Registries can share information through:
-
-1. **Registry Federation Protocol**: Standard for registry-to-registry communication
-2. **Cross-Registry Search**: Propagating queries across registry boundaries
-3. **Cache Synchronization**: Periodic syncing of registry data
-
-## Advanced Discovery Topics
-
-### Discovery Caching
-
-To optimize performance:
-- Agents `SHOULD` cache discovery results
-- Cache entries `SHOULD` have appropriate TTL values
-- Cached entries `SHOULD` be refreshed asynchronously
-
-### Progressive Discovery
-
-For complex requirements:
-- Start with broad discovery criteria
-- Progressively refine based on additional requirements
-- Use multi-phase discovery for complex workflows
-
-### Predictive Discovery
-
-For optimized performance:
-- Pre-discover agents likely to be needed
-- Maintain connections to frequently used agents
-- Use historical patterns to predict future needs
-
-## Discovery Lifecycle Management
-
-### Agent Registration Lifecycle
-
-1. **Initial Registration**: Agent registers with DR Service
-2. **Periodic Refresh**: Agent updates its registration before expiration
-3. **Capability Updates**: Agent modifies its capabilities as they change
-4. **Deregistration**: Agent explicitly removes itself when shutting down
-5. **Expiration**: Registry automatically removes stale registrations
-
-### Error Handling
-
-Agents must gracefully handle these discovery scenarios:
-
-1. **Registry Unavailable**: Fall back to alternative discovery methods
-2. **No Matching Agents**: Report appropriate error or try alternative capabilities
-3. **Agent Unreachable**: Try alternative agents or report service unavailability
-4. **Authentication Failure**: Handle DID resolution or verification failures
+<Callout type="info">
+  Implement proper caching strategies for discovery responses to reduce network load and improve responsiveness.
+</Callout>
 
 ## Implementation Considerations
 
-### Scalability
+When implementing discovery in your agent:
 
-For high-scale environments:
-- Implement efficient indexing of capabilities
-- Consider sharding registries by capability domains
-- Use caching at multiple levels
-- Implement load balancing across registry instances
+1. **Fallback Mechanisms**: Implement multiple discovery methods with fallback options
+2. **Capability Filtering**: Filter discovery results client-side for more precise matching
+3. **Rate Limiting**: Respect rate limits of discovery services
+4. **Error Handling**: Implement robust error handling for discovery failures
+5. **Privacy Considerations**: Be aware of what capabilities reveal about your agent
 
-### Security
-
-To protect the discovery ecosystem:
-- Verify all capability advertisement signatures
-- Implement reputation systems to rank trustworthy agents
-- Protect against malicious advertisements
-- Consider privacy implications of capability disclosure
-
-### Performance Monitoring
-
-To maintain quality service:
-- Track discovery latency metrics
-- Monitor registry availability and response times
-- Log failed lookups and registration attempts
-- Implement alerting for registry performance degradation
-
-## Summary
-
-The H.I.V.E. Agent Discovery Flow provides a comprehensive framework for agents to advertise their capabilities and discover appropriate partners for collaboration. By supporting multiple discovery patterns and providing detailed registry specifications, H.I.V.E. ensures robust, scalable agent discovery across diverse deployment scenarios.
-
----
-
-*This specification is subject to enhancement proposals through the H.I.V.E. Protocol Improvement Process.*
+<Callout type="info">
+  For more details on capability descriptions, see the [Capability Advertisement](/docs/protocol/structure/capability-advertisement) documentation.
+</Callout>

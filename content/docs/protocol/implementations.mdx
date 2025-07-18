@@ -1,55 +1,215 @@
 ---
 title: Implementations
-description: Plans for official and community-driven tools to speed up H.I.V.E. Protocol adoption.
+description: Guide to implementing the H.I.V.E. Protocol
 icon: Puzzle
 ---
 
-To foster widespread adoption and ease of development, the H.I.V.E. Protocol community plans to develop and maintain
-reference implementations and Software Development Kits (SDKs) in various programming languages.
-These resources will serve as practical guides and foundational libraries for building H.I.V.E. agents.
+import { Cards, Card } from "fumadocs-ui/components/card";
+import { Callout } from "fumadocs-ui/components/callout";
+import { Code } from "lucide-react";
 
-## Purpose
+This guide provides an overview of how to implement the H.I.V.E. Protocol in your own agent systems. The protocol
+is designed to be language-agnostic and adaptable to different programming environments.
 
-Reference implementations provide concrete examples of how to apply the H.I.V.E. Protocol specification.
-They serve several key purposes:
+## Implementation Approaches
 
-- **Accelerated Development**: Provide developers with pre-built components for common H.I.V.E. functionalities
-  (e.g., DID management, message serialization/deserialization, Noise protocol integration).
-- **Interoperability Assurance**: Act as a "golden standard" to demonstrate correct protocol behavior, aiding in
-  cross-implementation compatibility testing.
-- **Learning Resource**: Offer executable code that clarifies abstract concepts presented in the specification.
-- **Community Collaboration**: Serve as a collaborative hub for best practices and pattern development.
+There are several ways to implement the H.I.V.E. Protocol based on your specific needs and constraints:
 
-## Planned SDKs and Libraries
+<Cards>
+  <Card
+    title="Full Implementation"
+    description="Implement all protocol components for complete functionality"
+    icon={<Code className="text-blue-500" />}
+    href="/docs/protocol/implementation/quick-start"
+  />
+  <Card
+    title="Minimal Implementation"
+    description="Implement only essential components for basic interoperability"
+    icon={<Code className="text-green-500" />}
+    href="/docs/protocol/implementation/example-agent"
+  />
+  <Card
+    title="Client-Only Implementation"
+    description="Implement client capabilities to interact with existing agents"
+    icon={<Code className="text-purple-500" />}
+    href="/docs/protocol/implementation/testing"
+  />
+</Cards>
 
-The H.I.V.E. Protocol community aims to support SDKs in popular programming environments. Initial efforts will focus on:
+## Core Requirements
 
-- **Python SDK**: Providing a comprehensive library for Python developers to build H.I.V.E. agents.
-- **JavaScript/TypeScript SDK**: Enabling H.I.V.E. agent development for Node.js and potentially browser-based
-  environments.
-- **Rust Crate**: A high-performance, secure library for Rust developers.
-- **Go Module**: For efficient and scalable agent implementations in Go.
+Regardless of your implementation approach, all H.I.V.E. Protocol implementations must satisfy these core requirements:
 
-Each SDK `WILL AIM` to provide:
+1. **Message Format Compliance**: Implement the standard message format and serialization
+2. **Cryptographic Verification**: Support message signing and verification
+3. **Basic Task Lifecycle**: Handle the essential task states and transitions
+4. **Error Handling**: Implement standardized error codes and responses
 
-- **DID Management**: Utilities for `did:key` generation, resolution, and key pair management.
-- **Message Handling**: Functions for constructing, signing, verifying, and parsing all defined H.I.V.E. message types.
-- **Secure Communication**: Wrappers for Noise Protocol (IK handshake) and WebSocket/TLS integration.
-- **Contract Negotiation**: Helper functions for managing the H.I.V.E. Negotiation Protocol flow.
-- **Discovery Integration**: Client libraries for interacting with a Discovery Registry Service.
+## Implementation Checklist
 
-## Contribution & Community Efforts
+Use this checklist to ensure your implementation covers the essential protocol components:
 
-The development of these implementations will be an open, community-driven effort.
+- [ ] **Identity Management**
+  - [ ] Generate and manage cryptographic key pairs
+  - [ ] Create and verify message signatures
+  - [ ] Store agent identities securely
 
-- **Open Source**: All official reference implementations `WILL BE` open-source under a permissive license.
-- **Contribution Guidelines**: Clear contribution guidelines `WILL BE PROVIDED` for developers wishing to
-  contribute to SDK development or create their own compatible libraries.
-- **Community Examples**: The documentation `WILL FEATURE` community-contributed agent examples demonstrating
-  various use cases and implementation patterns.
+- [ ] **Communication Layer**
+  - [ ] Implement HTTP/HTTPS endpoints
+  - [ ] Support WebSocket connections (if needed)
+  - [ ] Handle message serialization/deserialization
+  - [ ] Implement proper error handling
 
-## Getting Started
+- [ ] **Agent Discovery**
+  - [ ] Register with discovery services
+  - [ ] Query for other agents
+  - [ ] Advertise capabilities
 
-Once available, details on accessing, installing, and using these SDKs will be provided on the main H.I.V.E.
-Protocol website and within their respective project repositories. Developers are encouraged to monitor these
-channels for updates.
+- [ ] **Task Management**
+  - [ ] Create and parse task proposals
+  - [ ] Handle task state transitions
+  - [ ] Manage task execution
+  - [ ] Deliver task results
+
+- [ ] **Contract Handling**
+  - [ ] Create and validate contracts
+  - [ ] Store contract state
+  - [ ] Enforce contract terms
+
+## Implementation Libraries
+
+The following libraries can help you implement the H.I.V.E. Protocol in different languages:
+
+### JavaScript/TypeScript
+
+```bash
+# Install the H.I.V.E. Protocol SDK
+npm install @hive-protocol/sdk
+
+# Or with yarn
+yarn add @hive-protocol/sdk
+```
+
+```typescript
+import { HiveAgent, Capability, TaskContract } from '@hive-protocol/sdk';
+
+// Create an agent
+const agent = new HiveAgent({
+  agentId: 'my-agent-id',
+  // Generate or load keys
+  keyPair: await HiveAgent.generateKeyPair()
+});
+
+// Define a capability
+const translateCapability = new Capability({
+  id: 'text-translation',
+  parameters: {
+    sourceLanguage: { type: 'string', required: true },
+    targetLanguage: { type: 'string', required: true },
+    text: { type: 'string', required: true }
+  },
+  handler: async (params) => {
+    // Implement capability logic
+    const translated = await translateText(
+      params.text, 
+      params.sourceLanguage, 
+      params.targetLanguage
+    );
+
+    return { translatedText: translated };
+  }
+});
+
+// Register the capability
+agent.registerCapability(translateCapability);
+
+// Start the agent
+await agent.start({
+  port: 3000,
+  discoveryService: 'https://registry.example.com'
+});
+
+console.log('Agent started on port 3000');
+```
+
+### Python
+
+```bash
+# Install the H.I.V.E. Protocol package
+pip install hive-protocol
+```
+
+```python
+from hive_protocol import HiveAgent, Capability
+
+# Create an agent
+agent = HiveAgent(
+    agent_id="my-python-agent",
+    # Generate or load keys
+    key_pair=HiveAgent.generate_key_pair()
+)
+
+# Define a capability
+@agent.capability(
+    id="text-translation",
+    parameters={
+        "sourceLanguage": {"type": "string", "required": True},
+        "targetLanguage": {"type": "string", "required": True},
+        "text": {"type": "string", "required": True}
+    }
+)
+async def translate_text(params):
+    # Implement capability logic
+    translated = await translate(
+        params["text"],
+        params["sourceLanguage"],
+        params["targetLanguage"]
+    )
+
+    return {"translatedText": translated}
+
+# Start the agent
+agent.start(
+    port=3000,
+    discovery_service="https://registry.example.com"
+)
+
+print("Agent started on port 3000")
+```
+
+## Conformance Testing
+
+To ensure your implementation correctly follows the H.I.V.E. Protocol specification, use the conformance testing suite:
+
+```bash
+# Install the test suite
+npm install -g @hive-protocol/conformance-tests
+
+# Run tests against your implementation
+hive-conformance-test --endpoint http://localhost:3000
+```
+
+The test suite verifies:
+- Message format compliance
+- Signature generation and verification
+- Task lifecycle handling
+- Error responses
+- Contract validation
+
+<Callout type="info">
+  For more detailed implementation guidance, refer to the [Quick Start Guide](/docs/protocol/implementation/quick-start)
+    and [Example Agent Implementation](/docs/protocol/implementation/example-agent).
+</Callout>
+
+## Implementation Tips
+
+1. **Start Simple**: Begin with a minimal implementation and add features incrementally
+2. **Focus on Security**: Prioritize proper key management and message verification
+3. **Test Thoroughly**: Use the conformance tests early and often
+4. **Handle Errors Gracefully**: Implement robust error handling from the start
+5. **Consider Scaling**: Design your implementation with future scaling in mind
+
+<Callout type="warning">
+  Security is critical in H.I.V.E. Protocol implementations. Never expose private keys, always verify signatures,
+    and implement proper authentication and authorization checks.
+</Callout>

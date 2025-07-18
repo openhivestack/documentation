@@ -1,0 +1,577 @@
+---
+title: Testing H.I.V.E. Agents
+description: Tools and strategies for testing protocol implementations
+icon: TestTube
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Testing is a critical part of implementing the H.I.V.E. Protocol. This guide covers strategies and tools for
+thoroughly testing your agent implementations to ensure they comply with the protocol specification and operate reliably.
+
+## Testing Approach
+
+A comprehensive testing strategy for H.I.V.E. Protocol agents should include:
+
+1. **Unit Testing**: Testing individual components in isolation
+2. **Integration Testing**: Testing interactions between components
+3. **Conformance Testing**: Verifying compliance with the protocol specification
+4. **Load Testing**: Evaluating performance under load
+5. **Security Testing**: Identifying security vulnerabilities
+
+## Unit Testing
+
+Unit tests focus on testing individual components of your agent implementation in isolation.
+
+### Example: Testing a Capability
+
+```typescript
+// test/capabilities/text-processing.test.ts
+import { textProcessingCapability } from '../../src/capabilities/text';
+
+describe('Text Processing Capability', () => {
+  test('should convert text to uppercase', async () => {
+    const result = await textProcessingCapability.handler({
+      operation: 'uppercase',
+      text: 'hello world'
+    });
+
+    expect(result).toEqual({ result: 'HELLO WORLD' });
+  });
+
+  test('should count words correctly', async () => {
+    const result = await textProcessingCapability.handler({
+      operation: 'count',
+      text: 'hello world, this is a test',
+      options: { countWords: true }
+    });
+
+    expect(result).toEqual({ result: 6, type: 'word_count' });
+  });
+
+  test('should throw error for unknown operation', async () => {
+    await expect(textProcessingCapability.handler({
+      operation: 'unknown',
+      text: 'hello world'
+    })).rejects.toThrow('Unknown operation: unknown');
+  });
+});
+```
+
+### Example: Testing Parameter Validation
+
+```typescript
+// test/utils/validation.test.ts
+import { validateParameters } from '../../src/utils/validation';
+import { Capability } from '@hive-protocol/sdk';
+
+describe('Parameter Validation', () => {
+  const testCapability = new Capability({
+    id: 'test-capability',
+    parameters: {
+      requiredString: {
+        type: 'string',
+        required: true,
+        maxLength: 100
+      },
+      optionalEnum: {
+        type: 'string',
+        required: false,
+        enum: ['option1', 'option2']
+      },
+      numberRange: {
+        type: 'number',
+        required: false,
+        minimum: 1,
+        maximum: 10
+      }
+    },
+    handler: async () => ({})
+  });
+
+  test('should validate valid parameters', () => {
+    const result = validateParameters(testCapability, {
+      requiredString: 'valid string',
+      optionalEnum: 'option1',
+      numberRange: 5
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.errors).toBeUndefined();
+  });
+
+  test('should detect missing required parameter', () => {
+    const result = validateParameters(testCapability, {
+      optionalEnum: 'option1'
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('Missing required parameter: requiredString');
+  });
+
+  test('should detect invalid enum value', () => {
+    const result = validateParameters(testCapability, {
+      requiredString: 'valid',
+      optionalEnum: 'invalid'
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('Parameter optionalEnum must be one of: option1, option2');
+  });
+
+  test('should detect out of range number', () => {
+    const result = validateParameters(testCapability, {
+      requiredString: 'valid',
+      numberRange: 20
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('Parameter numberRange exceeds maximum value of 10');
+  });
+});
+```
+
+## Integration Testing
+
+Integration tests verify that different components of your agent work together correctly.
+
+### Example: Testing Task Execution Flow
+
+```typescript
+// test/integration/task-execution.test.ts
+import { HiveAgent, HiveClient, KeyPair } from '@hive-protocol/sdk';
+import { textProcessingCapability } from '../../src/capabilities/text';
+import express from 'express';
+
+describe('Task Execution Flow', () => {
+  let agent: HiveAgent;
+  let client: HiveClient;
+  let server: any;
+
+  beforeAll(async () => {
+    // Set up test agent
+    const agentKeyPair = await KeyPair.generate('Ed25519');
+    agent = new HiveAgent({
+      id: 'test-agent',
+      keyPair: agentKeyPair,
+      endpoint: 'http://localhost:3001/api'
+    });
+
+    // Register capability
+    agent.registerCapability(textProcessingCapability);
+
+    // Set up Express server
+    const app = express();
+    app.use(express.json());
+    app.use('/api', agent.createExpressRouter());
+
+    // Start server
+    server = app.listen(3001);
+
+    // Set up test client
+    const clientKeyPair = await KeyPair.generate('Ed25519');
+    client = new HiveClient({
+      id: 'test-client',
+      keyPair: clientKeyPair
+    });
+  });
+
+  afterAll(done => {
+    server.close(done);
+  });
+
+  test('should execute task and return result', async () => {
+    const result = await client.requestTask({
+      endpoint: 'http://localhost:3001/api',
+      capability: 'text-processing',
+      parameters: {
+        operation: 'uppercase',
+        text: 'integration test'
+      }
+    });
+
+    expect(result).toBeDefined();
+    expect(result.result).toBe('INTEGRATION TEST');
+  });
+
+  test('should handle invalid capability gracefully', async () => {
+    await expect(client.requestTask({
+      endpoint: 'http://localhost:3001/api',
+      capability: 'non-existent',
+      parameters: {}
+    })).rejects.toThrow();
+  });
+});
+```
+
+## Conformance Testing
+
+Conformance tests verify that your implementation correctly follows the H.I.V.E. Protocol specification.
+
+### Using the Conformance Test Suite
+
+The H.I.V.E. Protocol provides an official conformance test suite that you can run against your implementation:
+
+```bash
+# Install the conformance test suite
+npm install -g @hive-protocol/conformance-tests
+
+# Run the test suite against your agent
+hive-conformance-test --endpoint http://localhost:3000/api
+```
+
+The conformance tests check:
+
+1. Message format compliance
+2. Cryptographic signature generation and verification
+3. Task lifecycle state transitions
+4. Error handling and error codes
+5. Contract validation and enforcement
+
+### Creating Custom Conformance Tests
+
+You can also create custom conformance tests for specific aspects of your implementation:
+
+```typescript
+// test/conformance/message-format.test.ts
+import { HiveAgent, KeyPair } from '@hive-protocol/sdk';
+import axios from 'axios';
+
+describe('Message Format Conformance', () => {
+  let agentKeyPair: KeyPair;
+  let clientKeyPair: KeyPair;
+
+  beforeAll(async () => {
+    agentKeyPair = await KeyPair.generate('Ed25519');
+    clientKeyPair = await KeyPair.generate('Ed25519');
+  });
+
+  test('should reject message with missing signature', async () => {
+    // Create message without signature
+    const message = {
+      messageId: 'msg-123',
+      messageType: 'TASK_PROPOSAL',
+      timestamp: new Date().toISOString(),
+      sender: {
+        id: 'client-123',
+        publicKey: clientKeyPair.publicKeyPem
+      },
+      recipient: {
+        id: 'agent-456',
+        publicKey: agentKeyPair.publicKeyPem
+      },
+      payload: {
+        taskId: 'task-123',
+        capabilityId: 'text-processing',
+        parameters: {
+          operation: 'uppercase',
+          text: 'test'
+        }
+      }
+      // Signature intentionally omitted
+    };
+
+    try {
+      await axios.post('http://localhost:3000/api/tasks', message);
+      fail('Should have rejected message with missing signature');
+    } catch (error) {
+      expect(error.response.status).toBe(400);
+      expect(error.response.data.errorCode).toBe('INVALID_MESSAGE_FORMAT');
+    }
+  });
+});
+```
+
+## Load Testing
+
+Load testing evaluates how your agent performs under heavy usage.
+
+### Example: Load Testing with k6
+
+```javascript
+// load-test.js
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+
+export const options = {
+  vus: 10,         // 10 virtual users
+  duration: '30s', // for 30 seconds
+  thresholds: {
+    http_req_duration: ['p(95)<500'], // 95% of requests should complete within 500ms
+  },
+};
+
+// Generate a valid message with signature (simplified for example)
+function generateValidMessage() {
+  return {
+    messageId: `msg-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    messageType: 'TASK_PROPOSAL',
+    timestamp: new Date().toISOString(),
+    sender: {
+      id: 'load-test-client',
+      publicKey: 'PREDEFINED_TEST_KEY'
+    },
+    recipient: {
+      id: 'test-agent',
+      publicKey: 'AGENT_PUBLIC_KEY'
+    },
+    payload: {
+      taskId: `task-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      capabilityId: 'text-processing',
+      parameters: {
+        operation: 'uppercase',
+        text: `Load test message ${Math.random()}`
+      }
+    },
+    signature: 'VALID_SIGNATURE_FOR_TESTING' // In a real test, generate valid signatures
+  };
+}
+
+export default function() {
+  const message = generateValidMessage();
+
+  const response = http.post('http://localhost:3000/api/tasks', JSON.stringify(message), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  check(response, {
+    'status is 200': (r) => r.status === 200,
+    'response has taskId': (r) => JSON.parse(r.body).taskId !== undefined,
+  });
+
+  sleep(1);
+}
+```
+
+Run the load test:
+
+```bash
+k6 run load-test.js
+```
+
+## Security Testing
+
+Security tests identify vulnerabilities in your implementation.
+
+### Example: Testing Signature Verification
+
+```typescript
+// test/security/signature-verification.test.ts
+import { HiveAgent, KeyPair } from '@hive-protocol/sdk';
+import axios from 'axios';
+
+describe('Signature Verification Security', () => {
+  let validKeyPair: KeyPair;
+  let attackerKeyPair: KeyPair;
+
+  beforeAll(async () => {
+    validKeyPair = await KeyPair.generate('Ed25519');
+    attackerKeyPair = await KeyPair.generate('Ed25519');
+  });
+
+  test('should reject message with invalid signature', async () => {
+    // Create message base
+    const messageBase = {
+      messageId: 'msg-123',
+      messageType: 'TASK_PROPOSAL',
+      timestamp: new Date().toISOString(),
+      sender: {
+        id: 'client-123',
+        publicKey: validKeyPair.publicKeyPem
+      },
+      recipient: {
+        id: 'agent-456',
+        publicKey: 'AGENT_PUBLIC_KEY'
+      },
+      payload: {
+        taskId: 'task-123',
+        capabilityId: 'text-processing',
+        parameters: {
+          operation: 'uppercase',
+          text: 'test'
+        }
+      }
+    };
+
+    // Sign with attacker's key instead of the claimed sender's key
+    const signature = await attackerKeyPair.sign(JSON.stringify(messageBase));
+    const message = {
+      ...messageBase,
+      signature
+    };
+
+    try {
+      await axios.post('http://localhost:3000/api/tasks', message);
+      fail('Should have rejected message with invalid signature');
+    } catch (error) {
+      expect(error.response.status).toBe(401);
+      expect(error.response.data.errorCode).toBe('INVALID_SIGNATURE');
+    }
+  });
+
+  test('should reject message with expired timestamp', async () => {
+    // Create message with old timestamp
+    const oldDate = new Date();
+    oldDate.setHours(oldDate.getHours() - 2); // 2 hours old
+
+    const messageBase = {
+      messageId: 'msg-456',
+      messageType: 'TASK_PROPOSAL',
+      timestamp: oldDate.toISOString(), // Old timestamp
+      sender: {
+        id: 'client-123',
+        publicKey: validKeyPair.publicKeyPem
+      },
+      recipient: {
+        id: 'agent-456',
+        publicKey: 'AGENT_PUBLIC_KEY'
+      },
+      payload: {
+        taskId: 'task-456',
+        capabilityId: 'text-processing',
+        parameters: {
+          operation: 'uppercase',
+          text: 'test'
+        }
+      }
+    };
+
+    // Sign with valid key
+    const signature = await validKeyPair.sign(JSON.stringify(messageBase));
+    const message = {
+      ...messageBase,
+      signature
+    };
+
+    try {
+      await axios.post('http://localhost:3000/api/tasks', message);
+      fail('Should have rejected message with expired timestamp');
+    } catch (error) {
+      expect(error.response.status).toBe(400);
+      expect(error.response.data.errorCode).toBe('EXPIRED_MESSAGE');
+    }
+  });
+});
+```
+
+## Mock Testing
+
+Mock testing allows you to test components that depend on external services.
+
+### Example: Testing Discovery Integration
+
+```typescript
+// test/mocks/registry.ts
+import nock from 'nock';
+
+export function mockRegistryService() {
+  return nock('https://registry.example.com')
+    .post('/agents')
+    .reply(200, {
+      status: 'registered',
+      agentId: 'test-agent'
+    });
+}
+
+// test/discovery/registry-integration.test.ts
+import { HiveAgent, KeyPair } from '@hive-protocol/sdk';
+import { mockRegistryService } from '../mocks/registry';
+
+describe('Registry Integration', () => {
+  let agent: HiveAgent;
+
+  beforeEach(async () => {
+    const keyPair = await KeyPair.generate('Ed25519');
+    agent = new HiveAgent({
+      id: 'test-agent',
+      keyPair,
+      endpoint: 'http://localhost:3000/api'
+    });
+  });
+
+  test('should register with discovery service', async () => {
+    const registryMock = mockRegistryService();
+
+    await agent.registerWithDiscoveryService('https://registry.example.com');
+
+    expect(registryMock.isDone()).toBe(true);
+  });
+});
+```
+
+## Automated Testing Workflow
+
+Implement a CI/CD pipeline for automated testing:
+
+```yaml
+# .github/workflows/test.yml
+name: Test H.I.V.E. Agent
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run linting
+      run: npm run lint
+
+    - name: Run unit tests
+      run: npm test
+
+    - name: Build agent
+      run: npm run build
+
+    - name: Start agent for integration tests
+      run: npm run start:test &
+      env:
+        PORT: 3001
+
+    - name: Wait for agent to start
+      run: sleep 5
+
+    - name: Run integration tests
+      run: npm run test:integration
+
+    - name: Run conformance tests
+      run: npx @hive-protocol/conformance-tests --endpoint http://localhost:3001/api
+
+    - name: Run security tests
+      run: npm run test:security
+```
+
+## Testing Best Practices
+
+1. **Test Coverage**: Aim for high test coverage across all components
+2. **Isolation**: Ensure tests are isolated and don't affect each other
+3. **Realistic Data**: Use realistic test data that mimics production scenarios
+4. **Edge Cases**: Test boundary conditions and error paths
+5. **Mocking**: Use mocks for external dependencies to ensure tests are fast and reliable
+6. **Security Focus**: Dedicate specific tests to security concerns
+7. **Automated Testing**: Integrate tests into your CI/CD pipeline
+
+<Callout type="warning">
+  Never use real private keys in your tests. Always generate test-specific keys to avoid accidental exposure of
+    production credentials.
+</Callout>
+
+<Callout type="info">
+  The conformance test suite is continually updated as the protocol evolves. Regularly run the latest version to
+    ensure ongoing compliance with the specification.
+</Callout>

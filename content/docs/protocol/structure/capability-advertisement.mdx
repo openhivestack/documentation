@@ -1,156 +1,294 @@
 ---
 title: Capability Advertisement
-description: Standardizing how H.I.V.E. agents describe and advertise their capabilities using HSDL.
-icon: Briefcase
+description: How agents communicate their abilities to others
+icon: Wrench
 ---
 
-The H.I.V.E. Protocol utilizes a standardized mechanism for agents to describe and advertise their functional
-capabilities. This enables other agents to programmatically discover, understand, and interact with available services.
+import { Callout } from "fumadocs-ui/components/callout";
 
-## H.I.V.E. Service Description Language (HSDL)
+Capability Advertisement is a core mechanism in the H.I.V.E. Protocol that enables agents to communicate what they
+can do. This standardized approach allows agents to discover each other based on their abilities and requirements.
 
-- **Standard**: Agent capabilities `MUST` be described using H.I.V.E. Service Description Language (HSDL).
-- **Foundation**: While inspired by OpenAPI 3.1, HSDL is a simpler, custom specification tailored for the H.I.V.E.
-  protocol. It avoids the complexity of OpenAPI while providing a clear contract for agent interaction.
-- **Purpose**: HSDL documents detail an agent's available services, expected inputs, anticipated outputs, and terms
-  for engagement, serving as a machine-readable contract.
-- **Format**: HSDL documents `MUST` be serialized in either **YAML** or **JSON**.
+## Capability Description Format
 
-### HSDL Schema Profile
+Agents advertise their capabilities using a standardized JSON format that provides detailed information about what
+functions they can perform:
 
-An HSDL document is structured with the following key sections:
-
-- **`hsdl_version`** (required): The semantic version of the HSDL specification itself. This ensures backward
-  compatibility as the schema evolves.
-- **`info`** (required): An object containing essential metadata about the services offered.
-    - `title`, `version` (of the service implementation), and `description`.
-- **`agent`** (required): An object containing identification and connection details for the agent.
-    - `did`: The Decentralized Identifier of the agent.
-    - `network_address`: The primary WebSocket URI for the agent.
-- **`capabilities`** (required): An array of objects, where each object defines a specific, callable function or
-  service the agent provides.
-    - `intent`: A unique string to programmatically identify the capability.
-    - `prompts`: An array of prompt templates for invoking this capability.
-    - `description`: Human-readable details about the capability.
-    - `input_schema`, `output_schema`, `error_schema`: References to schemas defining the structure of requests,
-      successful responses, and errors.
-- **`components`** (optional): Contains reusable objects, primarily for defining data schemas (`schemas`) that can
-  be referenced elsewhere in the document to avoid duplication. It uses standard JSON Schema definitions.
-
-### HSDL Example
-
-Here is an example of an HSDL document for an agent providing image processing services:
-
-```yaml
-# The version of the HSDL specification being used.
-hsdl_version: "1.0.0"
-
-# General information about the agent's service offerings.
-info:
-  title: "Image Processing Agent"
-  version: "2.1.0" # Version of this specific service implementation
-  description: "An agent that can resize and apply watermarks to images."
-  contact:
-    name: "Maintainer Team"
-    email: "contact@images.agent"
-
-# Identity and connection details for the agent.
-agent:
-  did: "did:key:z6Mkp..."
-  network_address: "wss://agent.images.com/hive"
-
-# Core list of capabilities offered by the agent.
-capabilities:
-  - intent: "resizeImage"
-    prompts:
-      - ""
-    description: "Accepts a base64-encoded image and returns a resized version. Supports PNG and JPEG."
-    input_schema:
-      $ref: "#/components/schemas/ImageResizeRequest"
-    output_schema:
-      $ref: "#/components/schemas/ImageResizeResponse"
-    error_schema:
-      $ref: "#/components/schemas/StandardError"
-
-  - intent: "getHealth"
-    prompts:
-      - ""
-    description: "Returns the operational status of the agent and its services."
-    input_schema: {} # No input required for this service
-    output_schema:
-      $ref: "#/components/schemas/HealthStatus"
-    error_schema:
-      $ref: "#/components/schemas/StandardError"
-
-# Reusable data structures (JSON Schema).
-components:
-  schemas:
-    ImageResizeRequest:
-      type: "object"
-      properties:
-        image_data:
-          type: "string"
-          format: "byte"
-          description: "Base64 encoded image data."
-        width:
-          type: "integer"
-        height:
-          type: "integer"
-      required: ["image_data", "width", "height"]
-
-    ImageResizeResponse:
-      type: "object"
-      properties:
-        resized_image_data:
-          type: "string"
-          format: "byte"
-          description: "Base64 encoded resized image data."
-      required: ["resized_image_data"]
-
-    HealthStatus:
-      type: "object"
-      properties:
-        status:
-          type: "string"
-          enum: ["ok", "degraded", "error"]
-        timestamp:
-          type: "string"
-          format: "date-time"
-      required: ["status", "timestamp"]
-
-    StandardError:
-      type: "object"
-      properties:
-        error_code:
-          type: "integer"
-          description: "A H.I.V.E. standard error code."
-        message:
-          type: "string"
-          description: "A human-readable error message."
-      required: ["error_code", "message"]
+```json
+{
+  "capabilities": [
+    {
+      "id": "text-translation",
+      "version": "1.0",
+      "name": "Text Translation",
+      "description": "Translates text between different languages",
+      "categories": ["language", "text-processing"],
+      "supportedLanguages": ["en", "es", "fr", "de", "zh", "ja"],
+      "parameters": {
+        "sourceLanguage": {
+          "type": "string",
+          "required": true,
+          "description": "Source language code (ISO 639-1)",
+          "enum": ["en", "es", "fr", "de", "zh", "ja"]
+        },
+        "targetLanguage": {
+          "type": "string",
+          "required": true,
+          "description": "Target language code (ISO 639-1)",
+          "enum": ["en", "es", "fr", "de", "zh", "ja"]
+        },
+        "text": {
+          "type": "string",
+          "required": true,
+          "description": "Text to translate",
+          "maxLength": 10000
+        },
+        "preserveFormatting": {
+          "type": "boolean",
+          "required": false,
+          "default": true,
+          "description": "Whether to preserve formatting in the translated text"
+        },
+        "domain": {
+          "type": "string",
+          "required": false,
+          "description": "Specialized domain for translation",
+          "enum": ["general", "technical", "medical", "legal", "financial"],
+          "default": "general"
+        }
+      },
+      "returns": {
+        "translatedText": {
+          "type": "string",
+          "description": "The translated text"
+        },
+        "confidence": {
+          "type": "number",
+          "description": "Confidence score between 0 and 1"
+        },
+        "detectedLanguage": {
+          "type": "string",
+          "description": "Detected source language if not specified"
+        }
+      },
+      "examples": [
+        {
+          "description": "Translate from English to Spanish",
+          "request": {
+            "sourceLanguage": "en",
+            "targetLanguage": "es",
+            "text": "Hello world"
+          },
+          "response": {
+            "translatedText": "Hola mundo",
+            "confidence": 0.98
+          }
+        }
+      ],
+      "performance": {
+        "averageResponseTime": 0.8,
+        "throughput": "5000 chars/second",
+        "costPerUnit": {
+          "unit": "1000 characters",
+          "cost": 0.01
+        }
+      },
+      "availability": {
+        "uptime": 0.998,
+        "rateLimits": {
+          "requestsPerMinute": 100,
+          "tokensPerDay": 1000000
+        }
+      }
+    }
+  ]
+}
 ```
 
-### CapabilityAdvertisement Message
+## Capability Components
 
-- **Purpose**: The `CapabilityAdvertisement` message (as defined in Message Formats) is the vehicle for
-  disseminating an agent's HSDL.
-- **Content**: This message `MUST` contain:
-  - The agent's `DID`.
-  - Its primary agent_network_address (wss:// URI).
-  - A timestamp of advertisement creation.
-  - The cryptographically signed HSDL document.
-- **Validation**: The HSDL document `MUST` be validated against the HSDL schema before being advertised. The DID in the HSDL document `MUST` match the sender's DID in the message.
-- **Signing**: The HSDL document itself `MUST` be signed by the agent's `DID` to ensure its authenticity and
-  integrity before being included in the `CapabilityAdvertisement` message payload.
-- **Dissemination**: Agents `MUST` register this message with a Discovery Registry (DR) Service. They `MAY` also share
-  it directly with known peer agents.
+### Basic Information
 
-### Discovery Lookup
+| Field         | Description                                      |
+|---------------|--------------------------------------------------|
+| `id`          | Unique identifier for the capability             |
+| `version`     | Version of the capability implementation         |
+| `name`        | Human-readable name                              |
+| `description` | Detailed description of what the capability does |
+| `categories`  | Tags for categorizing the capability             |
 
-- **Querying DR**: Other agents `MAY` query a Discovery Registry Service using parameters like service_type
-  (e.g., "Image Processing"), `required_capabilities` (e.g., specific intents or schema properties), or a
-  target `agent_id` (`DID`).
-- **Matching**: The DR Service or peer agents will match queries against registered `CapabilityAdvertisement` messages,
-  facilitating the discovery of suitable service providers.
-- **Capability Selection**: When multiple agents with similar capabilities are found, selecting agents may involve considering factors such as response time, reliability metrics, or user preferences.
-- **Caching**: Agents `SHOULD` cache capability advertisements they receive to minimize network traffic and improve performance during subsequent interactions.
+### Parameters
+
+The `parameters` object defines the inputs that the capability accepts:
+
+- Each parameter has a unique name as its key
+- `type` specifies the data type (string, number, boolean, object, array)
+- `required` indicates whether the parameter is mandatory
+- `description` provides human-readable explanation
+- Additional validation constraints can be included (`enum`, `minLength`, `maxLength`, etc.)
+
+### Returns
+
+The `returns` object describes the output format:
+
+- Each field has a unique name as its key
+- `type` specifies the data type of the return value
+- `description` explains the meaning of the return value
+
+### Examples
+
+The `examples` array provides sample usage scenarios:
+
+- `description` explains the example scenario
+- `request` shows sample parameter values
+- `response` shows expected output
+
+### Performance and Availability
+
+Optional metrics about the capability's performance characteristics:
+
+- `averageResponseTime` in seconds
+- `throughput` in relevant units
+- `costPerUnit` for fee-based capabilities
+- `availability` metrics like uptime and rate limits
+
+## Advertisement Methods
+
+Agents can advertise their capabilities through several mechanisms:
+
+### Registry Publication
+
+Agents register their capabilities with a central or federated registry:
+
+```http
+POST /registry/agents HTTP/1.1
+Host: registry.example.com
+Content-Type: application/json
+
+{
+  "agentId": "agent-abc123",
+  "publicKey": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----",
+  "endpoints": {
+    "http": "https://agent-abc123.example.com/api",
+    "websocket": "wss://agent-abc123.example.com/ws"
+  },
+  "capabilities": [ /* capability objects */ ]
+}
+```
+
+### Direct Broadcast
+
+Agents broadcast capability advertisements directly to known peers:
+
+```json
+{
+  "messageType": "CAPABILITY_ADVERTISEMENT",
+  "payload": {
+    "capabilities": [ /* capability objects */ ],
+    "expires": "2025-07-25T00:00:00Z"
+  }
+}
+```
+
+### Capability Endpoint
+
+Agents expose a standard endpoint for capability discovery:
+
+```http
+GET /capabilities HTTP/1.1
+Host: agent-abc123.example.com
+Accept: application/json
+```
+
+## Capability Discovery
+
+Agents can discover capabilities through complementary methods:
+
+### Registry Query
+
+Querying a registry for agents with specific capabilities:
+
+```http
+GET /registry/agents?capability=text-translation&language=es HTTP/1.1
+Host: registry.example.com
+Accept: application/json
+```
+
+### Direct Query
+
+Directly querying an agent for its capabilities:
+
+```json
+{
+  "messageType": "CAPABILITY_QUERY",
+  "payload": {
+    "queryType": "ALL"
+  }
+}
+```
+
+Or for specific capabilities:
+
+```json
+{
+  "messageType": "CAPABILITY_QUERY",
+  "payload": {
+    "queryType": "SPECIFIC",
+    "capabilityIds": ["text-translation", "image-generation"]
+  }
+}
+```
+
+## Capability Updates
+
+Agents should update their capability advertisements when changes occur:
+
+- When new capabilities are added
+- When existing capabilities are modified or removed
+- When performance characteristics change significantly
+
+Updates follow the same format as initial advertisements but include version information and change details.
+
+## Filtering and Matching
+
+When searching for capabilities, agents can apply filtering criteria:
+
+```json
+{
+  "messageType": "CAPABILITY_QUERY",
+  "payload": {
+    "queryType": "FILTERED",
+    "filters": {
+      "capabilityType": "text-translation",
+      "parameters": {
+        "sourceLanguage": "en",
+        "targetLanguage": "es"
+      },
+      "performance": {
+        "minUptime": 0.99,
+        "maxResponseTime": 1.0
+      }
+    }
+  }
+}
+```
+
+## Implementation Considerations
+
+When implementing capability advertisement and discovery:
+
+- **Accurate Descriptions**: Ensure capability descriptions are accurate and complete
+- **Versioning**: Clearly version capabilities to handle compatibility
+- **Update Frequency**: Balance between freshness and network overhead
+- **Validation**: Validate capability descriptions against the schema
+- **Caching**: Implement appropriate caching strategies for efficiency
+
+<Callout type="warning">
+  Agents should never advertise capabilities they cannot reliably provide. Misrepresenting capabilities damages
+    trust in the network.
+</Callout>
+
+<Callout type="info">
+  When advertising capabilities, include detailed parameter specifications to help potential requesters understand
+    exactly what inputs are required and what constraints apply.
+</Callout>

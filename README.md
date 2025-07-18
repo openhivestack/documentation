@@ -1,11 +1,8 @@
 # H.I.V.E. Protocol (Hybrid Inter-Agent Verification & Execution Protocol)
 
-## 🐝 Empowering Autonomous Agent Collaboration
+## 🐝 Simple Agent Collaboration
 
-H.I.V.E. establishes foundational conventions for the entire lifecycle of inter-agent collaboration, from initial 
-discovery and secure channel establishment to contract negotiation, task execution, and verifiable delivery. 
-Its "Hybrid" nature supports diverse network topologies, while "Verification" and "Execution" principles ensure trust 
-and efficiency.
+H.I.V.E. is a simplified protocol that makes it easy for AI agents to work together. It provides the essential building blocks for agents to find each other, communicate securely, and complete tasks reliably.
 
 This repository contains the official specification and documentation for the H.I.V.E. Protocol.
 
@@ -13,37 +10,29 @@ This repository contains the official specification and documentation for the H.
 
 ## 💡 What is H.I.V.E.?
 
-The H.I.V.E. Protocol is a layered architecture designed to enable autonomous AI agents to seamlessly discover, 
-connect, agree upon, and complete tasks with built-in cryptographic security. It defines a stack for:
+The H.I.V.E. Protocol is a streamlined architecture that enables AI agents to collaborate effectively. It focuses on two key components:
 
-- **Communication Transport**: Secure, reliable, and ordered message exchange.
-- **Discovery & Identity**: Agent identification via Decentralized Identifiers (DIDs), capability advertisement, and secure channel establishment.
-- **Interaction & Trust**: Secure negotiation, task execution management, value agreement, and verifiable delivery of results.
+- **Communication Layer**: How agents connect, identify themselves, and share capabilities.
+- **Agent Collaboration**: How agents negotiate tasks, execute work, and deliver results.
 
-By adhering to H.I.V.E., agents can achieve unprecedented levels of interoperability, autonomy, and trust, fostering a new era of collaborative AI ecosystems.
+By using H.I.V.E., developers can create AI agents that work together seamlessly without unnecessary complexity.
 
 ## 📚 Documentation
 
-The complete and normative specification for the H.I.V.E. Protocol is available in our dedicated documentation portal. 
-This is the primary resource for anyone looking to understand, implement, or contribute to H.I.V.E.
+The H.I.V.E. Protocol documentation is available in our dedicated documentation portal.
 
 👉 **[View the H.I.V.E. Protocol Documentation](https://openhive.sh)**
 
 The documentation covers:
 
-- A detailed [Architectural Overview](https://openhive.sh/docs/protocol/architecture)
-- Layer-by-layer breakdowns:
-  - [Transport Layer](https://openhive.sh/docs/protocol/layers/transport)
-  - [Discovery & Identity Layer](https://openhive.sh/docs/protocol/layers/discovery-identity)
-  - [Interaction & Trust Layer](https://openhive.sh/docs/protocol/layers/interaction-trust)
-- [Standardized Message Formats](https://openhive.sh/docs/protocol/structure/message-formats)
-- [Error Codes](https://openhive.sh/docs/protocol/structure/error-codes) for robust error handling
-- [Security Considerations](https://openhive.sh/docs/protocol/structure/security-considerations) and threat model
-- [Conformance Criteria](https://openhive.sh/docs/protocol/guidelines/conformance) for compliant implementations
-- [Versioning Strategy](https://openhive.sh/docs/protocol/guidelines/versioning) for protocol evolution
-- [Best Practices](https://openhive.sh/docs/protocol/structure/best-practices) for agent development
-- A comprehensive [Glossary](https://openhive.sh/docs/protocol/structure/glossary) of terms
-- Information on [Reference Implementations & SDKs](https://openhive.sh/docs/protocol/implementations) (planned)
+- [Architecture Overview](https://openhive.sh/docs/protocol/architecture) - The simplified design
+- Key components:
+  - [Communication Layer](https://openhive.sh/docs/protocol/layers/communication) - How agents connect
+  - [Agent Collaboration](https://openhive.sh/docs/protocol/layers/collaboration) - How agents work together
+- [Message Formats](https://openhive.sh/docs/protocol/structure/message-formats) - Simple message structures
+- [Task Contracts](https://openhive.sh/docs/protocol/structure/simplified-contract) - Basic agreement format
+- [Task Lifecycle](https://openhive.sh/docs/protocol/structure/lifecycle) - How tasks progress from start to finish
+- [Implementation Guide](https://openhive.sh/docs/protocol/implementations) - Getting started with H.I.V.E.
 
 ## ✨ Getting Started (for Implementers)
 
