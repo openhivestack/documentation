@@ -61,7 +61,7 @@ Create your main agent file `agent.ts`:
 
 ```typescript
 // agent.ts
-import { HiveAgent, Capability, DidManager } from '@hive-protocol/sdk';
+import { HiveAgent, Capability, IdentityManager } from '@hive-protocol/sdk';
 import express from 'express';
 import cors from 'cors';
 import { agentConfig } from './config';
@@ -72,19 +72,19 @@ async function main() {
   app.use(cors());
   app.use(express.json());
 
-  // Generate or load DID and keys
-  const didManager = new DidManager();
-  const { did, didDocument, keyPair } = await didManager.generate({
-    method: agentConfig.didMethod || 'hive',
+  // Generate or load agent identity and keys
+  const identityManager = new IdentityManager();
+  const { id, profile, keyPair } = await identityManager.generate({
+    network: agentConfig.network || 'hive',
     keyType: 'Ed25519'
   });
 
-  console.log(`Agent DID: ${did}`);
+  console.log(`Agent ID: ${id}`);
 
   // Create the agent
   const agent = new HiveAgent({
-    did,
-    didDocument,
+    id,
+    profile,
     name: agentConfig.name,
     description: agentConfig.description,
     version: agentConfig.version,
@@ -169,22 +169,22 @@ Create a simple client `client.ts` to interact with your agent:
 
 ```typescript
 // client.ts
-import { HiveClient, DidManager } from '@hive-protocol/sdk';
+import { HiveClient, IdentityManager } from '@hive-protocol/sdk';
 
 async function main() {
-  // Generate client DID and keys
-  const didManager = new DidManager();
-  const { did, didDocument, keyPair } = await didManager.generate({
-    method: 'hive',
+  // Generate client identity and keys
+  const identityManager = new IdentityManager();
+  const { id, profile, keyPair } = await identityManager.generate({
+    network: 'hive',
     keyType: 'Ed25519'
   });
 
-  console.log(`Client DID: ${did}`);
+  console.log(`Client ID: ${id}`);
 
   // Create a client
   const client = new HiveClient({
-    did,
-    didDocument,
+    id,
+    profile,
     keyPair
   });
 

@@ -22,7 +22,7 @@
     "structure/capability-advertisement",
     "structure/contract",
     "structure/lifecycle",
-    "structure/did-resolution",
+    "structure/agent-identity",
     "---Implementation---",
     "implementation/quick-start",
     "implementation/example-agent",

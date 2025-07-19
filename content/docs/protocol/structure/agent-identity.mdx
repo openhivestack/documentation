@@ -1,0 +1,184 @@
+---
+title: Agent Identity
+description: How to resolve and validate Agent Identities in the H.I.V.E. Protocol
+icon: Fingerprint
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Mermaid } from "@/components/mdx/mermaid";
+
+## Introduction to Agent Identity
+
+Agent Identities (AgentIDs) are globally unique identifiers that enable verifiable, self-sovereign digital identity. In the H.I.V.E. Protocol, AgentIDs provide a simple yet effective approach to agent identification and authentication.
+
+An AgentID follows this simple format:
+
+```
+agentid:network:uniqueIdentifier
+```
+
+For example: `agentid:hive:123456789abcdefghi`
+
+## Agent Profiles
+
+Each AgentID resolves to an Agent Profile, which contains:
+
+- Public keys for authentication and signing
+- Service endpoints for interacting with the agent
+- Verification information for establishing trust
+
+Here's a standard H.I.V.E. Protocol Agent Profile:
+
+```json
+{
+  "id": "agentid:hive:123456789abcdefghi",
+  "name": "Translation Agent",
+  "keys": [{
+    "id": "primary",
+    "type": "Ed25519",
+    "publicKey": "H3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV"
+  }],
+  "auth": ["primary"],
+  "services": [{
+    "id": "main",
+    "type": "agent",
+    "url": "https://agent.example.com/api"
+  }]
+}
+```
+
+## Identity Resolution Process
+
+<Mermaid
+  chart={`
+sequenceDiagram
+    participant Client as Agent A
+    participant Registry as Registry
+    participant Agent as Agent B
+
+    Client->>Registry: Lookup AgentID
+    Registry-->>Client: Return Agent Profile
+    Client->>Client: Validate Profile
+    Client->>Agent: Connect securely
+`}
+/>
+
+When an agent needs to communicate with another agent:
+
+1. It looks up the target agent's ID to get their Agent Profile
+2. It validates the Agent Profile's authenticity
+3. It extracts service endpoints and public keys from the profile
+4. It establishes a connection using the appropriate service endpoint
+5. It verifies messages using the agent's public keys
+
+## Agent Networks
+
+The H.I.V.E. Protocol primarily uses the `hive` network identifier, but supports other networks including:
+
+- `web`: For web-based agent identification
+- `direct`: For direct key-based identification
+- `custom`: For organization-specific networks
+
+Agents can specify supported networks in their capabilities advertisement.
+
+## Creating an AgentID
+
+Agents can create identities through several methods:
+
+### Self-Generated Identities
+
+```javascript
+import { generateAgentId } from '@hive-protocol/identity';
+
+// Generate a new agent identity
+const { id, profile, privateKey } = await generateAgentId({
+  network: 'hive',
+  keyType: 'Ed25519'
+});
+
+console.log(`New AgentID: ${id}`);
+```
+
+### Registry-Based Identities
+
+```javascript
+import { registerAgent } from '@hive-protocol/identity';
+
+// Register an agent with a registry
+const { id, profile } = await registerAgent({
+  network: 'hive',
+  registryUrl: 'https://registry.example.com',
+  keyType: 'Ed25519'
+});
+```
+
+## Resolving an AgentID
+
+To resolve an AgentID to its Agent Profile:
+
+```javascript
+import { resolveAgent } from '@hive-protocol/identity';
+
+// Resolve an AgentID to get the Agent Profile
+const profile = await resolveAgent('agentid:hive:123456789abcdefghi');
+
+// Access public keys
+const publicKey = profile.keys[0].publicKey;
+
+// Access service endpoints
+const serviceUrl = profile.services.find(s => s.type === 'agent').url;
+```
+
+## Message Verification
+
+To verify a message signed by an agent:
+
+```javascript
+import { verifySignature } from '@hive-protocol/identity';
+
+// Verify a signature using an AgentID
+const isValid = await verifySignature({
+  agentId: 'agentid:hive:123456789abcdefghi',
+  keyId: 'primary',
+  message: 'Message to verify',
+  signature: 'Base64EncodedSignature'
+});
+
+if (isValid) {
+  console.log('Signature verified successfully');
+}
+```
+
+## Agent Profile Updates
+
+Agent Profiles can be updated to:
+
+- Add new public keys
+- Replace compromised keys
+- Update service endpoints
+- Modify agent capabilities
+
+The profile update process is straightforward:
+
+1. Create a new version of the Agent Profile
+2. Sign it with your current authorized key
+3. Publish the updated profile to the registry
+
+<Callout type="warning">
+  When rotating keys, maintain the previous verification method for a grace period to ensure
+  ongoing operations aren't disrupted.
+</Callout>
+
+## Best Practices for Agent Identity
+
+- **Key Security**: Store private keys securely, preferably in a hardware security module (HSM) or secure enclave
+- **Key Types**: Use Ed25519 for most applications due to its security and performance characteristics
+- **Multiple Keys**: Include separate keys for different purposes when needed
+- **Service Information**: Provide clear service endpoints in the Agent Profile
+- **Network Selection**: Choose appropriate networks based on your security and compatibility needs
+- **Caching**: Cache identity resolution results to improve performance
+
+<Callout type="info">
+  The identity resolution process is a critical security component. Always validate Agent Profiles
+  and verify the authenticity of all identity information.
+</Callout>

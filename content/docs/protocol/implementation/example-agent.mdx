@@ -100,15 +100,15 @@ export const config = {
     description: process.env.AGENT_DESCRIPTION || 'A comprehensive H.I.V.E. Protocol agent implementation',
     version: process.env.AGENT_VERSION || '1.0.0',
     endpoint: process.env.AGENT_ENDPOINT || 'http://localhost:3000/api',
-    didMethod: process.env.DID_METHOD || 'hive'
+    network: process.env.AGENT_NETWORK || 'hive'
   },
   server: {
     port: parseInt(process.env.PORT || '3000', 10),
     host: process.env.HOST || 'localhost'
   },
-  did: {
-    documentPath: process.env.DID_DOCUMENT_PATH,
-    keyPath: process.env.DID_KEY_PATH
+  identity: {
+    profilePath: process.env.AGENT_PROFILE_PATH,
+    keyPath: process.env.AGENT_KEY_PATH
   },
   discovery: {
     registryUrl: process.env.REGISTRY_URL || 'https://registry.example.com',
@@ -131,33 +131,33 @@ Create cryptographic utilities in `src/utils/crypto.ts`:
 
 ```typescript
 // src/utils/crypto.ts
-import { DidManager } from '@hive-protocol/sdk';
+import { IdentityManager } from '@hive-protocol/sdk';
 import fs from 'fs/promises';
 import path from 'path';
 import { config } from '../config';
 
-// Load or generate DID and key pair
-export async function getAgentDid() {
-  const didManager = new DidManager();
+// Load or generate agent identity and key pair
+export async function getAgentIdentity() {
+  const identityManager = new IdentityManager();
 
-  // If DID document path is provided, try to load existing DID
-  if (config.did.documentPath && config.did.keyPath) {
+  // If profile path is provided, try to load existing identity
+  if (config.identity.profilePath && config.identity.keyPath) {
     try {
-      const didDocumentJson = await fs.readFile(config.did.documentPath, 'utf-8');
-      const didKeyJson = await fs.readFile(config.did.keyPath, 'utf-8');
+      const profileJson = await fs.readFile(config.identity.profilePath, 'utf-8');
+      const keyJson = await fs.readFile(config.identity.keyPath, 'utf-8');
 
-      const didDocument = JSON.parse(didDocumentJson);
-      const keyPair = JSON.parse(didKeyJson);
+      const profile = JSON.parse(profileJson);
+      const keyPair = JSON.parse(keyJson);
 
-      return { did: didDocument.id, didDocument, keyPair };
+      return { id: profile.id, profile, keyPair };
     } catch (error) {
-      console.warn('Failed to load existing DID, generating new one', error);
+      console.warn('Failed to load existing identity, generating new one', error);
     }
   }
 
-  // Generate new DID
-  const { did, didDocument, keyPair } = await didManager.generate({
-    method: config.agent.didMethod,
+  // Generate new identity
+  const { id, profile, keyPair } = await identityManager.generate({
+    network: config.agent.network,
     keyType: 'Ed25519'
   });
 
@@ -181,27 +181,27 @@ export async function getAgentDid() {
   return { did, didDocument, keyPair };
 }
 
-// Verify a proof
-export async function verifyProof(
+// Verify a signature
+export async function verifySignature(
   data: string | object,
-  proof: {
+  signature: {
     type: string;
-    verificationMethod: string;
-    proofValue: string;
+    keyId: string;
+    value: string;
   },
-  didDocument: any
+  profile: any
 ): Promise<boolean> {
   try {
     const dataStr = typeof data === 'string' ? data : JSON.stringify(data);
-    const didManager = new DidManager();
+    const identityManager = new IdentityManager();
 
-    return didManager.verifyProof({
+    return identityManager.verifySignature({
       data: dataStr,
-      proof,
-      didDocument
+      signature,
+      profile
     });
   } catch (error) {
-    console.error('Proof verification failed', error);
+    console.error('Signature verification failed', error);
     return false;
   }
 }

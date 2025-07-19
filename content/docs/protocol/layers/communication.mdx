@@ -85,21 +85,20 @@ All communications in the H.I.V.E. Protocol use a standardized message format to
   "messageId": "msg-123456",
   "timestamp": "2025-07-18T12:30:45Z",
   "sender": {
-    "did": "did:hive:123456789abcdefghi",
-    "verificationMethod": "did:hive:123456789abcdefghi#keys-1"
+    "id": "agentid:hive:123456789abcdefghi",
+    "keyId": "primary"
   },
   "recipient": {
-    "did": "did:hive:987654321jihgfedcba",
-    "verificationMethod": "did:hive:987654321jihgfedcba#keys-1"
+    "id": "agentid:hive:987654321jihgfedcba",
+    "keyId": "primary"
   },
   "messageType": "TASK_REQUEST",
   "payload": { /* message-specific content */ },
-  "proof": {
-    "type": "Ed25519Signature2020",
+  "signature": {
+    "type": "Ed25519",
     "created": "2025-07-18T12:30:45Z",
-    "verificationMethod": "did:hive:123456789abcdefghi#keys-1",
-    "proofPurpose": "authentication",
-    "proofValue": "z58DAdFfa9SkqZMVPxAQpic6FNGVeCcW7reirYHuF2i1eFUXdpzVoNXn7RNmwevYcK7Sn" 
+    "keyId": "primary",
+    "value": "58DAdFfa9SkqZMVPxAQpic6FNGVeCcW7reirYHuF2i1eFUXdpzVoNXn7RNmwevYcK7Sn" 
   }
 }
 ```
@@ -115,10 +114,10 @@ interactions.
 
 ### Message Authentication
 
-- All messages include a cryptographic proof created using the sender's verification method
-- Recipients verify the proof using the verification method referenced in the sender's DID Document
-- Supports multiple proof formats including Ed25519Signature2020 and JsonWebSignature2020
-- Ensures message authenticity and non-repudiation with standards-based verification
+- All messages include a cryptographic signature created using the sender's private key
+- Recipients verify the signature using the public key from the sender's Agent Profile
+- Supports multiple signature formats including Ed25519 and RSA
+- Ensures message authenticity and non-repudiation
 
 ### Transport Security
 
@@ -128,10 +127,10 @@ interactions.
 
 ### Authentication Methods
 
-- **DID Authentication**: Primary authentication mechanism using DID verification methods
-- **Verifiable Credentials**: Optional authentication using W3C Verifiable Credentials
-- **DID-based JWT**: JWT tokens that incorporate DIDs for enhanced security and context
-- **API Keys**: Simplified authentication for controlled environments (with DID association)
+- **Key-based Authentication**: Primary authentication using public/private key pairs
+- **Credentials**: Optional authentication using verifiable credentials
+- **Agent JWT**: JWT tokens incorporating agent identity for enhanced security
+- **API Keys**: Simplified authentication for controlled environments
 
 ## Integration with Other Layers
 

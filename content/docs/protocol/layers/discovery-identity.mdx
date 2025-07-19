@@ -29,32 +29,28 @@ In the H.I.V.E. Protocol, each agent has a unique identity established through c
 
 An agent's identity consists of:
 
-- **Decentralized Identifier (DID)**: A globally unique identifier conforming to the W3C DID standard
-- **DID Document**: Contains verification methods, services, and other DID-related information
+- **Agent Identifier (AgentID)**: A globally unique identifier for the agent
+- **Agent Profile**: Contains public keys, services, and other identity information
 - **Metadata**: Optional information about the agent's purpose, owner, etc.
 
 ```json
 {
-  "did": "did:hive:123456789abcdefghi",
-  "didDocument": {
-    "@context": ["https://www.w3.org/ns/did/v1"],
-    "id": "did:hive:123456789abcdefghi",
-    "verificationMethod": [{
-      "id": "did:hive:123456789abcdefghi#keys-1",
-      "type": "Ed25519VerificationKey2020",
-      "controller": "did:hive:123456789abcdefghi",
-      "publicKeyMultibase": "zH3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV"
+  "id": "agentid:hive:123456789abcdefghi",
+  "profile": {
+    "name": "Translation Agent",
+    "keys": [{
+      "id": "primary",
+      "type": "Ed25519",
+      "publicKey": "H3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV"
     }],
-    "authentication": ["did:hive:123456789abcdefghi#keys-1"],
-    "assertionMethod": ["did:hive:123456789abcdefghi#keys-1"],
-    "service": [{
-      "id": "did:hive:123456789abcdefghi#agent",
-      "type": "HiveAgent",
-      "serviceEndpoint": "https://agent.example.com/api"
+    "auth": ["primary"],
+    "services": [{
+      "id": "main",
+      "type": "agent",
+      "url": "https://agent.example.com/api"
     }]
   },
   "metadata": {
-    "name": "Translation Agent",
     "description": "Provides language translation services",
     "owner": "company-xyz",
     "created": "2025-01-15T08:30:00Z"
@@ -62,16 +58,16 @@ An agent's identity consists of:
 }
 ```
 
-### Verification Methods
+### Key Types
 
-H.I.V.E. supports multiple verification method types in accordance with the W3C DID specification:
+H.I.V.E. supports multiple key types for agent authentication and message signing:
 
-1. **Ed25519VerificationKey2020**: Modern elliptic curve cryptography offering superior performance and security
-2. **JsonWebKey2020**: JSON Web Key format supporting various algorithms including RSA and ECDSA
-3. **X25519KeyAgreementKey2020**: Specialized for encrypted communications
+1. **Ed25519**: Modern elliptic curve cryptography offering superior performance and security
+2. **RSA**: Traditional cryptography supporting various key sizes
+3. **ECDSA**: Elliptic Curve Digital Signature Algorithm with P-256 curve support
 
-All agent communications are signed using the appropriate verification method from the DID Document, ensuring
-message authenticity while supporting a wider range of cryptographic algorithms and standards.
+All agent communications are signed using the appropriate key from the Agent Profile, ensuring
+message authenticity while supporting various cryptographic standards.
 
 <Callout type="warning">
   Private keys must be securely stored and never shared. Compromise of a private key allows impersonation of the agent.
@@ -96,25 +92,23 @@ Host: registry.example.com
 Content-Type: application/json
 
 {
-  "did": "did:hive:123456789abcdefghi",
-  "didDocument": {
-    "@context": ["https://www.w3.org/ns/did/v1"],
-    "id": "did:hive:123456789abcdefghi",
-    "verificationMethod": [{
-      "id": "did:hive:123456789abcdefghi#keys-1",
-      "type": "Ed25519VerificationKey2020",
-      "controller": "did:hive:123456789abcdefghi",
-      "publicKeyMultibase": "zH3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV"
+  "id": "agentid:hive:123456789abcdefghi",
+  "profile": {
+    "name": "Translation Agent",
+    "keys": [{
+      "id": "primary",
+      "type": "Ed25519",
+      "publicKey": "H3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV"
     }],
-    "authentication": ["did:hive:123456789abcdefghi#keys-1"],
-    "service": [{
-      "id": "did:hive:123456789abcdefghi#agent",
-      "type": "HiveAgent",
-      "serviceEndpoint": "https://agent-abc123.example.com/api"
+    "auth": ["primary"],
+    "services": [{
+      "id": "main",
+      "type": "agent",
+      "url": "https://agent-abc123.example.com/api"
     },{
-      "id": "did:hive:123456789abcdefghi#websocket",
-      "type": "HiveWebSocket",
-      "serviceEndpoint": "wss://agent-abc123.example.com/ws"
+      "id": "websocket",
+      "type": "websocket",
+      "url": "wss://agent-abc123.example.com/ws"
     }]
   },
   "capabilities": [
@@ -137,13 +131,13 @@ Accept: application/json
 {
   "agents": [
     {
-      "did": "did:hive:123456789abcdefghi",
-      "didDocument": { /* DID Document */ },
+      "id": "agentid:hive:123456789abcdefghi",
+      "profile": { /* Agent Profile */ },
       "capabilities": [{ /* capability details */ }]
     },
     {
-      "did": "did:hive:987654321jihgfedcba",
-      "didDocument": { /* DID Document */ },
+      "id": "agentid:hive:987654321jihgfedcba",
+      "profile": { /* Agent Profile */ },
       "capabilities": [{ /* capability details */ }]
     }
   ]
