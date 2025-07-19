@@ -21,12 +21,12 @@ A H.I.V.E. Task Contract follows this standardized structure:
   "createdAt": "2025-07-18T12:00:00Z",
   "parties": {
     "requester": {
-      "agentId": "agent-abc123",
-      "publicKey": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+      "did": "did:hive:123456789abcdefghi",
+      "verificationMethod": "did:hive:123456789abcdefghi#keys-1"
     },
     "provider": {
-      "agentId": "agent-xyz789",
-      "publicKey": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+      "did": "did:hive:987654321jihgfedcba",
+      "verificationMethod": "did:hive:987654321jihgfedcba#keys-1"
     }
   },
   "task": {
@@ -80,7 +80,7 @@ The `parties` section identifies the agents involved in the contract:
 - **Requester**: The agent requesting the task to be performed
 - **Provider**: The agent agreeing to perform the task
 
-Each party is identified by their `agentId` and `publicKey`, which is used for message signing and verification.
+Each party is identified by their `did` (Decentralized Identifier) and a specific `verificationMethod` from their DID Document, which is used for message signing and verification. This approach provides greater flexibility and aligns with W3C standards for decentralized identity.
 
 ### Task Definition
 
@@ -201,8 +201,8 @@ For simple, one-off tasks, a lightweight contract format can be used:
 ```json
 {
   "contractId": "simple-contract-123",
-  "requester": "agent-abc123",
-  "provider": "agent-xyz789",
+  "requester": "did:hive:123456789abcdefghi",
+  "provider": "did:hive:987654321jihgfedcba",
   "taskId": "task-456789",
   "capability": "text-translation",
   "parameters": {
@@ -211,8 +211,14 @@ For simple, one-off tasks, a lightweight contract format can be used:
     "text": "Hello world"
   },
   "deadline": "2025-07-18T13:00:00Z",
-  "requesterSignature": "Base64-encoded signature",
-  "providerSignature": "Base64-encoded signature"
+  "requesterSignature": {
+    "verificationMethod": "did:hive:123456789abcdefghi#keys-1",
+    "signature": "Base64-encoded signature"
+  },
+  "providerSignature": {
+    "verificationMethod": "did:hive:987654321jihgfedcba#keys-1",
+    "signature": "Base64-encoded signature"
+  }
 }
 ```
 

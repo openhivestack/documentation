@@ -96,19 +96,19 @@ dotenv.config();
 
 export const config = {
   agent: {
-    id: process.env.AGENT_ID || 'advanced-hive-agent',
     name: process.env.AGENT_NAME || 'Advanced H.I.V.E. Agent',
     description: process.env.AGENT_DESCRIPTION || 'A comprehensive H.I.V.E. Protocol agent implementation',
     version: process.env.AGENT_VERSION || '1.0.0',
-    endpoint: process.env.AGENT_ENDPOINT || 'http://localhost:3000/api'
+    endpoint: process.env.AGENT_ENDPOINT || 'http://localhost:3000/api',
+    didMethod: process.env.DID_METHOD || 'hive'
   },
   server: {
     port: parseInt(process.env.PORT || '3000', 10),
     host: process.env.HOST || 'localhost'
   },
-  keys: {
-    privateKeyPath: process.env.PRIVATE_KEY_PATH,
-    publicKeyPath: process.env.PUBLIC_KEY_PATH
+  did: {
+    documentPath: process.env.DID_DOCUMENT_PATH,
+    keyPath: process.env.DID_KEY_PATH
   },
   discovery: {
     registryUrl: process.env.REGISTRY_URL || 'https://registry.example.com',
@@ -131,59 +131,77 @@ Create cryptographic utilities in `src/utils/crypto.ts`:
 
 ```typescript
 // src/utils/crypto.ts
-import { KeyPair } from '@hive-protocol/sdk';
+import { DidManager } from '@hive-protocol/sdk';
 import fs from 'fs/promises';
 import path from 'path';
 import { config } from '../config';
 
-// Load or generate key pair
-export async function getKeyPair(): Promise<KeyPair> {
-  // If key paths are provided, try to load existing keys
-  if (config.keys.privateKeyPath && config.keys.publicKeyPath) {
-    try {
-      const privateKeyPem = await fs.readFile(config.keys.privateKeyPath, 'utf-8');
-      const publicKeyPem = await fs.readFile(config.keys.publicKeyPath, 'utf-8');
+// Load or generate DID and key pair
+export async function getAgentDid() {
+  const didManager = new DidManager();
 
-      return KeyPair.fromPem(privateKeyPem, publicKeyPem);
+  // If DID document path is provided, try to load existing DID
+  if (config.did.documentPath && config.did.keyPath) {
+    try {
+      const didDocumentJson = await fs.readFile(config.did.documentPath, 'utf-8');
+      const didKeyJson = await fs.readFile(config.did.keyPath, 'utf-8');
+
+      const didDocument = JSON.parse(didDocumentJson);
+      const keyPair = JSON.parse(didKeyJson);
+
+      return { did: didDocument.id, didDocument, keyPair };
     } catch (error) {
-      console.warn('Failed to load existing keys, generating new ones', error);
+      console.warn('Failed to load existing DID, generating new one', error);
     }
   }
 
-  // Generate new keys
-  const keyPair = await KeyPair.generate('Ed25519');
+  // Generate new DID
+  const { did, didDocument, keyPair } = await didManager.generate({
+    method: config.agent.didMethod,
+    keyType: 'Ed25519'
+  });
 
-  // Save keys if paths are provided
-  if (config.keys.privateKeyPath && config.keys.publicKeyPath) {
+  // Save DID and keys if paths are provided
+  if (config.did.documentPath && config.did.keyPath) {
     try {
       // Ensure directories exist
-      await fs.mkdir(path.dirname(config.keys.privateKeyPath), { recursive: true });
-      await fs.mkdir(path.dirname(config.keys.publicKeyPath), { recursive: true });
+      await fs.mkdir(path.dirname(config.did.documentPath), { recursive: true });
+      await fs.mkdir(path.dirname(config.did.keyPath), { recursive: true });
 
-      // Save keys
-      await fs.writeFile(config.keys.privateKeyPath, keyPair.privateKeyPem);
-      await fs.writeFile(config.keys.publicKeyPath, keyPair.publicKeyPem);
+      // Save DID document and keys
+      await fs.writeFile(config.did.documentPath, JSON.stringify(didDocument, null, 2));
+      await fs.writeFile(config.did.keyPath, JSON.stringify(keyPair, null, 2));
 
-      console.log('Generated and saved new key pair');
+      console.log('Generated and saved new DID');
     } catch (error) {
-      console.error('Failed to save generated keys', error);
+      console.error('Failed to save generated DID', error);
     }
   }
 
-  return keyPair;
+  return { did, didDocument, keyPair };
 }
 
-// Verify a signature
-export async function verifySignature(
+// Verify a proof
+export async function verifyProof(
   data: string | object,
-  signature: string,
-  publicKey: string
+  proof: {
+    type: string;
+    verificationMethod: string;
+    proofValue: string;
+  },
+  didDocument: any
 ): Promise<boolean> {
   try {
     const dataStr = typeof data === 'string' ? data : JSON.stringify(data);
-    return KeyPair.verify(dataStr, signature, publicKey);
+    const didManager = new DidManager();
+
+    return didManager.verifyProof({
+      data: dataStr,
+      proof,
+      didDocument
+    });
   } catch (error) {
-    console.error('Signature verification failed', error);
+    console.error('Proof verification failed', error);
     return false;
   }
 }
@@ -480,7 +498,7 @@ Create contract manager in `src/contracts/manager.ts`:
 
 ```typescript
 // src/contracts/manager.ts
-import { TaskContract, KeyPair } from '@hive-protocol/sdk';
+import { TaskContract } from '@hive-protocol/sdk';
 import crypto from 'crypto';
 
 interface ContractRecord {
@@ -494,9 +512,13 @@ interface ContractRecord {
 
 export class ContractManager {
   private contracts: Map<string, ContractRecord> = new Map();
-  private keyPair: KeyPair;
+  private did: string;
+  private didDocument: any;
+  private keyPair: any;
 
-  constructor(keyPair: KeyPair) {
+  constructor({ did, didDocument, keyPair }) {
+    this.did = did;
+    this.didDocument = didDocument;
     this.keyPair = keyPair;
   }
 
@@ -510,8 +532,8 @@ export class ContractManager {
       parties: {
         requester: requesterInfo,
         provider: {
-          agentId: this.keyPair.agentId,
-          publicKey: this.keyPair.publicKeyPem
+          did: this.did,
+          verificationMethod: `${this.did}#keys-1`
         }
       },
       task: {
@@ -615,13 +637,13 @@ Create the main agent file in `src/agent.ts`:
 
 ```typescript
 // src/agent.ts
-import { HiveAgent, KeyPair, ErrorCode } from '@hive-protocol/sdk';
+import { HiveAgent, ErrorCode } from '@hive-protocol/sdk';
 import express from 'express';
 import cors from 'cors';
 import winston from 'winston';
 
 import { config } from './config';
-import { getKeyPair, validateParameters } from './utils';
+import { getAgentDid, validateParameters } from './utils';
 import { textProcessingCapability, imageProcessingCapability } from './capabilities';
 import { ContractManager } from './contracts';
 
@@ -649,13 +671,13 @@ if (config.logging.file) {
 
 async function main() {
   try {
-    // Load or generate key pair
-    logger.info('Initializing agent key pair');
-    const keyPair = await getKeyPair();
-    logger.info(`Agent public key: ${keyPair.publicKeyPem.substring(0, 32)}...`);
+    // Load or generate DID and keys
+    logger.info('Initializing agent DID');
+    const { did, didDocument, keyPair } = await getAgentDid();
+    logger.info(`Agent DID: ${did}`);
 
     // Create contract manager
-    const contractManager = new ContractManager(keyPair);
+    const contractManager = new ContractManager({ did, didDocument, keyPair });
 
     // Create Express app
     const app = express();
@@ -673,7 +695,8 @@ async function main() {
 
     // Create the agent
     const agent = new HiveAgent({
-      id: config.agent.id,
+      did,
+      didDocument,
       name: config.agent.name,
       description: config.agent.description,
       version: config.agent.version,

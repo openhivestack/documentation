@@ -44,13 +44,14 @@ Create a configuration file `config.ts` for your agent:
 ```typescript
 // config.ts
 export const agentConfig = {
-  id: 'text-processor-agent',
   name: 'Text Processing Agent',
   description: 'Provides basic text processing capabilities',
   version: '1.0.0',
   endpoint: 'http://localhost:3000',
   // Registry to register with (optional)
-  registryUrl: 'https://registry.example.com'
+  registryUrl: 'https://registry.example.com',
+  // DID method to use
+  didMethod: 'hive'
 };
 ```
 
@@ -60,7 +61,7 @@ Create your main agent file `agent.ts`:
 
 ```typescript
 // agent.ts
-import { HiveAgent, Capability, KeyPair } from '@hive-protocol/sdk';
+import { HiveAgent, Capability, DidManager } from '@hive-protocol/sdk';
 import express from 'express';
 import cors from 'cors';
 import { agentConfig } from './config';
@@ -71,13 +72,19 @@ async function main() {
   app.use(cors());
   app.use(express.json());
 
-  // Generate or load keys
-  const keyPair = await KeyPair.generate('Ed25519');
-  console.log(`Agent public key: ${keyPair.publicKey}`);
+  // Generate or load DID and keys
+  const didManager = new DidManager();
+  const { did, didDocument, keyPair } = await didManager.generate({
+    method: agentConfig.didMethod || 'hive',
+    keyType: 'Ed25519'
+  });
+
+  console.log(`Agent DID: ${did}`);
 
   // Create the agent
   const agent = new HiveAgent({
-    id: agentConfig.id,
+    did,
+    didDocument,
     name: agentConfig.name,
     description: agentConfig.description,
     version: agentConfig.version,
@@ -162,15 +169,22 @@ Create a simple client `client.ts` to interact with your agent:
 
 ```typescript
 // client.ts
-import { HiveClient, KeyPair } from '@hive-protocol/sdk';
+import { HiveClient, DidManager } from '@hive-protocol/sdk';
 
 async function main() {
-  // Generate client keys
-  const keyPair = await KeyPair.generate('Ed25519');
+  // Generate client DID and keys
+  const didManager = new DidManager();
+  const { did, didDocument, keyPair } = await didManager.generate({
+    method: 'hive',
+    keyType: 'Ed25519'
+  });
+
+  console.log(`Client DID: ${did}`);
 
   // Create a client
   const client = new HiveClient({
-    id: 'simple-client',
+    did,
+    didDocument,
     keyPair
   });
 

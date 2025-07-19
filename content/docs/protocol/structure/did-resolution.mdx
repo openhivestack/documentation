@@ -1,0 +1,190 @@
+---
+title: DID Resolution
+description: How to resolve and validate Decentralized Identifiers (DIDs) in the H.I.V.E. Protocol
+icon: Fingerprint
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Mermaid } from "@/components/mdx/mermaid";
+
+## Introduction to DIDs
+
+Decentralized Identifiers (DIDs) are a type of globally unique identifier that enables verifiable, self-sovereign digital identity. In the H.I.V.E. Protocol, DIDs replace the traditional combination of agent IDs and public keys with a more flexible, standards-based approach to identity management.
+
+A DID is a URI that follows this format:
+
+```
+did:method:methodSpecificId
+```
+
+For example: `did:hive:123456789abcdefghi`
+
+## DID Documents
+
+Each DID resolves to a DID Document, which contains:
+
+- Verification methods (public keys) for authentication and signing
+- Service endpoints for interacting with the identity
+- Proof mechanisms for verifying the document's integrity
+
+Here's a standard H.I.V.E. Protocol DID Document:
+
+```json
+{
+  "@context": ["https://www.w3.org/ns/did/v1"],
+  "id": "did:hive:123456789abcdefghi",
+  "verificationMethod": [{
+    "id": "did:hive:123456789abcdefghi#keys-1",
+    "type": "Ed25519VerificationKey2020",
+    "controller": "did:hive:123456789abcdefghi",
+    "publicKeyMultibase": "zH3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV"
+  }],
+  "authentication": [
+    "did:hive:123456789abcdefghi#keys-1"
+  ],
+  "assertionMethod": [
+    "did:hive:123456789abcdefghi#keys-1"
+  ],
+  "service": [{
+    "id": "did:hive:123456789abcdefghi#agent",
+    "type": "HiveAgent",
+    "serviceEndpoint": "https://agent.example.com/api"
+  }]
+}
+```
+
+## DID Resolution Process
+
+<Mermaid
+  chart={`
+sequenceDiagram
+    participant Client as Agent A
+    participant Resolver as DID Resolver
+    participant Agent as Agent B
+
+    Client->>Resolver: Resolve DID (did:hive:123...)
+    Resolver-->>Client: Return DID Document
+    Client->>Client: Validate DID Document
+    Client->>Agent: Initiate authenticated connection
+`}
+/>
+
+When an agent needs to communicate with another agent:
+
+1. It resolves the target agent's DID to obtain the DID Document
+2. It validates the DID Document's authenticity
+3. It extracts service endpoints and verification methods from the document
+4. It establishes a connection using the appropriate service endpoint
+5. It verifies messages using the verification methods in the DID Document
+
+## DID Methods in H.I.V.E.
+
+The H.I.V.E. Protocol primarily uses the `did:hive` method, but supports other standard DID methods including:
+
+- `did:web`: For web-based DID resolution
+- `did:key`: For simplified, key-based DIDs
+- `did:ion`: For Microsoft's ION network (Bitcoin-anchored)
+
+Agents can specify supported DID methods in their capabilities advertisement.
+
+## Creating a DID
+
+Agents can create DIDs through several methods:
+
+### Self-Generated DIDs
+
+```javascript
+import { generateDid } from '@hive-protocol/did';
+
+// Generate a new DID and DID Document
+const { did, didDocument, privateKey } = await generateDid({
+  method: 'hive',
+  keyType: 'Ed25519'
+});
+
+console.log(`New DID: ${did}`);
+```
+
+### Registry-Based DIDs
+
+```javascript
+import { registerDid } from '@hive-protocol/did';
+
+// Register a DID with a registry
+const { did, didDocument } = await registerDid({
+  method: 'hive',
+  registryUrl: 'https://registry.example.com',
+  keyType: 'Ed25519'
+});
+```
+
+## Resolving a DID
+
+To resolve a DID to its DID Document:
+
+```javascript
+import { resolveDid } from '@hive-protocol/did';
+
+// Resolve a DID to get the DID Document
+const didDocument = await resolveDid('did:hive:123456789abcdefghi');
+
+// Access verification methods
+const verificationMethod = didDocument.verificationMethod[0];
+
+// Access service endpoints
+const serviceEndpoint = didDocument.service.find(s => s.type === 'HiveAgent').serviceEndpoint;
+```
+
+## Verification with DIDs
+
+To verify a message signed using a DID:
+
+```javascript
+import { verifySignature } from '@hive-protocol/did';
+
+// Verify a signature using a DID
+const isValid = await verifySignature({
+  did: 'did:hive:123456789abcdefghi',
+  verificationMethodId: 'did:hive:123456789abcdefghi#keys-1',
+  message: 'Message to verify',
+  signature: 'Base64EncodedSignature'
+});
+
+if (isValid) {
+  console.log('Signature verified successfully');
+}
+```
+
+## DID Document Rotation and Updates
+
+DID Documents can be updated to:
+
+- Add new verification methods (keys)
+- Rotate compromised keys
+- Update service endpoints
+- Add or remove capabilities
+
+The process for updating a DID Document depends on the DID method, but typically involves:
+
+1. Creating a new version of the DID Document
+2. Signing it with an authorized key from the current document
+3. Publishing the update to the appropriate registry or storage system
+
+<Callout type="warning">
+  When rotating keys, maintain the previous verification method for a grace period to ensure
+  ongoing operations aren't disrupted.
+</Callout>
+
+## Best Practices for DIDs in H.I.V.E.
+
+- **Key Management**: Store private keys securely, preferably in a hardware security module (HSM) or secure enclave
+- **Verification Method Types**: Use Ed25519 for most applications due to its security and performance characteristics
+- **Multiple Verification Methods**: Include multiple verification methods for different purposes (authentication, assertion, key agreement)
+- **Service Discovery**: Provide comprehensive service endpoints in the DID Document
+- **DID Method Selection**: Choose DID methods based on security, performance, and ecosystem compatibility requirements
+- **Caching**: Cache DID resolution results to improve performance, but implement proper cache invalidation
+
+<Callout type="info">
+  The DID resolution process is a critical security component. Always validate DID Documents
+  and verify that the resolution process hasn't been compromised.
+</Callout>

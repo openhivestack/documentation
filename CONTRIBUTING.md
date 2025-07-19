@@ -1,5 +1,77 @@
 # 🤝 Contributing to H.I.V.E. Protocol
 
+Thank you for your interest in contributing to the H.I.V.E. Protocol! This document provides guidelines and instructions for contributing to the project.
+
+## Code of Conduct
+
+All contributors are expected to adhere to our Code of Conduct. Please read it before participating.
+
+## How to Contribute
+
+### Reporting Bugs
+
+- Use the GitHub issue tracker to report bugs
+- Describe the bug in detail, including steps to reproduce
+- Include information about your environment (OS, browser, etc.)
+- If possible, provide a minimal code example that demonstrates the issue
+
+### Suggesting Enhancements
+
+- Use the GitHub issue tracker to suggest enhancements
+- Clearly describe the enhancement and its expected benefits
+- Provide examples or use cases where applicable
+
+### Pull Requests
+
+1. Fork the repository
+2. Create a new branch for your changes
+3. Make your changes
+4. Run tests and ensure they pass
+5. Submit a pull request with a clear description of the changes
+
+## Development Guidelines
+
+### DID Implementation
+
+The H.I.V.E. Protocol uses W3C Decentralized Identifiers (DIDs) for agent identity. When working with DIDs:
+
+1. **Use Standard DID Methods**: Implement standard DID methods when possible (did:hive, did:web, did:key)
+2. **Follow W3C Specifications**: Ensure DID Documents conform to the W3C DID specification
+3. **Verification Methods**: Include appropriate verification methods in DID Documents
+4. **Service Endpoints**: Properly configure service endpoints in DID Documents
+5. **Security Considerations**: Implement secure DID resolution and verification
+
+### Code Style
+
+- Follow the established code style of the project
+- Use meaningful variable and function names
+- Write clear comments and documentation
+- Follow the principle of least privilege
+
+### Testing
+
+- Write tests for new features and bug fixes
+- Ensure all tests pass before submitting a pull request
+- Include both unit tests and integration tests where appropriate
+
+### Documentation
+
+- Update documentation to reflect your changes
+- Document public APIs, classes, and methods
+- Use clear, concise language
+- Include examples where helpful
+
+## Getting Help
+
+If you need help or have questions, you can:
+
+- Open an issue on GitHub
+- Join our community discussions
+- Contact the maintainers directly
+
+## License
+
+By contributing to the H.I.V.E. Protocol, you agree that your contributions will be licensed under the project's Apache-2.0 License.
 We warmly welcome contributions to the H.I.V.E. Protocol from everyone! Whether you're a protocol designer, 
 an agent developer, a technical writer, or just someone passionate about autonomous systems, your input is valuable.
 

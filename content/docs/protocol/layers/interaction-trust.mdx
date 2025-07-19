@@ -49,34 +49,45 @@ The protocol supports several authentication mechanisms:
 ### Authentication Flow
 
 ```javascript
-// Challenge-Response Example
+// DID-based Challenge-Response Example
 
 // Agent A generates and sends a challenge
 const challenge = generateRandomChallenge();
-send(agentB, {
+send(agentBDid, {
   messageType: 'AUTHENTICATION_CHALLENGE',
   challenge: challenge
 });
 
-// Agent B signs the challenge and responds
+// Agent B creates a proof for the challenge using their verification method
 receive(message => {
   if (message.messageType === 'AUTHENTICATION_CHALLENGE') {
-    const signature = signWithPrivateKey(message.challenge);
-    send(agentA, {
+    const proof = createProof({
+      verificationMethod: 'did:hive:987654321jihgfedcba#keys-1',
+      proofPurpose: 'authentication',
+      challenge: message.challenge,
+      domain: 'hive.example.com'
+    });
+
+    send(agentADid, {
       messageType: 'AUTHENTICATION_RESPONSE',
       challenge: message.challenge,
-      signature: signature
+      proof: proof
     });
   }
 });
 
-// Agent A verifies the signature
+// Agent A verifies the proof using the DID Document
 receive(message => {
   if (message.messageType === 'AUTHENTICATION_RESPONSE') {
-    const isValid = verifySignature(message.challenge, message.signature, agentB.publicKey);
+    // Resolve the DID to get the DID Document
+    const didDocument = await resolveDid(agentBDid);
+
+    // Verify the proof using the verification method from the DID Document
+    const isValid = await verifyProof(message.challenge, message.proof, didDocument);
+
     if (isValid) {
       // Authentication successful
-      establishSecureChannel(agentB);
+      establishSecureChannel(agentBDid);
     }
   }
 });
