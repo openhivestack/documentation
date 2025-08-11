@@ -1,247 +1,202 @@
 ---
 title: Discovery & Identity
-description: How agents identify themselves and discover each other
+description: simple agent identification and discovery
 icon: Search
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 import { Mermaid } from "@/components/mdx/mermaid";
 
-The Discovery & Identity layer of the H.I.V.E. Protocol enables agents to establish their identity and discover other
-agents based on capabilities and requirements.
+The Discovery & Identity layer provides simple agent identification and capability discovery designed for scale. No complex DID resolution or elaborate discovery protocols - just what you need to get agents talking.
 
-## Layer Overview
+## Simple Approach
 
 <Mermaid
   chart={`
 flowchart LR
-    A[Agent Identity] --> B[Key Management]
-    B --> C[Discovery Mechanisms]
-    C --> D[Capability Advertisement]
+    A[Generate Keys] --> B[Create Agent ID]
+    B --> C[Register Capabilities]
+    C --> D[Start Processing Tasks]
 `}
 />
 
-## Agent Identity
+**Key Simplifications**:
 
-In the H.I.V.E. Protocol, each agent has a unique identity established through cryptographic keys.
+- **Simple Agent IDs**: `agentid:hive:uniqueIdentifier` format
+- **Ed25519 keys only**: No complex key management
+- **HTTP registry**: Simple REST API for discovery
+- **Minimal capability format**: 3 fields only
 
-### Identity Structure
+## Simple Agent Identity
 
-An agent's identity consists of:
+### Agent ID Format
 
-- **Agent Identifier (AgentID)**: A globally unique identifier for the agent
-- **Agent Profile**: Contains public keys, services, and other identity information
-- **Metadata**: Optional information about the agent's purpose, owner, etc.
-
-```json
-{
-  "id": "agentid:hive:123456789abcdefghi",
-  "profile": {
-    "name": "Translation Agent",
-    "keys": [{
-      "id": "primary",
-      "type": "Ed25519",
-      "publicKey": "H3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV"
-    }],
-    "auth": ["primary"],
-    "services": [{
-      "id": "main",
-      "type": "agent",
-      "url": "https://agent.example.com/api"
-    }]
-  },
-  "metadata": {
-    "description": "Provides language translation services",
-    "owner": "company-xyz",
-    "created": "2025-01-15T08:30:00Z"
-  }
-}
+```
+agentid:hive:uniqueIdentifier
 ```
 
-### Key Types
+**Examples**:
 
-H.I.V.E. supports multiple key types for agent authentication and message signing:
+- `agentid:hive:abc123`
+- `agentid:hive:translator-v1`
+- `agentid:hive:image-processor-2024`
 
-1. **Ed25519**: Modern elliptic curve cryptography offering superior performance and security
-2. **RSA**: Traditional cryptography supporting various key sizes
-3. **ECDSA**: Elliptic Curve Digital Signature Algorithm with P-256 curve support
+### Identity Creation (30 seconds)
 
-All agent communications are signed using the appropriate key from the Agent Profile, ensuring
-message authenticity while supporting various cryptographic standards.
+```javascript
+import crypto from "crypto";
+
+// 1. Generate Ed25519 key pair
+const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
+
+// 2. Create unique identifier
+const uniqueId = crypto.randomBytes(8).toString("hex");
+
+// 3. Form Agent ID
+const agentId = `agentid:hive:${uniqueId}`;
+
+console.log(`Your Agent ID: ${agentId}`);
+```
+
+**That's it!** No complex profiles, metadata, or multiple key types needed for Tier 1.
+
+### Key Management (Simplified)
+
+**Tier 1 Requirements**:
+
+- **One key type**: Ed25519 only
+- **One key pair**: Public key for verification, private key for signing
+- **Simple storage**: Save keys securely (environment variables or key files)
+
+**Advanced key management** (multiple keys, rotation, etc.) is only needed for Tier 2+.
 
 <Callout type="warning">
-  Private keys must be securely stored and never shared. Compromise of a private key allows impersonation of the agent.
+  **Security**: Store private keys securely. Never commit them to code or share
+  them. In production, use environment variables or secure key management
+  services.
 </Callout>
 
-## Agent Discovery
+## Simple Discovery
 
-The H.I.V.E. Protocol provides multiple mechanisms for agents to discover each other.
+### Primary: HTTP Registry (Recommended)
 
-### Registry-Based Discovery
-
-The most common approach uses a central or federated registry service:
-
-1. **Registration**: Agents register their identity and capabilities with the registry
-2. **Lookup**: Agents query the registry to find others with specific capabilities
-3. **Connection**: Once discovered, agents connect directly to each other
+**Registration** - Register your agent:
 
 ```http
-# Registration Example
-POST /registry/agents HTTP/1.1
+POST /agents HTTP/1.1
 Host: registry.example.com
 Content-Type: application/json
 
 {
-  "id": "agentid:hive:123456789abcdefghi",
-  "profile": {
-    "name": "Translation Agent",
-    "keys": [{
-      "id": "primary",
-      "type": "Ed25519",
-      "publicKey": "H3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV"
-    }],
-    "auth": ["primary"],
-    "services": [{
-      "id": "main",
-      "type": "agent",
-      "url": "https://agent-abc123.example.com/api"
-    },{
-      "id": "websocket",
-      "type": "websocket",
-      "url": "wss://agent-abc123.example.com/ws"
-    }]
-  },
+  "agent_id": "agentid:hive:translator123",
+  "endpoint": "https://translator123.example.com",
   "capabilities": [
     {
       "id": "text-translation",
-      "supportedLanguages": ["en", "es", "fr", "de"],
-      "maxTextLength": 10000
+      "input": { "text": "string", "target_lang": "string" },
+      "output": { "translated_text": "string" }
     }
   ]
 }
 ```
 
-```http
-# Lookup Example
-GET /registry/agents?capability=text-translation&language=es HTTP/1.1
-Host: registry.example.com
-Accept: application/json
+**Discovery** - Find agents by capability:
 
-# Response
+```http
+GET /agents?capability=text-translation HTTP/1.1
+Host: registry.example.com
+
+# Response:
 {
   "agents": [
     {
-      "id": "agentid:hive:123456789abcdefghi",
-      "profile": { /* Agent Profile */ },
-      "capabilities": [{ /* capability details */ }]
-    },
-    {
-      "id": "agentid:hive:987654321jihgfedcba",
-      "profile": { /* Agent Profile */ },
-      "capabilities": [{ /* capability details */ }]
+      "agent_id": "agentid:hive:translator123",
+      "endpoint": "https://translator123.example.com",
+      "capabilities": ["text-translation"]
     }
   ]
 }
 ```
 
-### Direct Discovery
+### Fallback: Direct Discovery
 
-For known agents, direct discovery bypasses the registry:
+If you know an agent's endpoint, query it directly:
 
-1. **Address Knowledge**: The agent already knows the endpoint of another agent
-2. **Direct Connection**: The agent connects directly to the known endpoint
-3. **Capability Query**: The agent can request capability details directly
+```http
+GET /capabilities HTTP/1.1
+Host: known-agent.example.com
 
-### Decentralized Discovery
+# Response: Same capability format
+```
 
-For decentralized deployments, H.I.V.E. supports peer-to-peer discovery:
+### Optional: Local Discovery (mDNS)
 
-1. **Broadcast**: Agents broadcast discovery messages to the network
-2. **Response**: Agents with matching capabilities respond directly
-3. **Connection**: Agents establish direct connections based on responses
+For local networks, use mDNS service discovery (Tier 2+):
 
-## Capability Advertisement
+- Service type: `_hive._tcp.local`
+- TXT records contain capability information
 
-Agents advertise their capabilities to enable efficient discovery and collaboration.
+## Simple Capability Advertisement
 
-### Capability Format
-
-Capabilities are described in a standardized JSON format:
+### Minimal Capability Format
 
 ```json
 {
   "capabilities": [
     {
       "id": "text-translation",
-      "version": "1.0",
-      "description": "Translates text between languages",
-      "supportedLanguages": ["en", "es", "fr", "de", "zh", "ja"],
-      "parameters": {
-        "sourceLanguage": {
-          "type": "string",
-          "required": true,
-          "description": "Source language code"
-        },
-        "targetLanguage": {
-          "type": "string",
-          "required": true,
-          "description": "Target language code"
-        },
-        "text": {
-          "type": "string",
-          "required": true,
-          "maxLength": 10000,
-          "description": "Text to translate"
-        },
-        "preserveFormatting": {
-          "type": "boolean",
-          "required": false,
-          "default": true,
-          "description": "Whether to preserve formatting"
-        }
-      },
-      "returns": {
-        "translatedText": {
-          "type": "string",
-          "description": "The translated text"
-        },
-        "confidence": {
-          "type": "number",
-          "description": "Confidence score between 0 and 1"
-        }
-      },
-      "performanceMetrics": {
-        "averageResponseTime": 1.2,
-        "throughput": "5000 chars/second"
-      }
+      "input": { "text": "string", "target_lang": "string" },
+      "output": { "translated_text": "string" }
+    },
+    {
+      "id": "image-resize",
+      "input": { "image_url": "string", "width": "number", "height": "number" },
+      "output": { "resized_image_url": "string" }
     }
   ]
 }
 ```
 
-### Capability Updates
+## Implementation (Tier 1)
 
-Agents should update their capability advertisements when changes occur:
+**Required for basic discovery**:
 
-- New capabilities are added
-- Existing capabilities are modified or removed
-- Performance characteristics change significantly
+- [ ] Generate Ed25519 key pair
+- [ ] Create Agent ID with `agentid:hive:` prefix
+- [ ] Register with HTTP registry (optional)
+- [ ] Advertise capabilities in minimal format
+- [ ] Handle capability queries
+
+**5-minute implementation**:
+
+```javascript
+// Register with registry
+const registration = {
+  agent_id: AGENT_ID,
+  endpoint: `http://localhost:${PORT}`,
+  capabilities: [
+    {
+      id: "text-processing",
+      input: { text: "string", operation: "string" },
+      output: { result: "string" },
+    },
+  ],
+};
+
+// POST to registry
+fetch("https://registry.example.com/agents", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(registration),
+});
+```
 
 <Callout type="info">
-  See the [Capability Advertisement](/docs/protocol/structure/capability-advertisement) page for detailed specifications.
+  **Scale Optimization**: The simplified capability format reduces registry
+  storage requirements and speeds up discovery queries.
 </Callout>
 
-## Implementation Considerations
-
-When implementing the Discovery & Identity layer, developers should consider:
-
-- Key rotation policies for long-lived agents
-- Registry redundancy for high availability
-- Cache strategies for frequently used discovery results
-- Rate limiting for discovery requests
-- Privacy implications of capability advertisements
-
 <Callout type="warning">
-  Registry services should implement proper authentication and authorization to prevent unauthorized capability
-    advertisements and discovery data tampering.
+  **Accuracy**: Only advertise capabilities you can reliably provide.
+  Misrepresenting capabilities damages trust and wastes network resources.
 </Callout>

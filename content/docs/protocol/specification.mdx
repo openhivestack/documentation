@@ -4,8 +4,16 @@ description: Simple Agent Collaboration Protocol
 icon: NotebookText
 ---
 
-The H.I.V.E. Protocol defines how AI agents can work together to get tasks done efficiently. This specification
-provides a simpler approach to agent collaboration that's easier to implement while maintaining key functionality.
+The H.I.V.E. Protocol defines how AI agents can work together to get tasks done efficiently. This specification provides a streamlined approach designed for scale and rapid adoption.
+
+## Design Philosophy
+
+H.I.V.E. prioritizes **simplicity over features** to maximize adoption:
+
+- **Efficient Messaging**: Compact message format for reduced bandwidth usage
+- **Direct Task Processing**: Simple task agreements instead of formal contracts
+- **Three Implementation Tiers**: Choose your complexity level (Minimal, Standard, Full)
+- **HTTP-First**: Uses familiar web technologies developers already know
 
 ## Overview
 
@@ -14,7 +22,7 @@ The H.I.V.E. Protocol uses a streamlined architecture with two main components:
 - **Communication Layer**: Handles how agents connect and identify each other
 - **Agent Collaboration**: Manages task negotiation, execution, and completion
 
-This simple design makes it easy to implement while ensuring agents can work together effectively.
+This streamlined design makes it easy to implement while ensuring agents can work together effectively at scale.
 
 ## 1. Communication Layer
 
@@ -25,46 +33,144 @@ compatibility with existing infrastructure.
 
 ### 2.1. Agent Identification
 
-- Agents identify themselves using RSA or Ed25519 key pairs
-- The public key serves as the agent's unique identifier (AgentID)
+- Agents identify themselves using Ed25519 key pairs (recommended) or RSA
+- Agent ID format: `agentid:hive:uniqueIdentifier` (e.g., `agentid:hive:abc123`)
 - Messages are signed with the private key for verification
-- Simple identification without complex resolution
+- No complex DID resolution - simple and fast
 
 ### 2.2. Discovery
 
-- A simple registry service helps agents find each other
-- Agents register with a REST API and can be found by capability
-- Lookup returns agent addresses and capability details
-- Direct connections are supported for known agents
+- **Primary**: HTTP registry service for capability lookup
+- **Fallback**: Direct endpoint connections for known agents
+- **Optional**: mDNS for local network discovery
+- Registry uses simple REST API: `GET /agents?capability=text-translation`
 
 ### 2.3. Capability Sharing
 
-- Agents describe their capabilities in a simple JSON format
-- Descriptions include name, inputs, outputs, and parameters
-- Registry maintains an up-to-date directory of available agents
+Agents describe capabilities in simple format:
+
+```json
+{
+  "id": "text-translation",
+  "input": { "text": "string", "target_lang": "string" },
+  "output": { "translated_text": "string" }
+}
+```
+
+- Fast discovery and matching
+- Easy to generate programmatically
 
 ## 3. Task Collaboration
 
-### 3.1. Basic Security
+### 3.1. Simple Message Format
 
-- Messages are signed with the sender's private key
-- Recipients verify the signature using the sender's public key
-- Standard TLS encryption protects all communications
+All messages use this minimal format:
 
-### 3.2. Simple Task Contracts
+```json
+{
+  "from": "agentid:hive:abc123",
+  "to": "agentid:hive:xyz789",
+  "type": "task_request",
+  "data": {
+    "capability": "text-translation",
+    "text": "hello",
+    "target_lang": "es"
+  },
+  "sig": "ed25519_signature"
+}
+```
 
-- Agents use a straightforward task request/acceptance process
-- Task contracts specify what needs to be done and expected outputs
-- No complex negotiation protocols required
+### 3.2. Lightweight Task Agreements
 
-### 3.3. Task Execution
+Use simple task agreements:
 
-- Tasks follow five basic states: `PROPOSED`, `ACCEPTED`, `IN_PROGRESS`, `COMPLETED`, and `FAILED`
-- For long tasks, agents provide regular progress updates
-- Simple error reporting with clear error codes and messages
+```json
+{
+  "task_id": "task-123",
+  "capability": "text-translation",
+  "params": { "text": "hello", "target_lang": "es" },
+  "deadline": "2025-07-18T15:00:00Z"
+}
+```
 
-### 3.4. Results Delivery
+**Benefits**:
 
-- Results are delivered in a standard message format
-- Recipients confirm they received the results
-- Large results can use file sharing or cloud storage links
+- No contract negotiation overhead
+- Faster task initiation
+- Simpler implementation
+
+### 3.3. Basic Task States
+
+Tasks follow four essential states:
+
+- `REQUESTED` → `ACCEPTED` → `IN_PROGRESS` → `COMPLETED`/`FAILED`
+
+### 3.4. Simplified Error Handling
+
+```json
+{
+  "error": "capability_not_found",
+  "message": "text-translation not available",
+  "retry": true
+}
+```
+
+### 3.5. Security
+
+- **Required**: TLS encryption for all communications
+- **Required**: Ed25519 message signatures
+- **Optional**: JWT tokens for session-based auth (reduces signature overhead)
+
+## 4. Implementation Tiers
+
+Choose your implementation complexity based on your needs:
+
+### 🟢 Tier 1: Minimal (Recommended for 80% of use cases)
+
+**Perfect for**: Basic agent interactions, MVP development, rapid prototyping
+
+**Includes**:
+
+- Simple HTTP endpoints (`POST /tasks`, `GET /status`)
+- Simple message format
+- Basic task tracking (no contracts)
+- Ed25519 signatures only
+- Registry-based discovery only
+
+**Implementation time**: 1-2 days
+
+### 🟡 Tier 2: Standard (For 15% of use cases)
+
+**Perfect for**: Production systems, enhanced reliability
+
+**Adds to Tier 1**:
+
+- WebSocket support for real-time updates
+- Basic task agreements (lightweight contracts)
+- Enhanced error handling
+- Multiple discovery methods (registry + direct)
+
+**Implementation time**: 1-2 weeks
+
+### 🔴 Tier 3: Full (For 5% of use cases)
+
+**Perfect for**: Enterprise systems, maximum compatibility
+
+**Adds to Tier 2**:
+
+- Complete protocol implementation
+- Advanced security features
+- Federation support
+- Custom extensions
+- Full backward compatibility
+
+**Implementation time**: 4-6 weeks
+
+## 5. Getting Started
+
+1. **Start with Tier 1** - get basic functionality working
+2. **Test with real agents** - validate your implementation
+3. **Upgrade to higher tiers** as needed
+4. **Use conformance tests** to verify compliance
+
+The goal is to get you from zero to working agent in under a day with Tier 1!

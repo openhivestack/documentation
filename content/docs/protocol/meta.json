@@ -25,6 +25,7 @@
     "structure/agent-identity",
     "---Implementation---",
     "implementation/quick-start",
+    "implementation/tiers",
     "implementation/example-agent",
     "implementation/testing"
   ]

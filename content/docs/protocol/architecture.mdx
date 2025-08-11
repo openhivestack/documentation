@@ -1,85 +1,136 @@
 ---
 title: Architecture
-description: A simple overview of the H.I.V.E. Protocol's design.
+description: Simple architecture designed for scale and developer productivity
 icon: Hexagon
 ---
 
 import { Cards, Card } from "fumadocs-ui/components/card";
 import { Callout } from "fumadocs-ui/components/callout";
 import { Mermaid } from "@/components/mdx/mermaid";
-import {
-  PackageSearchIcon,
-  InfinityIcon,
-} from "lucide-react";
+import { PackageSearchIcon, InfinityIcon, Zap } from "lucide-react";
 
-The H.I.V.E. Protocol uses a streamlined architecture that enables AI agents to discover each other, communicate
-securely, and collaborate on tasks. Its simple design focuses on essential functionality while maintaining
-flexibility for different implementations.
+The H.I.V.E. Protocol uses a streamlined architecture designed for scale and ease of implementation. Every component focuses on essential functionality while maintaining flexibility for different use cases.
+
+## Design Principles
+
+- **Simplicity First**: Focus on essential functionality
+- **Scale Optimized**: Efficient design for high-throughput scenarios
+- **Developer Friendly**: Quick implementation using familiar technologies
+- **Progressive Enhancement**: Start simple, add complexity only when needed
 
 ## H.I.V.E. Protocol Components
 
 <Mermaid
   chart={`
 flowchart LR
-    A[Communication Layer] --> B[Agent Collaboration]
+    A[HTTP Endpoints] --> B[Task Processing]
+    B --> C[Capability Discovery]
 `}
 />
 
-The protocol consists of two essential components:
+The protocol consists of three essential components:
 
 <Cards>
   <Card
-    title="Communication Layer"
-    description="Handles agent connections, identity verification, and capability sharing"
+    title="HTTP Endpoints"
+    description="Standard REST API for all agent communication"
     icon={<PackageSearchIcon />}
-    href="/docs/protocol/layers/communication"
+    href="/docs/protocol/implementation/quick-start"
   />
   <Card
-    title="Agent Collaboration"
-    description="Manages task negotiation, execution, and completion between agents"
+    title="Task Processing"
+    description="Direct task execution with minimal overhead"
     icon={<InfinityIcon />}
-    href="/docs/protocol/layers/collaboration"
+    href="/docs/protocol/structure/message-formats"
+  />
+  <Card
+    title="Capability Discovery"
+    description="Simple capability advertisement and lookup"
+    icon={<Zap />}
+    href="/docs/protocol/structure/capability-advertisement"
   />
 </Cards>
 
-This simplified architecture enables AI agents to work together effectively while maintaining security and reliability.
+This streamlined architecture enables AI agents to work together efficiently at scale.
 
-## 1. Communication Layer
+## 1. HTTP Endpoints (Simple Communication)
 
-The Communication Layer handles secure connections between agents and identity verification.
+**Three endpoints handle most use cases**:
 
-- **Connections**: Agents use standard web protocols (HTTP/WebSockets) to communicate
-- **Identity**: Agents identify themselves using simple public/private key pairs
-- **Discovery**: Agents can find each other through a central registry or direct connections
-- **Capabilities**: Agents share what they can do using standardized descriptions
+- `POST /tasks` - Submit and process tasks
+- `GET /capabilities` - Discover what an agent can do
+- `GET /status` - Check if agent is online
 
-## 2. Agent Collaboration
+**Key Features**:
 
-The Agent Collaboration component enables agents to work together on tasks effectively.
+- Standard HTTP/HTTPS only (no WebSockets required for Tier 1)
+- Ed25519 signatures for security
+- 5-field message format
+- TLS encryption for all communications
 
-- **Task Negotiation**: 
-  - Simple message exchange to agree on what needs to be done
-  - Basic contract format with task details and requirements
-- **Task Execution**:
-  - Standardized task states: PROPOSED, ACCEPTED, IN_PROGRESS, COMPLETED, FAILED
-  - Regular status updates during long-running tasks
-- **Results Delivery**:
-  - Secure transfer of task results
-  - Simple verification of completed work
+## 2. Task Processing (Direct Execution)
+
+**Streamlined task execution**:
+
+- **Request**: Send task with capability and parameters
+- **Response**: Get immediate accept/reject
+- **Execution**: Simple status updates
+- **Result**: Receive completed output
+
+**Simple task agreements** specify what needs to be done without complex contract negotiation.
+
+## 3. Capability Discovery (Essential Format)
+
+**Streamlined capability format**:
+
+```json
+{
+  "id": "text-translation",
+  "input": { "text": "string", "target_lang": "string" },
+  "output": { "translated_text": "string" }
+}
+```
+
+**Discovery methods**:
+
+- **Primary**: HTTP registry lookup
+- **Fallback**: Direct agent connections
+- **Optional**: Local network discovery (mDNS)
+
+## Implementation Tiers
+
+<Mermaid
+  chart={`
+graph TD
+    A[Tier 1: Quick Start] --> B[HTTP + Basic Tasks]
+    C[Tier 2: Enhanced] --> D[+ WebSockets + Agreements]
+    E[Tier 3: Complete] --> F[+ Full Features + Security]
+    
+    B --> G[Most use cases]
+    D --> H[Advanced scenarios]  
+    F --> I[Enterprise needs]
+`}
+/>
+
+## Why This Architecture Works
+
+**For large-scale systems**:
+
+- **Efficient messaging**: Compact message format
+- **Fast processing**: Simple parsing and validation
+- **Easy debugging**: Human-readable JSON format
+- **Low latency**: Direct task execution
+- **High throughput**: Designed for performance
+
+**For developers**:
+
+- **Quick start**: Rapid agent implementation
+- **Easy maintenance**: Minimal code surface area
+- **Clear upgrade path**: Add complexity only when needed
+- **Standard tools**: Uses familiar HTTP and JSON
 
 <Callout type="info">
-    See the [Agent Collaboration](/docs/protocol/layers/collaboration) page for more details.
+  **Scale Focus**: This architecture is designed for systems that need to handle
+  many concurrent agents. Every design decision prioritizes simplicity and
+  performance.
 </Callout>
-
-## Summary
-
-The H.I.V.E. Protocol provides a simple yet powerful framework for AI agents to work together. By focusing on
-essential functionality and reducing complexity, H.I.V.E. makes it easier to:
-
-- Connect agents through standard communication channels
-- Share agent capabilities in a standard format
-- Negotiate and execute tasks between agents
-- Verify successful task completion
-
-This streamlined approach ensures compatibility between different implementations while keeping the barrier to
-entry low for developers.

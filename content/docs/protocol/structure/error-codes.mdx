@@ -1,330 +1,260 @@
 ---
 title: Error Codes
-description: Standardized error codes and handling in the H.I.V.E. Protocol
+description: Essential error codes for simple error handling
 icon: Bug
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
-The H.I.V.E. Protocol defines a standardized set of error codes to ensure consistent error reporting and handling
-across different agent implementations. This document catalogs these error codes, their meanings, and recommended
-handling strategies.
+The H.I.V.E. Protocol uses a minimal set of essential error codes optimized for simplicity and fast implementation.
+
+## Essential Error Codes (Tier 1)
+
+**8 error codes cover 95% of scenarios**:
+
+| Error Code               | Description                           | Retry? | HTTP Status |
+| ------------------------ | ------------------------------------- | ------ | ----------- |
+| `invalid_signature`      | Message signature verification failed | No     | 401         |
+| `capability_not_found`   | Requested capability not available    | No     | 404         |
+| `invalid_parameters`     | Missing or invalid task parameters    | No     | 400         |
+| `processing_failed`      | Error during task execution           | Yes    | 500         |
+| `resource_unavailable`   | Service temporarily unavailable       | Yes    | 503         |
+| `rate_limited`           | Too many requests from this agent     | Yes    | 429         |
+| `invalid_message_format` | Message doesn't match expected format | No     | 400         |
+| `agent_not_found`        | Target agent doesn't exist            | No     | 404         |
 
 ## Error Message Format
 
-All error messages in the H.I.V.E. Protocol follow a consistent structure:
+simple error format:
 
 ```json
 {
-  "messageType": "ERROR_RESPONSE",
-  "payload": {
-    "errorCode": "ERROR_CODE",
-    "message": "Human-readable error description",
-    "details": { /* Additional error-specific information */ },
-    "referenceId": "ID of the message that caused the error",
-    "timestamp": "2025-07-18T15:30:45Z",
-    "retryable": true,
-    "suggestedAction": "Suggested resolution steps"
-  }
+  "from": "agentid:hive:provider456",
+  "to": "agentid:hive:client123",
+  "type": "task_error",
+  "data": {
+    "task_id": "task-123",
+    "error": "capability_not_found",
+    "message": "text-translation not available",
+    "retry": false
+  },
+  "sig": "ed25519_signature"
 }
 ```
 
-### Error Object Fields
+## Implementation Examples
 
-| Field | Description |
-|-------|-------------|
-| `errorCode` | Standardized error code identifying the error type |
-| `message` | Human-readable description of the error |
-| `details` | Additional contextual information about the error |
-| `referenceId` | ID of the message that triggered the error (if applicable) |
-| `timestamp` | When the error occurred |
-| `retryable` | Whether the operation can be retried (boolean) |
-| `suggestedAction` | Recommended steps to resolve the issue |
-
-## Error Categories
-
-Errors in the H.I.V.E. Protocol are organized into several categories:
-
-### Protocol Errors (1000-1999)
-
-Errors related to the protocol itself and message processing.
-
-| Code | Name | Description | Retryable |
-|------|------|-------------|-----------||
-| 1000 | `PROTOCOL_ERROR` | Generic protocol error | Depends |
-| 1001 | `INVALID_MESSAGE_FORMAT` | Message does not conform to protocol format | No |
-| 1002 | `INVALID_SIGNATURE` | Message signature verification failed | No |
-| 1003 | `EXPIRED_MESSAGE` | Message timestamp is outside acceptable range | No |
-| 1004 | `UNKNOWN_MESSAGE_TYPE` | Message type is not recognized | No |
-| 1005 | `MISSING_REQUIRED_FIELD` | Required field is missing from message | No |
-| 1006 | `INVALID_FIELD_VALUE` | Field contains an invalid value | No |
-| 1007 | `MESSAGE_TOO_LARGE` | Message exceeds size limits | No |
-| 1008 | `PROTOCOL_VERSION_MISMATCH` | Incompatible protocol versions | No |
-| 1009 | `DUPLICATE_MESSAGE` | Message with the same ID was already processed | No |
-
-### Authentication Errors (2000-2999)
-
-Errors related to agent identity and authentication.
-
-| Code | Name | Description | Retryable |
-|------|------|-------------|-----------||
-| 2000 | `AUTHENTICATION_ERROR` | Generic authentication error | Depends |
-| 2001 | `UNKNOWN_AGENT` | Agent ID is not recognized | No |
-| 2002 | `INVALID_CREDENTIALS` | Provided credentials are invalid | No |
-| 2003 | `EXPIRED_CREDENTIALS` | Credentials have expired | Yes |
-| 2004 | `INSUFFICIENT_PRIVILEGES` | Agent lacks required privileges | No |
-| 2005 | `REVOKED_KEY` | Agent's key has been revoked | No |
-| 2006 | `AUTHENTICATION_REQUIRED` | Authentication is required for this operation | Yes |
-| 2007 | `INVALID_CHALLENGE_RESPONSE` | Challenge-response verification failed | Yes |
-
-### Authorization Errors (3000-3999)
-
-Errors related to permissions and access control.
-
-| Code | Name | Description | Retryable |
-|------|------|-------------|-----------||
-| 3000 | `AUTHORIZATION_ERROR` | Generic authorization error | Depends |
-| 3001 | `PERMISSION_DENIED` | Agent does not have permission for the operation | No |
-| 3002 | `QUOTA_EXCEEDED` | Agent has exceeded their usage quota | Yes |
-| 3003 | `RATE_LIMITED` | Request rate limit exceeded | Yes |
-| 3004 | `RESOURCE_FORBIDDEN` | Access to the resource is forbidden | No |
-| 3005 | `EXPIRED_TOKEN` | Authorization token has expired | Yes |
-| 3006 | `INVALID_TOKEN` | Authorization token is invalid | No |
-
-### Task Errors (4000-4999)
-
-Errors related to task processing and execution.
-
-| Code | Name | Description | Retryable |
-|------|------|-------------|-----------||
-| 4000 | `TASK_ERROR` | Generic task processing error | Depends |
-| 4001 | `TASK_NOT_FOUND` | Specified task does not exist | No |
-| 4002 | `INVALID_TASK_STATE` | Operation not valid for current task state | Depends |
-| 4003 | `TASK_ALREADY_EXISTS` | Task with the same ID already exists | No |
-| 4004 | `TASK_EXECUTION_ERROR` | Error occurred during task execution | Depends |
-| 4005 | `TASK_TIMEOUT` | Task execution exceeded time limit | Depends |
-| 4006 | `TASK_CANCELED` | Task was canceled | No |
-| 4007 | `INVALID_TASK_PARAMETERS` | Task parameters are invalid | No |
-| 4008 | `TASK_REJECTED` | Task was rejected by the provider | No |
-| 4009 | `MAX_RETRIES_EXCEEDED` | Task failed after maximum retry attempts | No |
-
-### Capability Errors (5000-5999)
-
-Errors related to agent capabilities and discovery.
-
-| Code | Name | Description | Retryable |
-|------|------|-------------|-----------||
-| 5000 | `CAPABILITY_ERROR` | Generic capability error | Depends |
-| 5001 | `CAPABILITY_NOT_FOUND` | Requested capability does not exist | No |
-| 5002 | `CAPABILITY_UNAVAILABLE` | Capability exists but is currently unavailable | Yes |
-| 5003 | `INVALID_CAPABILITY_PARAMETERS` | Parameters for capability are invalid | No |
-| 5004 | `CAPABILITY_VERSION_MISMATCH` | Incompatible capability version | No |
-| 5005 | `CAPABILITY_DEPRECATED` | Capability is deprecated and may be removed soon | No |
-
-### Contract Errors (6000-6999)
-
-Errors related to task contracts and agreements.
-
-| Code | Name | Description | Retryable |
-|------|------|-------------|-----------||
-| 6000 | `CONTRACT_ERROR` | Generic contract error | Depends |
-| 6001 | `CONTRACT_NOT_FOUND` | Specified contract does not exist | No |
-| 6002 | `CONTRACT_ALREADY_EXISTS` | Contract with the same ID already exists | No |
-| 6003 | `CONTRACT_VALIDATION_FAILED` | Contract validation failed | No |
-| 6004 | `CONTRACT_EXPIRED` | Contract has expired | No |
-| 6005 | `CONTRACT_TERMINATED` | Contract was terminated | No |
-| 6006 | `INVALID_CONTRACT_STATE` | Operation not valid for current contract state | No |
-| 6007 | `CONTRACT_SIGNATURE_MISSING` | Required signature is missing | Yes |
-| 6008 | `CONTRACT_SIGNATURE_INVALID` | Contract signature is invalid | No |
-
-### Resource Errors (7000-7999)
-
-Errors related to resources and their availability.
-
-| Code | Name | Description | Retryable |
-|------|------|-------------|-----------||
-| 7000 | `RESOURCE_ERROR` | Generic resource error | Depends |
-| 7001 | `RESOURCE_NOT_FOUND` | Requested resource does not exist | No |
-| 7002 | `RESOURCE_UNAVAILABLE` | Resource exists but is currently unavailable | Yes |
-| 7003 | `RESOURCE_EXHAUSTED` | Resource limits have been reached | Yes |
-| 7004 | `INVALID_RESOURCE_FORMAT` | Resource format is invalid | No |
-| 7005 | `RESOURCE_CONFLICT` | Conflict in resource state | Yes |
-| 7006 | `RESOURCE_LOCKED` | Resource is locked by another operation | Yes |
-
-### Network Errors (8000-8999)
-
-Errors related to network operations and connectivity.
-
-| Code | Name | Description | Retryable |
-|------|------|-------------|-----------||
-| 8000 | `NETWORK_ERROR` | Generic network error | Yes |
-| 8001 | `CONNECTION_FAILED` | Failed to establish connection | Yes |
-| 8002 | `TIMEOUT` | Network operation timed out | Yes |
-| 8003 | `HOST_UNREACHABLE` | Host is unreachable | Yes |
-| 8004 | `CONNECTION_CLOSED` | Connection was closed unexpectedly | Yes |
-| 8005 | `DNS_RESOLUTION_FAILED` | Failed to resolve hostname | Yes |
-| 8006 | `TLS_ERROR` | TLS/SSL error occurred | Depends |
-
-### Internal Errors (9000-9999)
-
-Errors related to agent internal operations.
-
-| Code | Name | Description | Retryable |
-|------|------|-------------|-----------||
-| 9000 | `INTERNAL_ERROR` | Generic internal error | Depends |
-| 9001 | `NOT_IMPLEMENTED` | Requested functionality is not implemented | No |
-| 9002 | `SERVICE_UNAVAILABLE` | Service is temporarily unavailable | Yes |
-| 9003 | `DATABASE_ERROR` | Database operation failed | Depends |
-| 9004 | `CONFIGURATION_ERROR` | Misconfiguration detected | No |
-| 9005 | `DEPENDENCY_FAILURE` | Required dependency failed | Depends |
-| 9006 | `RESOURCE_EXHAUSTION` | System resources exhausted | Yes |
-| 9007 | `UNEXPECTED_ERROR` | Unexpected error occurred | Depends |
-
-## Error Handling Best Practices
-
-When implementing error handling in your H.I.V.E. Protocol agents:
-
-### For Error Producers
-
-1. **Use Specific Codes**: Always use the most specific error code available
-2. **Clear Messages**: Provide clear, actionable error messages
-3. **Include Details**: Add contextual details that help diagnose the issue
-4. **Set Retryable Flag**: Accurately indicate whether retry is possible
-5. **Suggest Actions**: When possible, suggest how to resolve the error
-
-### For Error Consumers
-
-1. **Retry Logic**: Implement exponential backoff for retryable errors
-2. **Error Categorization**: Handle errors based on their category
-3. **Logging**: Log detailed error information for troubleshooting
-4. **User Feedback**: Translate technical errors to user-friendly messages
-5. **Fallback Mechanisms**: Implement fallbacks for critical operations
-
-## Example Error Handling
+### Basic Error Handling
 
 ```javascript
-async function handleTaskRequest(taskRequest) {
+// Simple error response function
+function sendError(taskId, requester, errorCode, message, canRetry = false) {
+  const errorResponse = {
+    from: AGENT_ID,
+    to: requester,
+    type: "task_error",
+    data: {
+      task_id: taskId,
+      error: errorCode,
+      message: message,
+      retry: canRetry,
+    },
+  };
+
+  return {
+    ...errorResponse,
+    sig: signMessage(errorResponse),
+  };
+}
+
+// Usage in endpoint
+app.post("/tasks", (req, res) => {
+  const message = req.body;
+
+  // Validate signature
+  if (!verifySignature(message)) {
+    return res
+      .status(401)
+      .json(
+        sendError(
+          message.data?.task_id,
+          message.from,
+          "invalid_signature",
+          "Signature verification failed"
+        )
+      );
+  }
+
+  // Check capability
+  const capability = findCapability(message.data.capability);
+  if (!capability) {
+    return res
+      .status(404)
+      .json(
+        sendError(
+          message.data.task_id,
+          message.from,
+          "capability_not_found",
+          `${message.data.capability} not available`
+        )
+      );
+  }
+
+  // Validate parameters
+  if (!validateParameters(capability, message.data)) {
+    return res
+      .status(400)
+      .json(
+        sendError(
+          message.data.task_id,
+          message.from,
+          "invalid_parameters",
+          "Required parameters missing"
+        )
+      );
+  }
+
   try {
-    // Validate request format
-    if (!isValidFormat(taskRequest)) {
-      return createErrorResponse({
-        errorCode: "INVALID_MESSAGE_FORMAT",
-        message: "Task request does not conform to required format",
-        details: { validationErrors: getValidationErrors(taskRequest) },
-        referenceId: taskRequest.messageId,
-        retryable: false,
-        suggestedAction: "Correct the format and try again"
-      });
-    }
-
-    // Check if capability exists
-    const capability = findCapability(taskRequest.payload.capabilityId);
-    if (!capability) {
-      return createErrorResponse({
-        errorCode: "CAPABILITY_NOT_FOUND",
-        message: `Capability ${taskRequest.payload.capabilityId} is not supported`,
-        referenceId: taskRequest.messageId,
-        retryable: false,
-        suggestedAction: "Check available capabilities and try again with a supported capability"
-      });
-    }
-
-    // Check if capability is available
-    if (!isCapabilityAvailable(capability)) {
-      return createErrorResponse({
-        errorCode: "CAPABILITY_UNAVAILABLE",
-        message: `Capability ${capability.id} is temporarily unavailable`,
-        details: { 
-          estimatedAvailability: getEstimatedAvailabilityTime(capability),
-          alternatives: findAlternativeCapabilities(capability)
-        },
-        referenceId: taskRequest.messageId,
-        retryable: true,
-        suggestedAction: "Retry later or try an alternative capability"
-      });
-    }
-
-    // Process the task request
-    return processTaskRequest(taskRequest);
+    // Process task
+    const result = processTask(message.data.capability, message.data);
+    res.json(createSuccessResponse(message.data.task_id, message.from, result));
   } catch (error) {
-    // Handle unexpected errors
-    return createErrorResponse({
-      errorCode: "INTERNAL_ERROR",
-      message: "An unexpected error occurred while processing the task request",
-      details: { errorType: error.name, errorMessage: error.message },
-      referenceId: taskRequest.messageId,
-      retryable: true,
-      suggestedAction: "Please report this issue and try again later"
-    });
+    res
+      .status(500)
+      .json(
+        sendError(
+          message.data.task_id,
+          message.from,
+          "processing_failed",
+          error.message,
+          true
+        )
+      );
   }
-}
+});
 ```
 
-## Client-Side Error Handling
+### Error Handling Best Practices
 
 ```javascript
-async function sendTaskRequest(taskRequest) {
-  let retries = 0;
-  const maxRetries = 3;
+// Rate limiting implementation
+const rateLimiter = new Map();
 
-  while (retries <= maxRetries) {
-    try {
-      const response = await sendRequest(taskRequest);
+function checkRateLimit(agentId) {
+  const now = Date.now();
+  const requests = rateLimiter.get(agentId) || [];
 
-      if (response.messageType === "ERROR_RESPONSE") {
-        const error = response.payload;
+  // Remove requests older than 1 minute
+  const recentRequests = requests.filter((time) => now - time < 60000);
 
-        // Handle non-retryable errors immediately
-        if (!error.retryable) {
-          logError(`Non-retryable error: ${error.errorCode} - ${error.message}`);
-          return handleNonRetryableError(error);
-        }
-
-        // Handle retryable errors with backoff
-        if (retries < maxRetries) {
-          const backoffTime = calculateBackoff(retries);
-          logWarning(`Retryable error: ${error.errorCode} - ${error.message}. Retrying in ${backoffTime}ms`);
-          await sleep(backoffTime);
-          retries++;
-          continue;
-        } else {
-          logError(`Max retries exceeded for error: ${error.errorCode} - ${error.message}`);
-          return handleMaxRetriesExceeded(error);
-        }
-      }
-
-      return response;
-    } catch (error) {
-      // Handle network or unexpected errors
-      if (retries < maxRetries) {
-        const backoffTime = calculateBackoff(retries);
-        logWarning(`Network error: ${error.message}. Retrying in ${backoffTime}ms`);
-        await sleep(backoffTime);
-        retries++;
-      } else {
-        logError(`Max retries exceeded for network error: ${error.message}`);
-        throw new Error(`Failed after ${maxRetries} retries: ${error.message}`);
-      }
-    }
+  if (recentRequests.length >= 60) {
+    // 60 requests per minute
+    return false;
   }
+
+  recentRequests.push(now);
+  rateLimiter.set(agentId, recentRequests);
+  return true;
 }
 
-function calculateBackoff(retryCount) {
-  // Exponential backoff with jitter
-  const baseDelay = 1000; // 1 second
-  const maxDelay = 30000; // 30 seconds
-  const exponentialDelay = baseDelay * Math.pow(2, retryCount);
-  const jitter = Math.random() * 0.3 * exponentialDelay; // 0-30% jitter
-  return Math.min(exponentialDelay + jitter, maxDelay);
+// Resource availability check
+function checkResourceAvailability() {
+  // Simple health check
+  const memoryUsage = process.memoryUsage();
+  const cpuUsage = process.cpuUsage();
+
+  if (memoryUsage.heapUsed > 500 * 1024 * 1024) {
+    // 500MB limit
+    return false;
+  }
+
+  return true;
 }
 ```
 
-<Callout type="warning">
-  Always design your agents to handle errors gracefully. Never assume operations will always succeed, and implement
-    proper retry and fallback mechanisms for critical operations.
-</Callout>
+## Optional: Extended Error Codes (Tier 2+)
+
+**Additional error codes for advanced implementations**:
+
+| Error Code               | Description                  | When to Use              |
+| ------------------------ | ---------------------------- | ------------------------ |
+| `timeout`                | Task execution timeout       | Long-running tasks       |
+| `insufficient_resources` | Not enough compute/memory    | Resource-intensive tasks |
+| `dependency_failed`      | Required service unavailable | Multi-service tasks      |
+| `validation_failed`      | Result validation failed     | Quality assurance        |
+| `permission_denied`      | Authorization failed         | Access control           |
+
+## Client Error Handling
+
+```javascript
+// Simple client-side error handling
+async function sendTaskRequest(agentEndpoint, taskRequest) {
+  try {
+    const response = await fetch(`${agentEndpoint}/tasks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(taskRequest),
+    });
+
+    const result = await response.json();
+
+    if (result.type === "task_error") {
+      const { error, message, retry } = result.data;
+
+      switch (error) {
+        case "capability_not_found":
+          console.log(`❌ Capability not available: ${message}`);
+          break;
+        case "processing_failed":
+          if (retry) {
+            console.log(`🔄 Retrying task: ${message}`);
+            // Implement retry logic
+          } else {
+            console.log(`❌ Task failed: ${message}`);
+          }
+          break;
+        case "rate_limited":
+          console.log(`⏳ Rate limited, waiting before retry: ${message}`);
+          // Implement backoff
+          break;
+        default:
+          console.log(`❌ Unknown error: ${error} - ${message}`);
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Network error:", error);
+    throw error;
+  }
+}
+```
+
+## Implementation Checklist
+
+**Tier 1 Error Handling**:
+
+- [ ] Implement 8 essential error codes
+- [ ] Use simple error message format
+- [ ] Map errors to appropriate HTTP status codes
+- [ ] Include retry flags for recoverable errors
+- [ ] Basic rate limiting
+
+**Optional Enhancements (Tier 2+)**:
+
+- [ ] Extended error code set
+- [ ] Detailed error context
+- [ ] Error analytics and monitoring
+- [ ] Advanced retry strategies
+- [ ] Error aggregation and reporting
 
 <Callout type="info">
-  When reporting errors, include as much context as possible without exposing sensitive information. This helps
-    debugging while maintaining security.
+  **Simplicity Focus**: The 8 essential error codes handle 95% of real-world
+  scenarios. Start with these and add more only if you encounter specific errors
+  that don't fit.
+</Callout>
+
+<Callout type="warning">
+  **Security**: Never include sensitive information in error messages. Keep
+  error details generic to prevent information leakage.
 </Callout>

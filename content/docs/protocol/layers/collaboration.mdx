@@ -1,230 +1,249 @@
 ---
 title: Agent Collaboration
-description: How agents negotiate, execute tasks, and deliver results
+description: lightweight task execution without contract overhead
 icon: Users
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 import { Mermaid } from "@/components/mdx/mermaid";
 
-The Agent Collaboration layer is the core component of the H.I.V.E. Protocol that enables AI agents to work together
-effectively. It defines how agents negotiate tasks, execute work, and deliver results in a standardized way.
+The Agent Collaboration layer enables fast task execution between agents. 
+Tasks can be initiated and completed with minimal overhead - designed for scalable agent systems.
 
-## Layer Overview
+## Collaboration Flow
 
 <Mermaid
   chart={`
 flowchart LR
-    A[Task Negotiation] --> B[Contract Formation]
+    A[Task Request] --> B[Immediate Accept/Reject]
     B --> C[Task Execution]
     C --> D[Results Delivery]
 `}
 />
 
-## Task Negotiation
+**Key Simplifications**:
 
-Task negotiation is the process where agents agree on what needs to be done, establishing clear expectations for
-both parties.
+- **No contract negotiation** - immediate accept/reject
+- **No formal agreements** - simple task tracking
+- **Minimal state management** - 4 basic task states
+- **Fast execution** - optimized for high throughput
 
-### Negotiation Flow
+## Direct Task Processing (No Negotiation)
 
-1. **Task Proposal**: The requester agent sends a task proposal specifying requirements
-2. **Capability Matching**: The provider agent evaluates if it can fulfill the requirements
-3. **Proposal Response**: The provider accepts, rejects, or counter-proposes
-4. **Agreement**: Both parties reach consensus on task parameters
+H.I.V.E. eliminates complex negotiation flows by using immediate accept/reject responses.
+
+### Streamlined Flow
+
+1. **Request**: Agent sends task request with all parameters
+2. **Immediate Response**: Provider immediately accepts or rejects (no negotiation)
+3. **Execution**: If accepted, task starts immediately
+4. **Result**: Results delivered upon completion
 
 ```json
-// Task Proposal Example
+// Task Request (all parameters included)
 {
-  "messageType": "TASK_PROPOSAL",
-  "taskId": "task-123",
-  "requirements": {
-    "taskType": "text-translation",
-    "sourceLanguage": "English",
-    "targetLanguage": "Spanish",
-    "expectedCompletion": "2025-07-19T15:00:00Z",
-    "priority": "normal"
-  }
+  "from": "agentid:hive:client123",
+  "to": "agentid:hive:translator456",
+  "type": "task_request",
+  "data": {
+    "task_id": "task-123",
+    "capability": "text-translation",
+    "text": "Hello world",
+    "source_lang": "en",
+    "target_lang": "es",
+    "deadline": "2025-07-18T15:00:00Z"
+  },
+  "sig": "signature"
+}
+
+// Immediate Response
+{
+  "from": "agentid:hive:translator456",
+  "to": "agentid:hive:client123",
+  "type": "task_response",
+  "data": {
+    "task_id": "task-123",
+    "status": "accepted"
+  },
+  "sig": "signature"
 }
 ```
 
-## Task Contracts
+**Benefits**:
 
-When agents agree on task parameters, they formalize the agreement in a task contract that serves as the reference
-for execution.
+- **faster** task initiation
+- **No negotiation overhead**
+- **Simpler implementation**
+- **Better scalability**
 
-### Contract Components
+## Task Tracking (No Contracts)
 
-A basic H.I.V.E. task contract includes:
+**Tier 1 Approach**: Use simple task tracking.
 
-- **Task Identifier**: Unique ID for referencing the task
-- **Participating Agents**: Requester and provider identities
-- **Requirements**: Detailed specifications for the task
-- **Deliverables**: Expected outputs and formats
-- **Timeline**: Deadlines and milestones
-- **Verification Criteria**: How completion will be verified
+### Basic Task Information
+
+All you need to track:
 
 ```json
-// Simplified Task Contract
 {
-  "contractId": "contract-456",
-  "taskId": "task-123",
-  "requester": {
-    "id": "agent-abc123",
-    "publicKey": "..."
-  },
-  "provider": {
-    "id": "agent-xyz789",
-    "publicKey": "..."
-  },
-  "requirements": {
-    "taskType": "text-translation",
-    "sourceLanguage": "English",
-    "targetLanguage": "Spanish",
-    "text": "Hello world, this is a test."
-  },
-  "deliverables": {
-    "format": "plain/text",
-    "verificationMethod": "manual-review"
-  },
-  "timeline": {
-    "deadline": "2025-07-19T15:00:00Z"
-  },
-  "signatures": {
-    "requester": "...",
-    "provider": "..."
-  }
+  "task_id": "task-123",
+  "capability": "text-translation",
+  "requester": "agentid:hive:client123",
+  "provider": "agentid:hive:translator456",
+  "status": "in_progress",
+  "created": "2025-07-18T14:30:00Z",
+  "deadline": "2025-07-18T15:00:00Z"
 }
 ```
+
+**Benefits**:
+
+- **No contract negotiation** required
+- **Immediate task execution**
+- **Simple state management**
+- **Faster processing** than contract-based approaches
+
+### When to Use Contracts (Tier 2+)
+
+Only upgrade to formal contracts when you need:
+
+- Multi-party task coordination
+- Payment or SLA guarantees
+- Complex dispute resolution
+- Regulatory compliance requirements
 
 <Callout type="info">
-  See the [Task Contracts](/docs/protocol/structure/simplified-contract) page for detailed contract specifications.
+  **Practical Rule**: Most agent interactions don't need formal contracts. Start
+  simple with task tracking and upgrade only when specific requirements demand
+  it.
 </Callout>
 
 ## Task Execution
 
-Task execution is the process of carrying out the agreed-upon work according to the contract specifications.
-
-### Task States
-
-Tasks in the H.I.V.E. Protocol follow a standardized lifecycle with clear state transitions:
+### 4 Essential Task States
 
 <Mermaid
   chart={`
 stateDiagram-v2
-    [*] --> PROPOSED
-    PROPOSED --> ACCEPTED: Provider accepts
-    PROPOSED --> REJECTED: Provider rejects
-    ACCEPTED --> IN_PROGRESS: Work begins
-    IN_PROGRESS --> COMPLETED: Work finished
-    IN_PROGRESS --> FAILED: Error occurs
+    [*] --> REQUESTED
+    REQUESTED --> ACCEPTED: Provider accepts
+    REQUESTED --> REJECTED: Provider rejects  
+    ACCEPTED --> COMPLETED: Work finished
+    ACCEPTED --> FAILED: Error occurs
     COMPLETED --> [*]
     FAILED --> [*]
     REJECTED --> [*]
 `}
 />
 
-- **PROPOSED**: Initial state when a task is first proposed
-- **ACCEPTED**: Provider has agreed to perform the task
-- **IN_PROGRESS**: Provider is actively working on the task
-- **COMPLETED**: Task has been successfully completed
-- **FAILED**: Task could not be completed due to errors
+**States**:
 
-### Progress Updates
+- **REQUESTED**: Task sent to provider
+- **ACCEPTED**: Provider will do the task
+- **COMPLETED**: Task finished successfully
+- **FAILED**: Task couldn't be completed
 
-For long-running tasks, providers send regular status updates to requesters:
+### Optional Progress Updates (Tier 2+)
+
+For long-running tasks, progress updates:
 
 ```json
 {
-  "messageType": "TASK_UPDATE",
-  "taskId": "task-123",
-  "status": "IN_PROGRESS",
-  "progress": 0.75,
-  "message": "Translation 75% complete, estimated completion in 5 minutes",
-  "timestamp": "2025-07-18T14:45:30Z"
+  "from": "agentid:hive:provider",
+  "to": "agentid:hive:requester",
+  "type": "task_update",
+  "data": {
+    "task_id": "task-123",
+    "progress": 0.75,
+    "message": "Translation 75% complete"
+  },
+  "sig": "signature"
 }
 ```
 
 ## Results Delivery
 
-When a task is completed, the provider delivers the results to the requester in a standardized format.
-
-### Result Message
+### Basic Result Message
 
 ```json
 {
-  "messageType": "TASK_RESULT",
-  "taskId": "task-123",
-  "status": "COMPLETED",
-  "result": {
-    "translatedText": "Hola mundo, esto es una prueba."
+  "from": "agentid:hive:provider",
+  "to": "agentid:hive:requester",
+  "type": "task_result",
+  "data": {
+    "task_id": "task-123",
+    "status": "completed",
+    "result": {
+      "translated_text": "Hola mundo"
+    }
   },
-  "metadata": {
-    "completionTime": "2025-07-18T15:00:00Z",
-    "qualityScore": 0.98
-  }
+  "sig": "signature"
 }
 ```
 
-### Handling Large Results
+### Large Results (Tier 2+)
 
-For results too large to include directly in a message:
-
-1. Provider uploads results to secure storage
-2. Provider sends a result message with access details
-3. Requester downloads the results using provided access information
+For large results, use simple file references:
 
 ```json
 {
-  "messageType": "TASK_RESULT",
-  "taskId": "task-123",
-  "status": "COMPLETED",
-  "resultReference": {
-    "storageType": "s3",
-    "location": "s3://results-bucket/task-123/output.zip",
-    "accessToken": "...",
-    "expiresAt": "2025-07-19T15:00:00Z"
-  }
+  "from": "agentid:hive:provider",
+  "to": "agentid:hive:requester",
+  "type": "task_result",
+  "data": {
+    "task_id": "task-123",
+    "status": "completed",
+    "result_url": "https://storage.example.com/results/task-123.zip",
+    "expires": "2025-07-19T15:00:00Z"
+  },
+  "sig": "signature"
 }
 ```
 
 ## Error Handling
 
-The Agent Collaboration layer includes standardized error handling to communicate issues clearly.
-
-### Error Response Format
+### Basic Error Response
 
 ```json
 {
-  "messageType": "TASK_ERROR",
-  "taskId": "task-123",
-  "status": "FAILED",
-  "error": {
-    "code": "RESOURCE_UNAVAILABLE",
-    "message": "Required translation model is currently unavailable",
-    "details": {
-      "resourceId": "spanish-model-v2",
-      "retryAfter": "2025-07-18T16:00:00Z"
-    }
-  }
+  "from": "agentid:hive:provider",
+  "to": "agentid:hive:requester",
+  "type": "task_error",
+  "data": {
+    "task_id": "task-123",
+    "error": "resource_unavailable",
+    "message": "Translation service temporarily down",
+    "retry": true
+  },
+  "sig": "signature"
 }
 ```
 
-<Callout type="warning">
-  Agents should implement retry logic with exponential backoff for transient errors, while handling permanent
-    failures gracefully.
-</Callout>
+**Common error codes**:
 
-## Implementation Considerations
+- `capability_not_found` - Agent doesn't have this capability
+- `invalid_parameters` - Wrong or missing parameters
+- `resource_unavailable` - Service temporarily down
+- `processing_failed` - Error during execution
 
-When implementing the Agent Collaboration layer, developers should consider:
+## Implementation (Tier 1)
 
-- Handling timeouts and unresponsive agents
-- Implementing proper error recovery mechanisms
-- Ensuring idempotent operations for reliability
-- Maintaining an audit trail of task interactions
-- Implementing verification checks for completed tasks
+**Required for basic collaboration**:
+
+- [ ] Handle `task_request` messages
+- [ ] Send `task_response` (accept/reject)
+- [ ] Process tasks and send `task_result`
+- [ ] Handle errors with `task_error`
+- [ ] Basic task state tracking
+
+**Optional (Tier 2+)**:
+
+- [ ] Progress updates for long tasks
+- [ ] Formal task agreements
+- [ ] Advanced error handling
+- [ ] Result verification
 
 <Callout type="info">
-  For a complete understanding of task workflows, see the [Task Lifecycle](/docs/protocol/structure/lifecycle) documentation.
+  **Start Simple**: Most agents only need the 4 basic message types for task
+  collaboration. Add complexity only when your specific use case requires it.
 </Callout>

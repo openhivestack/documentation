@@ -1,156 +1,127 @@
 ---
 title: Capability Advertisement
-description: How agents communicate their abilities to others
+description: Simple capability format designed for scale
 icon: Wrench
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
-Capability Advertisement is a core mechanism in the H.I.V.E. Protocol that enables agents to communicate what they
-can do. This standardized approach allows agents to discover each other based on their abilities and requirements.
+Capability Advertisement in the H.I.V.E. Protocol uses a streamlined format that focuses on essential information. This approach enables faster discovery and matching for scalable agent systems.
 
-## Capability Description Format
+## Design Philosophy
 
-Agents advertise their capabilities using a standardized JSON format that provides detailed information about what
-functions they can perform:
+The capability format focuses on what agents actually need to know:
+
+- What the capability does (ID)
+- What inputs it requires
+- What outputs it provides
+
+## Simple Capability Format
+
+Agents advertise capabilities using this essential format:
 
 ```json
 {
   "capabilities": [
     {
       "id": "text-translation",
-      "version": "1.0",
-      "name": "Text Translation",
-      "description": "Translates text between different languages",
-      "categories": ["language", "text-processing"],
-      "supportedLanguages": ["en", "es", "fr", "de", "zh", "ja"],
-      "parameters": {
-        "sourceLanguage": {
-          "type": "string",
-          "required": true,
-          "description": "Source language code (ISO 639-1)",
-          "enum": ["en", "es", "fr", "de", "zh", "ja"]
-        },
-        "targetLanguage": {
-          "type": "string",
-          "required": true,
-          "description": "Target language code (ISO 639-1)",
-          "enum": ["en", "es", "fr", "de", "zh", "ja"]
-        },
-        "text": {
-          "type": "string",
-          "required": true,
-          "description": "Text to translate",
-          "maxLength": 10000
-        },
-        "preserveFormatting": {
-          "type": "boolean",
-          "required": false,
-          "default": true,
-          "description": "Whether to preserve formatting in the translated text"
-        },
-        "domain": {
-          "type": "string",
-          "required": false,
-          "description": "Specialized domain for translation",
-          "enum": ["general", "technical", "medical", "legal", "financial"],
-          "default": "general"
-        }
+      "input": {
+        "text": "string",
+        "source_lang": "string",
+        "target_lang": "string"
       },
-      "returns": {
-        "translatedText": {
-          "type": "string",
-          "description": "The translated text"
-        },
-        "confidence": {
-          "type": "number",
-          "description": "Confidence score between 0 and 1"
-        },
-        "detectedLanguage": {
-          "type": "string",
-          "description": "Detected source language if not specified"
-        }
+      "output": {
+        "translated_text": "string"
+      }
+    },
+    {
+      "id": "image-resize",
+      "input": {
+        "image_url": "string",
+        "width": "number",
+        "height": "number"
       },
-      "examples": [
-        {
-          "description": "Translate from English to Spanish",
-          "request": {
-            "sourceLanguage": "en",
-            "targetLanguage": "es",
-            "text": "Hello world"
-          },
-          "response": {
-            "translatedText": "Hola mundo",
-            "confidence": 0.98
-          }
-        }
-      ],
-      "performance": {
-        "averageResponseTime": 0.8,
-        "throughput": "5000 chars/second",
-        "costPerUnit": {
-          "unit": "1000 characters",
-          "cost": 0.01
-        }
-      },
-      "availability": {
-        "uptime": 0.998,
-        "rateLimits": {
-          "requestsPerMinute": 100,
-          "tokensPerDay": 1000000
-        }
+      "output": {
+        "resized_image_url": "string"
       }
     }
   ]
 }
 ```
 
+**Benefits of this approach**:
+
+- **Faster parsing** and discovery matching
+- **Easy to generate** programmatically
+- **Human readable** for debugging
+- **Type-safe** with clear input/output contracts
+
 ## Capability Components
 
-### Basic Information
+### Essential Fields Only
 
-| Field         | Description                                      |
-|---------------|--------------------------------------------------|
-| `id`          | Unique identifier for the capability             |
-| `version`     | Version of the capability implementation         |
-| `name`        | Human-readable name                              |
-| `description` | Detailed description of what the capability does |
-| `categories`  | Tags for categorizing the capability             |
+| Field    | Description                  | Required |
+| -------- | ---------------------------- | -------- |
+| `id`     | Unique capability identifier | Yes      |
+| `input`  | Input parameter types        | Yes      |
+| `output` | Output field types           | Yes      |
 
-### Parameters
+That's it! No version numbers, descriptions, categories, examples, or performance metrics in Tier 1.
 
-The `parameters` object defines the inputs that the capability accepts:
+### Input/Output Specification
 
-- Each parameter has a unique name as its key
-- `type` specifies the data type (string, number, boolean, object, array)
-- `required` indicates whether the parameter is mandatory
-- `description` provides human-readable explanation
-- Additional validation constraints can be included (`enum`, `minLength`, `maxLength`, etc.)
+**Simple type system**:
 
-### Returns
+- `"string"` - Text data
+- `"number"` - Numeric data
+- `"boolean"` - True/false values
+- `"object"` - Nested JSON object
+- `"array"` - List of items
 
-The `returns` object describes the output format:
+**Example specifications**:
 
-- Each field has a unique name as its key
-- `type` specifies the data type of the return value
-- `description` explains the meaning of the return value
+```json
+// Text processing capability
+{
+  "id": "text-processing",
+  "input": { "text": "string", "operation": "string" },
+  "output": { "result": "string" }
+}
 
-### Examples
+// Data analysis capability
+{
+  "id": "data-analysis",
+  "input": { "dataset": "array", "analysis_type": "string" },
+  "output": { "insights": "object", "confidence": "number" }
+}
 
-The `examples` array provides sample usage scenarios:
+// File conversion capability
+{
+  "id": "file-convert",
+  "input": { "file_url": "string", "target_format": "string" },
+  "output": { "converted_file_url": "string" }
+}
+```
 
-- `description` explains the example scenario
-- `request` shows sample parameter values
-- `response` shows expected output
+### Advanced Types (Tier 2+)
 
-### Performance and Availability
+For more complex scenarios, you can add validation:
 
-Optional metrics about the capability's performance characteristics:
-
-- `averageResponseTime` in seconds
-- `throughput` in relevant units
-- `costPerUnit` for fee-based capabilities
-- `availability` metrics like uptime and rate limits
+```json
+{
+  "id": "image-processing",
+  "input": {
+    "image_url": "string",
+    "operation": { "type": "string", "enum": ["resize", "crop", "filter"] },
+    "width": { "type": "number", "min": 1, "max": 4000 },
+    "height": { "type": "number", "min": 1, "max": 4000 }
+  },
+  "output": {
+    "processed_image_url": "string",
+    "metadata": "object"
+  }
+}
+```
 
 ## Advertisement Methods
 
@@ -184,7 +155,9 @@ Agents broadcast capability advertisements directly to known peers:
 {
   "messageType": "CAPABILITY_ADVERTISEMENT",
   "payload": {
-    "capabilities": [ /* capability objects */ ],
+    "capabilities": [
+      /* capability objects */
+    ],
     "expires": "2025-07-25T00:00:00Z"
   }
 }
@@ -284,11 +257,12 @@ When implementing capability advertisement and discovery:
 - **Caching**: Implement appropriate caching strategies for efficiency
 
 <Callout type="warning">
-  Agents should never advertise capabilities they cannot reliably provide. Misrepresenting capabilities damages
-    trust in the network.
+  Agents should never advertise capabilities they cannot reliably provide.
+  Misrepresenting capabilities damages trust in the network.
 </Callout>
 
 <Callout type="info">
-  When advertising capabilities, include detailed parameter specifications to help potential requesters understand
-    exactly what inputs are required and what constraints apply.
+  When advertising capabilities, include detailed parameter specifications to
+  help potential requesters understand exactly what inputs are required and what
+  constraints apply.
 </Callout>

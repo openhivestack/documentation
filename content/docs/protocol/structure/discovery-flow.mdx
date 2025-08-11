@@ -1,349 +1,267 @@
 ---
 title: Discovery Flow
-description: How agents discover each other's capabilities
+description: simple agent discovery optimized for scale
 icon: Search
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 import { Mermaid } from "@/components/mdx/mermaid";
 
-The Discovery Flow in the H.I.V.E. Protocol defines how agents find each other and learn about their capabilities.
-This standardized process enables dynamic collaboration between previously unconnected agents.
+The Discovery Flow in the H.I.V.E. Protocol is optimized for simplicity and scale. Instead of complex multi-step discovery protocols, we use straightforward HTTP-based lookup that can handle millions of agents efficiently.
+
+## Design
+
+<Mermaid
+  chart={`
+flowchart LR
+    A[Need Capability] --> B[Query Registry]
+    B --> C[Get Agent List]
+    C --> D[Pick Agent]
+    D --> E[Send Task]
+`}
+/>
+
+**Key Simplifications**:
+
+- **No complex handshakes** - direct capability lookup
+- **No peer-to-peer discovery** - centralized registry for efficiency
+- **No elaborate filtering** - simple capability matching
+- **Immediate connection** - no discovery negotiation
 
 ## Discovery Methods
 
-The H.I.V.E. Protocol supports multiple discovery methods to accommodate different deployment scenarios:
+### Primary: HTTP Registry Lookup
 
-<Mermaid
-  chart={`
-flowchart TD
-    A[Agent Discovery] --> B[Registry-Based Discovery]
-    A --> C[Direct Discovery]
-    A --> D[Broadcast Discovery]
-    A --> E[Federation-Based Discovery]
-`}
-/>
-
-### Registry-Based Discovery
-
-Registry-based discovery is the most common approach, using a central directory service where agents register their
-capabilities and can be found by others.
-
-<Mermaid
-  chart={`
-sequenceDiagram
-    participant Agent A
-    participant Registry
-    participant Agent B
-
-    Agent A->>Registry: Register capabilities
-    Registry-->>Agent A: Registration confirmation
-
-    Agent B->>Registry: Query for capabilities
-    Registry-->>Agent B: Agent A's details and capabilities
-
-    Agent B->>Agent A: Direct connection
-`}
-/>
-
-#### Registration Process
-
-1. **Agent Registration**: Agent sends its identity, endpoints, and capabilities to the registry
-2. **Verification**: Registry verifies the agent's signature and validates capability format
-3. **Storage**: Registry stores the agent's information in its directory
-4. **Confirmation**: Registry confirms successful registration to the agent
+**Step 1**: Query registry for capability
 
 ```http
-# Registration Request
-POST /registry/agents HTTP/1.1
+GET /agents?capability=text-translation HTTP/1.1
 Host: registry.example.com
-Content-Type: application/json
 
-{
-  "agentId": "agent-abc123",
-  "publicKey": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----",
-  "endpoints": {
-    "http": "https://agent-abc123.example.com/api",
-    "websocket": "wss://agent-abc123.example.com/ws"
-  },
-  "capabilities": [
-    {
-      "id": "text-translation",
-      "version": "1.0",
-      "supportedLanguages": ["en", "es", "fr", "de"],
-      "maxTextLength": 10000
-    }
-  ],
-  "timestamp": "2025-07-18T12:00:00Z",
-  "signature": "Base64-encoded signature"
-}
-```
-
-```http
-# Registration Response
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-{
-  "status": "registered",
-  "registryId": "registry.example.com",
-  "agentId": "agent-abc123",
-  "registrationExpires": "2025-07-19T12:00:00Z"
-}
-```
-
-#### Discovery Process
-
-1. **Capability Query**: Agent queries the registry for agents with specific capabilities
-2. **Filtering**: Registry filters registered agents based on query criteria
-3. **Response**: Registry returns matching agents with their endpoints and capabilities
-4. **Direct Connection**: The querying agent connects directly to the discovered agent
-
-```http
-# Discovery Query
-GET /registry/agents?capability=text-translation&language=es HTTP/1.1
-Host: registry.example.com
-Accept: application/json
-```
-
-```http
-# Discovery Response
-HTTP/1.1 200 OK
-Content-Type: application/json
-
+# Response:
 {
   "agents": [
     {
-      "agentId": "agent-abc123",
-      "publicKey": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----",
-      "endpoints": {
-        "http": "https://agent-abc123.example.com/api",
-        "websocket": "wss://agent-abc123.example.com/ws"
-      },
-      "capabilities": [
-        {
-          "id": "text-translation",
-          "version": "1.0",
-          "supportedLanguages": ["en", "es", "fr", "de"],
-          "maxTextLength": 10000
-        }
-      ],
-      "lastSeen": "2025-07-18T12:00:00Z"
+      "agent_id": "agentid:hive:translator123",
+      "endpoint": "https://translator123.example.com",
+      "capabilities": ["text-translation"],
+      "last_seen": "2025-07-18T14:30:00Z"
     },
-    // Other matching agents...
+    {
+      "agent_id": "agentid:hive:translator456",
+      "endpoint": "https://translator456.example.com",
+      "capabilities": ["text-translation", "text-summarization"],
+      "last_seen": "2025-07-18T14:29:45Z"
+    }
   ]
 }
 ```
 
-### Direct Discovery
+**Step 2**: Pick an agent and send task directly
 
-Direct discovery is used when an agent already knows the endpoint of another agent and wants to learn about its
-capabilities.
+```javascript
+// Simple agent selection (pick first available)
+async function findAndUseAgent(capability, taskData) {
+  // 1. Discover agents
+  const response = await fetch(
+    `https://registry.example.com/agents?capability=${capability}`
+  );
+  const { agents } = await response.json();
 
-<Mermaid
-  chart={`
-sequenceDiagram
-    participant Agent A
-    participant Agent B
-
-    Agent A->>Agent B: Capability query
-    Agent B-->>Agent A: Capability advertisement
-`}
-/>
-
-#### Direct Query Process
-
-1. **Capability Query**: Agent sends a direct query to the known endpoint
-2. **Response**: The queried agent responds with its capabilities
-3. **Verification**: The querying agent verifies the response signature
-
-```json
-// Direct Capability Query
-{
-  "messageType": "CAPABILITY_QUERY",
-  "payload": {
-    "queryType": "ALL"
+  if (agents.length === 0) {
+    throw new Error(`No agents found for capability: ${capability}`);
   }
-}
-```
 
-```json
-// Direct Capability Response
-{
-  "messageType": "CAPABILITY_ADVERTISEMENT",
-  "payload": {
-    "capabilities": [
-      {
-        "id": "text-translation",
-        "version": "1.0",
-        "supportedLanguages": ["en", "es", "fr", "de"],
-        "maxTextLength": 10000
-      }
-    ]
-  }
-}
-```
+  // 2. Pick first agent (or implement your selection logic)
+  const selectedAgent = agents[0];
 
-### Broadcast Discovery
-
-Broadcast discovery enables agents to announce their presence and capabilities to the network without a central registry.
-
-<Mermaid
-  chart={`
-sequenceDiagram
-    participant Agent A
-    participant Network
-    participant Agent B
-    participant Agent C
-
-    Agent A->>Network: Broadcast capability advertisement
-    Network-->>Agent B: Receive advertisement
-    Network-->>Agent C: Receive advertisement
-
-    Agent B->>Agent A: Direct connection
-`}
-/>
-
-#### Broadcast Process
-
-1. **Capability Broadcast**: Agent broadcasts its capabilities to the network
-2. **Multicast Receipt**: Other agents on the network receive the broadcast
-3. **Filtering**: Receiving agents filter broadcasts based on their needs
-4. **Direct Connection**: Interested agents connect directly to the broadcasting agent
-
-```json
-// Broadcast Advertisement
-{
-  "messageType": "CAPABILITY_BROADCAST",
-  "payload": {
-    "agentId": "agent-abc123",
-    "publicKey": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----",
-    "endpoints": {
-      "http": "https://agent-abc123.example.com/api",
-      "websocket": "wss://agent-abc123.example.com/ws"
+  // 3. Send task immediately
+  const taskRequest = {
+    from: CLIENT_ID,
+    to: selectedAgent.agent_id,
+    type: "task_request",
+    data: {
+      task_id: generateTaskId(),
+      capability: capability,
+      ...taskData,
     },
-    "capabilities": [
-      {
-        "id": "text-translation",
-        "version": "1.0",
-        "supportedLanguages": ["en", "es", "fr", "de"]
-      }
-    ],
-    "broadcastId": "broadcast-123456",
-    "timestamp": "2025-07-18T12:00:00Z"
-  }
+  };
+
+  const signedRequest = {
+    ...taskRequest,
+    sig: signMessage(taskRequest),
+  };
+
+  // 4. Send to agent
+  const taskResponse = await fetch(`${selectedAgent.endpoint}/tasks`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(signedRequest),
+  });
+
+  return await taskResponse.json();
 }
 ```
 
-### Federation-Based Discovery
+### Fallback: Direct Agent Query
 
-Federation-based discovery connects multiple registries to provide a broader view of available agents while
-maintaining administrative boundaries.
+If you know an agent's endpoint, query it directly:
 
-<Mermaid
-  chart={`
-flowchart TD
-    A[Agent A] -->|Register| B[Registry 1]
-    C[Agent C] -->|Register| D[Registry 2]
+```javascript
+// Direct capability query
+async function queryAgentCapabilities(agentEndpoint) {
+  const response = await fetch(`${agentEndpoint}/capabilities`);
+  return await response.json();
+}
 
-    B <-->|Federation| D
+// Check if agent has specific capability
+async function agentHasCapability(agentEndpoint, capabilityId) {
+  const capabilities = await queryAgentCapabilities(agentEndpoint);
+  return capabilities.capabilities.some((cap) => cap.id === capabilityId);
+}
+```
 
-    E[Agent B] -->|Query| B
-    B -->|Results include\nAgent A and Agent C| E
-`}
-/>
+### Optional: Local Network Discovery (Tier 2+)
 
-#### Federation Process
+For local networks, use mDNS service discovery:
 
-1. **Registry Federation**: Registries establish federation relationships
-2. **Cross-Registry Queries**: Queries to one registry can return results from federated registries
-3. **Aggregation**: Results from multiple registries are aggregated before returning to the querying agent
+```javascript
+// mDNS discovery (Node.js example)
+const mdns = require("mdns");
 
-## Discovery Protocols
+// Advertise your agent
+const ad = mdns.createAdvertisement(mdns.tcp("hive"), 3000, {
+  txtRecord: {
+    agent_id: AGENT_ID,
+    capabilities: "text-processing,image-resize",
+  },
+});
+ad.start();
 
-The H.I.V.E. Protocol supports multiple underlying discovery protocols:
+// Discover other agents
+const browser = mdns.createBrowser(mdns.tcp("hive"));
+browser.on("serviceUp", (service) => {
+  console.log("Found agent:", service.txtRecord.agent_id);
+  console.log("Capabilities:", service.txtRecord.capabilities);
+  console.log("Endpoint:", `http://${service.addresses[0]}:${service.port}`);
+});
+browser.start();
+```
 
-### HTTP-Based Discovery
+## Agent Selection Strategies
 
-Using standard HTTP endpoints for registration and discovery:
+### Simple Selection (Tier 1)
 
-- `POST /registry/agents` for registration
-- `GET /registry/agents` for discovery queries
-- `GET /registry/agents/{agentId}` for specific agent lookup
+```javascript
+// Pick first available agent
+function selectAgent(agents) {
+  return agents[0];
+}
+```
 
-### DNS-Based Discovery
+### Smart Selection (Tier 2+)
 
-Using DNS records for discovery in decentralized environments:
+```javascript
+// Select based on multiple factors
+function selectBestAgent(agents, criteria) {
+  return agents
+    .filter((agent) => agent.last_seen > Date.now() - 300000) // Active in last 5 minutes
+    .sort((a, b) => {
+      // Prefer agents with fewer capabilities (more specialized)
+      if (a.capabilities.length !== b.capabilities.length) {
+        return a.capabilities.length - b.capabilities.length;
+      }
+      // Prefer more recently seen agents
+      return new Date(b.last_seen) - new Date(a.last_seen);
+    })[0];
+}
+```
 
-- SRV records for service discovery
-- TXT records for capability advertisements
-- NAPTR records for service resolution
+## Registry Implementation
 
-### mDNS/DNS-SD
+**Simple registry for development**:
 
-For local network discovery without a central registry:
+```javascript
+// Simple in-memory registry
+const agents = new Map();
 
-- Multicast DNS for local name resolution
-- DNS Service Discovery for capability advertisement
-- Zero-configuration networking
+// Register agent
+app.post("/agents", (req, res) => {
+  const { agent_id, endpoint, capabilities } = req.body;
 
-## Discovery Security
+  agents.set(agent_id, {
+    agent_id,
+    endpoint,
+    capabilities: capabilities.map((cap) => cap.id),
+    last_seen: new Date().toISOString(),
+    full_capabilities: capabilities,
+  });
 
-The discovery process includes several security measures:
+  res.json({ status: "registered" });
+});
 
-1. **Signature Verification**: All registration and advertisement messages are signed
-2. **Timestamp Validation**: Messages include timestamps to prevent replay attacks
-3. **Registry Authentication**: Registries authenticate themselves to agents
-4. **Capability Validation**: Registries validate capability format before acceptance
+// Discover agents
+app.get("/agents", (req, res) => {
+  const capability = req.query.capability;
+
+  const matchingAgents = Array.from(agents.values())
+    .filter((agent) => {
+      if (!capability) return true;
+      return agent.capabilities.includes(capability);
+    })
+    .map((agent) => ({
+      agent_id: agent.agent_id,
+      endpoint: agent.endpoint,
+      capabilities: agent.capabilities,
+      last_seen: agent.last_seen,
+    }));
+
+  res.json({ agents: matchingAgents });
+});
+
+// Heartbeat to keep agents active
+app.post("/agents/:agentId/heartbeat", (req, res) => {
+  const agent = agents.get(req.params.agentId);
+  if (agent) {
+    agent.last_seen = new Date().toISOString();
+    res.json({ status: "updated" });
+  } else {
+    res.status(404).json({ error: "agent_not_found" });
+  }
+});
+```
+
+## Implementation Checklist
+
+**Tier 1 Discovery Requirements**:
+
+- [ ] Generate unique Agent ID with `agentid:hive:` prefix
+- [ ] Register with HTTP registry (optional)
+- [ ] Query registry for capability discovery
+- [ ] Implement basic agent selection
+- [ ] Handle discovery failures gracefully
+
+**Optional Enhancements (Tier 2+)**:
+
+- [ ] Smart agent selection algorithms
+- [ ] Local network discovery (mDNS)
+- [ ] Agent caching and offline handling
+- [ ] Discovery result ranking
+- [ ] Federated registry support
+
+<Callout type="info">
+  **Scale Optimization**: The simplified discovery flow can handle millions of
+  agents efficiently by eliminating complex negotiation and using
+  straightforward HTTP queries.
+</Callout>
 
 <Callout type="warning">
-  Always verify signatures on discovery responses to prevent malicious impersonation of agents.
+  **Registry Dependency**: Tier 1 relies on registry availability. Implement
+  fallback mechanisms (cached agents, direct connections) for production
+  systems.
 </Callout>
 
-## Registration Maintenance
-
-Registration with discovery services requires ongoing maintenance:
-
-1. **Regular Renewal**: Agents must periodically renew their registration
-2. **Heartbeat Signals**: Optional heartbeat signals to indicate continued availability
-3. **Capability Updates**: Agents should update their registration when capabilities change
-4. **Deregistration**: Agents should deregister when shutting down gracefully
-
-```http
-# Registration Renewal
-PUT /registry/agents/agent-abc123 HTTP/1.1
-Host: registry.example.com
-Content-Type: application/json
-
-{
-  "agentId": "agent-abc123",
-  "timestamp": "2025-07-19T12:00:00Z",
-  "signature": "Base64-encoded signature"
-}
-```
-
-## Discovery Response Caching
-
-To improve efficiency, discovery responses can be cached:
-
-1. **TTL-Based Caching**: Responses include a time-to-live for caching
-2. **Conditional Requests**: Use ETags or Last-Modified headers for conditional requests
-3. **Capability Versioning**: Capability versions help determine cache invalidation
-
 <Callout type="info">
-  Implement proper caching strategies for discovery responses to reduce network load and improve responsiveness.
-</Callout>
-
-## Implementation Considerations
-
-When implementing discovery in your agent:
-
-1. **Fallback Mechanisms**: Implement multiple discovery methods with fallback options
-2. **Capability Filtering**: Filter discovery results client-side for more precise matching
-3. **Rate Limiting**: Respect rate limits of discovery services
-4. **Error Handling**: Implement robust error handling for discovery failures
-5. **Privacy Considerations**: Be aware of what capabilities reveal about your agent
-
-<Callout type="info">
-  For more details on capability descriptions, see the [Capability Advertisement](/docs/protocol/structure/capability-advertisement) documentation.
+  **Performance**: Cache discovery results and implement agent heartbeats to
+  maintain accurate availability information.
 </Callout>

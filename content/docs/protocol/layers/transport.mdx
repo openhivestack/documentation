@@ -1,229 +1,223 @@
 ---
 title: Transport Layer
-description: Network protocols and connectivity for agent communication
+description: HTTP-first transport optimized for simplicity and scale
 icon: Wifi
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
-The Transport Layer in the H.I.V.E. Protocol provides the foundation for network connectivity between agents.
-It defines the network protocols, connection mechanisms, and data transmission standards that enable reliable
-agent communication.
+The Transport Layer focuses on HTTP-first communication for maximum simplicity and compatibility. By prioritizing the most common web protocol, we eliminate complexity while ensuring every developer can implement H.I.V.E. agents quickly.
 
-## Supported Protocols
+## HTTP-First Approach
 
-The H.I.V.E. Protocol is designed to work with standard web protocols, making it compatible with existing
-infrastructure and easy to implement across different platforms.
+**Why HTTP-only for Tier 1**:
 
-### HTTP/HTTPS
+- ✅ **Universal support**: Every platform and language supports HTTP
+- ✅ **Existing infrastructure**: Leverage load balancers, CDNs, monitoring tools
+- ✅ **Simple debugging**: Use familiar tools like curl, Postman, browser dev tools
+- ✅ **Fast implementation**: No complex protocol handling needed
 
-HTTP/HTTPS serves as the primary protocol for request-response patterns in the H.I.V.E. Protocol.
+## Essential HTTP Endpoints
 
-**Key Features:**
-- RESTful API design for resource manipulation
-- Standard status codes for error handling
-- Content negotiation for different data formats
-- Caching mechanisms for performance optimization
+**Three endpoints handle everything**:
 
-**Example HTTP Request:**
+### 1. `POST /tasks` - Task Processing
 
 ```http
-POST /api/v1/tasks HTTP/1.1
+POST /tasks HTTP/1.1
 Host: agent.example.com
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...
 
 {
-  "taskType": "data-analysis",
-  "priority": "high",
-  "input": {
-    "dataUrl": "https://data.example.com/dataset123.json",
-    "analysisParameters": {
-      "algorithm": "clustering",
-      "features": ["age", "income", "location"]
-    }
-  }
+  "from": "agentid:hive:client123",
+  "to": "agentid:hive:agent456",
+  "type": "task_request",
+  "data": {
+    "task_id": "task-789",
+    "capability": "text-processing",
+    "text": "hello world",
+    "operation": "uppercase"
+  },
+  "sig": "ed25519_signature"
 }
 ```
 
-**Example HTTP Response:**
+**Response:**
 
 ```http
-HTTP/1.1 201 Created
+HTTP/1.1 200 OK
 Content-Type: application/json
-Location: /api/v1/tasks/task-456
 
 {
-  "taskId": "task-456",
-  "status": "ACCEPTED",
-  "estimatedCompletion": "2025-07-18T15:30:00Z",
-  "_links": {
-    "self": { "href": "/api/v1/tasks/task-456" },
-    "status": { "href": "/api/v1/tasks/task-456/status" },
-    "cancel": { "href": "/api/v1/tasks/task-456", "method": "DELETE" }
-  }
+  "from": "agentid:hive:agent456",
+  "to": "agentid:hive:client123",
+  "type": "task_result",
+  "data": {
+    "task_id": "task-789",
+    "status": "completed",
+    "result": { "result": "HELLO WORLD" }
+  },
+  "sig": "ed25519_signature"
 }
 ```
 
-### WebSockets
+### 2. `GET /capabilities` - Discovery
 
-WebSockets enable real-time, bidirectional communication for scenarios requiring continuous updates or
-event-driven interactions.
+```http
+GET /capabilities HTTP/1.1
+Host: agent.example.com
 
-**Key Features:**
-- Persistent connections for real-time updates
-- Reduced overhead compared to polling
-- Binary and text message support
-- Event-driven architecture
+# Response:
+{
+  "capabilities": [
+    {
+      "id": "text-processing",
+      "input": { "text": "string", "operation": "string" },
+      "output": { "result": "string" }
+    }
+  ]
+}
+```
 
-**Example WebSocket Communication:**
+### 3. `GET /status` - Health Check
+
+```http
+GET /status HTTP/1.1
+Host: agent.example.com
+
+# Response:
+{
+  "agent_id": "agentid:hive:agent456",
+  "status": "online",
+  "capabilities": ["text-processing"]
+}
+```
+
+## Optional Enhancements (Tier 2+)
+
+### WebSockets for Real-Time Updates
+
+**When to add**: Need real-time progress updates for long-running tasks
 
 ```javascript
-// Client-side connection establishment
-const socket = new WebSocket('wss://agent.example.com/ws');
+// Simple WebSocket addition to Tier 1 agent
+const WebSocket = require("ws");
+const wss = new WebSocket.Server({ port: 3001 });
 
-// Connection opened
-socket.addEventListener('open', (event) => {
-  socket.send(JSON.stringify({
-    messageType: 'SUBSCRIBE',
-    resource: 'task-456',
-    events: ['STATUS_CHANGE', 'PROGRESS_UPDATE']
-  }));
-});
-
-// Listen for messages
-socket.addEventListener('message', (event) => {
-  const message = JSON.parse(event.data);
-
-  if (message.messageType === 'TASK_UPDATE') {
-    console.log(`Task ${message.taskId} progress: ${message.progress * 100}%`);
-    updateProgressUI(message.progress);
-  }
+wss.on("connection", (ws) => {
+  ws.on("message", (data) => {
+    const message = JSON.parse(data);
+    if (message.type === "task_update") {
+      // Broadcast progress to interested clients
+      ws.send(
+        JSON.stringify({
+          type: "task_update",
+          data: { task_id: message.task_id, progress: 0.75 },
+        })
+      );
+    }
+  });
 });
 ```
 
-### MQTT
+### Message Compression (Tier 2+)
 
-MQTT (Message Queuing Telemetry Transport) is supported for lightweight publish-subscribe messaging, particularly
-useful for IoT and edge agent deployments.
+**When to add**: High-frequency communication or large payloads
 
-**Key Features:**
-- Lightweight protocol with minimal overhead
-- Publish-subscribe messaging pattern
-- Quality of Service (QoS) levels
-- Retained messages and last will and testament
+```javascript
+// Add gzip compression to Express
+app.use(compression());
+```
 
-**Example MQTT Topics:**
+## Transport Security (Essential Only)
 
-- `agents/discovery` - For agent capability advertisements
-- `agents/{agentId}/tasks/requests` - For task requests to a specific agent
-- `tasks/{taskId}/status` - For status updates on a specific task
-- `agents/{agentId}/heartbeat` - For agent availability monitoring
+### Required: TLS Encryption
 
-## Connection Patterns
+```javascript
+// Simple HTTPS server setup
+const https = require("https");
+const fs = require("fs");
 
-The H.I.V.E. Protocol supports multiple connection patterns to accommodate different use cases and deployment scenarios.
+const options = {
+  key: fs.readFileSync("private-key.pem"),
+  cert: fs.readFileSync("certificate.pem"),
+};
 
-### Request-Response
+https.createServer(options, app).listen(3000);
+```
 
-The standard pattern for discrete interactions where an agent makes a request and expects a response.
+### Required: Ed25519 Signatures
 
-- Typically implemented using HTTP/HTTPS
-- Suitable for task submission, capability queries, and result retrieval
-- Simple to implement and understand
+All messages must be signed:
 
-### Publish-Subscribe
+```javascript
+// Sign outgoing messages
+const messageToSign = { from, to, type, data };
+const signature = crypto.sign(
+  "sha256",
+  JSON.stringify(messageToSign),
+  privateKey
+);
+const signedMessage = { ...messageToSign, sig: signature.toString("base64") };
 
-Enables agents to publish messages to topics and subscribe to topics of interest.
+// Verify incoming messages
+const isValid = crypto.verify(
+  "sha256",
+  JSON.stringify(messageWithoutSig),
+  senderPublicKey,
+  signature
+);
+```
 
-- Implemented using WebSockets or MQTT
-- Ideal for event notifications, status updates, and broadcasts
-- Supports one-to-many communication
+## Implementation for Scale (Millions of Agents)
 
-### Stream Processing
+### Performance Optimizations
 
-Enables continuous processing of data streams between agents.
+```javascript
+// Connection pooling
+const agent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 100,
+});
 
-- Implemented using WebSockets or specialized streaming protocols
-- Suitable for real-time data processing, monitoring, and analytics
-- Supports backpressure mechanisms for flow control
+// Message batching for high frequency
+const messageBatch = [];
+setInterval(() => {
+  if (messageBatch.length > 0) {
+    sendBatch(messageBatch);
+    messageBatch.length = 0;
+  }
+}, 100); // Batch every 100ms
 
-## Data Formats
+// Compression for large payloads
+app.use(compression({ threshold: 1024 }));
+```
 
-The H.I.V.E. Protocol primarily uses JSON for message serialization, with support for other formats when needed.
+### Simple Implementation Checklist
 
-### JSON
+**Tier 1 Requirements**:
 
-The default data format for most H.I.V.E. Protocol messages.
+- [ ] HTTP server with 3 endpoints
+- [ ] TLS configuration
+- [ ] Ed25519 signature generation/verification
+- [ ] JSON message parsing
+- [ ] Basic error handling
 
-- Human-readable and widely supported
-- Schema validation using JSON Schema
-- Support for complex nested structures
+**Performance Enhancements**:
 
-### Binary Data
-
-For efficient transmission of large datasets, binary formats are supported.
-
-- Base64 encoding for small binary data in JSON
-- Multipart messages for larger binary payloads
-- Protocol Buffers or MessagePack for efficient serialization
-
-## Transport Security
-
-All H.I.V.E. Protocol communications must be secured using industry-standard encryption and security practices.
-
-### TLS/SSL
-
-- Mandatory for all HTTP and WebSocket connections
-- Minimum TLS version 1.2, with 1.3 recommended
-- Strong cipher suites required
-- Certificate validation enforced
-
-### Mutual TLS (mTLS)
-
-- Optional but recommended for high-security environments
-- Both server and client authenticate using certificates
-- Prevents unauthorized connections and man-in-the-middle attacks
-
-<Callout type="warning">
-  Never transmit agent credentials or sensitive data over unencrypted connections. All H.I.V.E. Protocol
-    implementations must use TLS for transport security.
-</Callout>
-
-## Connection Management
-
-H.I.V.E. Protocol implementations must handle connection lifecycle management effectively.
-
-### Connection Establishment
-
-- Clear handshake procedures for initial connection
-- Capability negotiation during connection setup
-- Graceful handling of connection failures
-
-### Connection Maintenance
-
-- Heartbeat mechanisms to detect connection health
-- Automatic reconnection with exponential backoff
-- Connection pooling for performance optimization
-
-### Connection Termination
-
-- Graceful shutdown procedures
-- Proper resource cleanup
-- State persistence for reconnection
-
-## Implementation Considerations
-
-When implementing the Transport Layer, developers should consider:
-
-- Network reliability and fault tolerance
-- Bandwidth and latency constraints
-- Firewall and NAT traversal requirements
-- Load balancing and scalability needs
-- Connection pooling and resource management
-- Monitoring and diagnostics capabilities
+- [ ] Connection pooling
+- [ ] Keep-alive connections
+- [ ] Message compression (>1KB)
+- [ ] Request rate limiting
+- [ ] Connection timeouts
 
 <Callout type="info">
-  The Transport Layer should be implemented with resilience in mind. Always assume network failures will occur and
-    implement proper retry and recovery mechanisms.
+  **HTTP-First Benefits**: By focusing on HTTP, you can leverage existing
+  infrastructure like load balancers, CDNs, and monitoring tools without
+  additional complexity.
+</Callout>
+
+<Callout type="warning">
+  **Security**: Always use TLS in production. HTTP is only acceptable for local
+  development and testing.
 </Callout>

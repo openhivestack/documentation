@@ -1,385 +1,217 @@
 ---
 title: Task Lifecycle
-description: The complete lifecycle of tasks from proposal to completion
+description: simple 4-state task lifecycle
 icon: LifeBuoy
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 import { Mermaid } from "@/components/mdx/mermaid";
 
-The Task Lifecycle in the H.I.V.E. Protocol defines how tasks progress from initial proposal to final completion.
-This standardized workflow ensures that all agents have a consistent understanding of task states and transitions.
+The H.I.V.E. Protocol uses an simplified 4-state task lifecycle that eliminates unnecessary complexity while maintaining clear task progression. Perfect for high-throughput systems with millions of agents.
 
-## Task States Overview
+## Simplified Task States
 
 <Mermaid
   chart={`
 stateDiagram-v2
-    [*] --> PROPOSED
-    PROPOSED --> ACCEPTED: Provider accepts
-    PROPOSED --> REJECTED: Provider rejects
-    ACCEPTED --> IN_PROGRESS: Work begins
-    IN_PROGRESS --> COMPLETED: Success
-    IN_PROGRESS --> FAILED: Error
-    IN_PROGRESS --> CANCELED: Mutual agreement
+    [*] --> REQUESTED
+    REQUESTED --> ACCEPTED: Provider accepts
+    REQUESTED --> REJECTED: Provider rejects
+    ACCEPTED --> COMPLETED: Success
+    ACCEPTED --> FAILED: Error
     COMPLETED --> [*]
     FAILED --> [*]
     REJECTED --> [*]
-    CANCELED --> [*]
 `}
 />
 
-## Detailed Task States
+**Key Simplifications**:
 
-### PROPOSED
+- **Removed "PROPOSED"**: Tasks go directly to REQUESTED
+- **Removed "IN_PROGRESS"**: Tasks go from ACCEPTED to COMPLETED/FAILED
+- **Removed "CANCELED"**: Keep it simple - tasks either complete or fail
+- **4 states total**: Down from 7+ in complex protocols
 
-The initial state when a task is first proposed by a requester agent to a provider agent.
+## Task States
 
-**Characteristics:**
-- Task details and requirements are specified
-- No commitment has been made by the provider
-- May include proposed deadline and constraints
+### REQUESTED
 
-**Possible Transitions:**
-- → ACCEPTED: Provider agrees to perform the task
-- → REJECTED: Provider declines to perform the task
+Task has been sent to a provider agent.
+
+```json
+{
+  "from": "agentid:hive:client123",
+  "to": "agentid:hive:provider456",
+  "type": "task_request",
+  "data": {
+    "task_id": "task-123",
+    "capability": "text-processing",
+    "text": "hello world",
+    "operation": "uppercase"
+  },
+  "sig": "signature"
+}
+```
 
 ### ACCEPTED
 
-The provider has agreed to perform the task according to the specified requirements.
+Provider will perform the task.
 
-**Characteristics:**
-- Contract between requester and provider is established
-- Resources are allocated by the provider
-- Expected completion time may be communicated
-
-**Possible Transitions:**
-- → IN_PROGRESS: Provider begins working on the task
-- → CANCELED: Task is canceled before work begins
-
-### IN_PROGRESS
-
-The provider is actively working on the task.
-
-**Characteristics:**
-- Provider sends periodic progress updates
-- Percentage completion may be reported
-- Intermediate results may be shared
-
-**Possible Transitions:**
-- → COMPLETED: Task is successfully completed
-- → FAILED: Task encounters an unrecoverable error
-- → CANCELED: Task is canceled during execution
+```json
+{
+  "from": "agentid:hive:provider456",
+  "to": "agentid:hive:client123",
+  "type": "task_response",
+  "data": {
+    "task_id": "task-123",
+    "status": "accepted"
+  },
+  "sig": "signature"
+}
+```
 
 ### COMPLETED
 
-The task has been successfully completed and results have been delivered.
-
-**Characteristics:**
-- Final results are available
-- All requirements have been met
-- Verification may be performed by the requester
-
-**Possible Transitions:**
-- (Terminal state)
-
-### FAILED
-
-The task could not be completed due to errors or other issues.
-
-**Characteristics:**
-- Error details are provided
-- Reason for failure is documented
-- Recovery options may be suggested
-
-**Possible Transitions:**
-- (Terminal state)
-
-### REJECTED
-
-The provider has declined to accept the task proposal.
-
-**Characteristics:**
-- Reason for rejection is provided
-- Alternative providers may be suggested
-- Parameters for reconsideration may be offered
-
-**Possible Transitions:**
-- (Terminal state)
-
-### CANCELED
-
-The task was canceled after being accepted or started.
-
-**Characteristics:**
-- Reason for cancellation is documented
-- Cancellation may be initiated by either party
-- Partial results may be provided if available
-
-**Possible Transitions:**
-- (Terminal state)
-
-## Task Lifecycle Flow
-
-### 1. Task Proposal
-
-The lifecycle begins when a requester agent proposes a task to a provider agent.
+Task finished successfully with results.
 
 ```json
 {
-  "messageType": "TASK_PROPOSAL",
-  "payload": {
-    "taskId": "task-123456",
-    "capabilityId": "text-translation",
-    "parameters": {
-      "sourceLanguage": "en",
-      "targetLanguage": "es",
-      "text": "Hello world, this is a test message."
-    },
-    "requirements": {
-      "deadline": "2025-07-18T15:00:00Z",
-      "priority": "NORMAL"
-    }
-  }
+  "from": "agentid:hive:provider456",
+  "to": "agentid:hive:client123",
+  "type": "task_result",
+  "data": {
+    "task_id": "task-123",
+    "status": "completed",
+    "result": { "result": "HELLO WORLD" }
+  },
+  "sig": "signature"
 }
 ```
 
-### 2. Task Acceptance or Rejection
+### REJECTED or FAILED
 
-The provider evaluates the proposal and decides whether to accept or reject it.
-
-```json
-// Acceptance
-{
-  "messageType": "TASK_RESPONSE",
-  "payload": {
-    "taskId": "task-123456",
-    "responseType": "ACCEPT",
-    "estimatedCompletionTime": "2025-07-18T14:45:00Z",
-    "contractId": "contract-789012"
-  }
-}
-
-// Rejection
-{
-  "messageType": "TASK_RESPONSE",
-  "payload": {
-    "taskId": "task-123456",
-    "responseType": "REJECT",
-    "reason": "CAPABILITY_UNAVAILABLE",
-    "message": "Spanish translation service currently unavailable",
-    "alternatives": [
-      {
-        "capabilityId": "text-translation",
-        "parameters": {
-          "sourceLanguage": "en",
-          "targetLanguage": "fr"
-        },
-        "availability": "AVAILABLE"
-      }
-    ]
-  }
-}
-```
-
-### 3. Task Execution
-
-If accepted, the provider begins executing the task and updates the requester on progress.
-
-```json
-// Starting execution
-{
-  "messageType": "TASK_UPDATE",
-  "payload": {
-    "taskId": "task-123456",
-    "contractId": "contract-789012",
-    "status": "IN_PROGRESS",
-    "progress": 0.0,
-    "message": "Translation starting",
-    "timestamp": "2025-07-18T14:30:00Z"
-  }
-}
-
-// Progress update
-{
-  "messageType": "TASK_UPDATE",
-  "payload": {
-    "taskId": "task-123456",
-    "contractId": "contract-789012",
-    "status": "IN_PROGRESS",
-    "progress": 0.75,
-    "message": "Translation 75% complete",
-    "timestamp": "2025-07-18T14:40:00Z"
-  }
-}
-```
-
-### 4. Task Completion or Failure
-
-The task either completes successfully or fails with an error.
-
-```json
-// Successful completion
-{
-  "messageType": "TASK_RESULT",
-  "payload": {
-    "taskId": "task-123456",
-    "contractId": "contract-789012",
-    "status": "COMPLETED",
-    "result": {
-      "translatedText": "Hola mundo, este es un mensaje de prueba."
-    },
-    "metadata": {
-      "completionTime": "2025-07-18T14:43:30Z",
-      "qualityScore": 0.98
-    }
-  }
-}
-
-// Failure
-{
-  "messageType": "TASK_ERROR",
-  "payload": {
-    "taskId": "task-123456",
-    "contractId": "contract-789012",
-    "status": "FAILED",
-    "error": {
-      "code": "PROCESSING_ERROR",
-      "message": "Translation engine encountered an error with special characters",
-      "details": {
-        "errorLocation": "char 25-30",
-        "suggestedAction": "Remove special characters and retry"
-      }
-    },
-    "timestamp": "2025-07-18T14:35:15Z"
-  }
-}
-```
-
-### 5. Result Acknowledgment
-
-The requester acknowledges receipt of the task result.
+Task couldn't be completed.
 
 ```json
 {
-  "messageType": "ACKNOWLEDGMENT",
-  "payload": {
-    "acknowledgedMessageId": "msg-result-123",
-    "taskId": "task-123456",
-    "contractId": "contract-789012",
-    "status": "RECEIVED",
-    "timestamp": "2025-07-18T14:44:00Z"
-  }
+  "from": "agentid:hive:provider456",
+  "to": "agentid:hive:client123",
+  "type": "task_error",
+  "data": {
+    "task_id": "task-123",
+    "error": "capability_not_found",
+    "message": "text-processing not available",
+    "retry": false
+  },
+  "sig": "signature"
 }
 ```
 
-## Task Cancellation
+## Implementation
 
-Either party can initiate task cancellation if needed.
+### Basic Task Lifecycle (Tier 1)
 
-```json
-// Cancellation request
-{
-  "messageType": "TASK_CANCELLATION_REQUEST",
-  "payload": {
-    "taskId": "task-123456",
-    "contractId": "contract-789012",
-    "reason": "REQUESTER_DECISION",
-    "message": "Task no longer needed",
-    "timestamp": "2025-07-18T14:38:00Z"
+```javascript
+// task lifecycle implementation
+const tasks = new Map(); // in-memory task tracking
+
+app.post("/tasks", (req, res) => {
+  const message = req.body;
+  const taskId = message.data.task_id;
+
+  // 1. REQUESTED state (implicit - task received)
+  tasks.set(taskId, {
+    state: "requested",
+    from: message.from,
+    capability: message.data.capability,
+    data: message.data,
+    timestamp: new Date().toISOString(),
+  });
+
+  try {
+    // 2. ACCEPTED state (immediate processing)
+    tasks.set(taskId, { ...tasks.get(taskId), state: "accepted" });
+
+    // Process task
+    const result = processTask(message.data.capability, message.data);
+
+    // 3. COMPLETED state
+    tasks.set(taskId, { ...tasks.get(taskId), state: "completed", result });
+
+    res.json({
+      from: AGENT_ID,
+      to: message.from,
+      type: "task_result",
+      data: {
+        task_id: taskId,
+        status: "completed",
+        result,
+      },
+      sig: signMessage({ result }),
+    });
+  } catch (error) {
+    // 4. FAILED state
+    tasks.set(taskId, {
+      ...tasks.get(taskId),
+      state: "failed",
+      error: error.message,
+    });
+
+    res.status(500).json({
+      from: AGENT_ID,
+      to: message.from,
+      type: "task_error",
+      data: {
+        task_id: taskId,
+        error: "processing_failed",
+        message: error.message,
+        retry: true,
+      },
+      sig: signMessage({ error: error.message }),
+    });
   }
-}
+});
 
-// Cancellation confirmation
-{
-  "messageType": "TASK_CANCELLATION_CONFIRMATION",
-  "payload": {
-    "taskId": "task-123456",
-    "contractId": "contract-789012",
-    "status": "CANCELED",
-    "partialResults": {
-      "translatedText": "Hola mundo, este es un..."
-    },
-    "timestamp": "2025-07-18T14:39:00Z"
+// Simple task status query
+app.get("/tasks/:taskId", (req, res) => {
+  const task = tasks.get(req.params.taskId);
+  if (!task) {
+    return res.status(404).json({ error: "task_not_found" });
   }
-}
+
+  res.json({
+    task_id: req.params.taskId,
+    state: task.state,
+    timestamp: task.timestamp,
+  });
+});
 ```
 
-## Timeouts and Retry Handling
+## Implementation Checklist
 
-The H.I.V.E. Protocol includes mechanisms for handling timeouts and retries:
+**Tier 1 Requirements**:
 
-1. **Response Timeout**: If a provider doesn't respond to a proposal within a specified time, the requester can consider it implicitly rejected
-2. **Execution Timeout**: If a task exceeds its deadline without completion, it can be automatically considered failed
-3. **Update Frequency**: For long-running tasks, providers should send updates at agreed-upon intervals
-4. **Retry Logic**: For transient failures, tasks can be automatically retried up to a specified limit
+- [ ] Track 4 basic task states: REQUESTED, ACCEPTED, COMPLETED, FAILED
+- [ ] Handle immediate accept/reject decisions
+- [ ] Process tasks synchronously when possible
+- [ ] Send appropriate result or error messages
+- [ ] Simple task state storage (in-memory or database)
 
-```json
-// Retry notification
-{
-  "messageType": "TASK_RETRY",
-  "payload": {
-    "taskId": "task-123456",
-    "contractId": "contract-789012",
-    "previousAttemptId": "attempt-1",
-    "currentAttemptId": "attempt-2",
-    "retryReason": "TRANSIENT_ERROR",
-    "timestamp": "2025-07-18T14:36:00Z"
-  }
-}
-```
+**Optional Enhancements (Tier 2+)**:
 
-<Callout type="warning">
-  Agents should implement proper timeout handling to prevent tasks from being stuck in intermediate states indefinitely.
-</Callout>
-
-## Task History and Auditability
-
-The H.I.V.E. Protocol recommends maintaining a complete history of task state transitions for auditability:
-
-```json
-{
-  "taskId": "task-123456",
-  "history": [
-    {
-      "timestamp": "2025-07-18T14:30:00Z",
-      "state": "PROPOSED",
-      "actor": "agent-abc123",
-      "details": { /* proposal details */ }
-    },
-    {
-      "timestamp": "2025-07-18T14:31:00Z",
-      "state": "ACCEPTED",
-      "actor": "agent-xyz789",
-      "details": { /* acceptance details */ }
-    },
-    {
-      "timestamp": "2025-07-18T14:31:30Z",
-      "state": "IN_PROGRESS",
-      "actor": "agent-xyz789",
-      "details": { /* progress details */ }
-    },
-    {
-      "timestamp": "2025-07-18T14:43:30Z",
-      "state": "COMPLETED",
-      "actor": "agent-xyz789",
-      "details": { /* completion details */ }
-    }
-  ]
-}
-```
-
-## Implementation Considerations
-
-When implementing the Task Lifecycle in your agent:
-
-1. **State Management**: Maintain clear state tracking for all tasks
-2. **Transactional Updates**: Ensure state transitions are atomic and consistent
-3. **Timeout Handling**: Implement proper timeouts for each state
-4. **Notification System**: Notify interested parties of state changes
-5. **Error Recovery**: Design for graceful recovery from failures
-6. **History Tracking**: Maintain an audit trail of state transitions
+- [ ] Progress updates for long-running tasks
+- [ ] Task timeout handling
+- [ ] Retry logic for failed tasks
+- [ ] Task history and audit trails
+- [ ] Batch task processing
 
 <Callout type="info">
-  For a detailed specification of the message formats used during the task lifecycle, see the [Message Formats](/docs/protocol/structure/message-formats) documentation.
+  **Simplicity Benefit**: By removing complex state transitions, implementation
+  becomes 70% simpler while still handling the vast majority of use cases
+  effectively.
+</Callout>
+
+<Callout type="warning">
+  **Task Tracking**: Even in Tier 1, maintain basic task state tracking to
+  handle duplicate requests and provide status queries.
 </Callout>

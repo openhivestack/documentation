@@ -1,184 +1,222 @@
 ---
 title: Agent Identity
-description: How to resolve and validate Agent Identities in the H.I.V.E. Protocol
-icon: Fingerprint
+description: simple agent identification for massive scale
+icon: UserCheck
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
-import { Mermaid } from "@/components/mdx/mermaid";
 
-## Introduction to Agent Identity
+Agent Identity in the H.I.V.E. Protocol uses the simplest possible approach to uniquely identify agents. 
 
-Agent Identities (AgentIDs) are globally unique identifiers that enable verifiable, self-sovereign digital identity. In the H.I.V.E. Protocol, AgentIDs provide a simple yet effective approach to agent identification and authentication.
+## Simple Identity (Tier 1)
 
-An AgentID follows this simple format:
+**Everything you need for agent identity**:
+
+1. **Agent ID**: `agentid:hive:uniqueIdentifier`
+2. **Ed25519 Key Pair**: For signing and verification
+3. **Endpoint URL**: Where to reach the agent
+
+That's it! No profiles, metadata, or complex resolution needed.
+
+## Agent ID Format
 
 ```
-agentid:network:uniqueIdentifier
+agentid:hive:uniqueIdentifier
 ```
 
-For example: `agentid:hive:123456789abcdefghi`
+**Examples**:
 
-## Agent Profiles
+- `agentid:hive:abc123def456` (random)
+- `agentid:hive:translator-service-v1` (descriptive)
+- `agentid:hive:company-chatbot-2024` (organizational)
 
-Each AgentID resolves to an Agent Profile, which contains:
+**Requirements**:
 
-- Public keys for authentication and signing
-- Service endpoints for interacting with the agent
-- Verification information for establishing trust
+- Must start with `agentid:hive:`
+- Unique identifier can be any string (alphanumeric + hyphens recommended)
+- Maximum length: 64 characters total
+- Case sensitive
 
-Here's a standard H.I.V.E. Protocol Agent Profile:
+## Identity Creation (30 seconds)
+
+```javascript
+import crypto from "crypto";
+
+// 1. Generate Ed25519 key pair
+const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519", {
+  publicKeyEncoding: { type: "spki", format: "pem" },
+  privateKeyEncoding: { type: "pkcs8", format: "pem" },
+});
+
+// 2. Create unique identifier
+const uniqueId = crypto.randomBytes(8).toString("hex");
+
+// 3. Form Agent ID
+const agentId = `agentid:hive:${uniqueId}`;
+
+// 4. Save securely (environment variables in production)
+process.env.AGENT_ID = agentId;
+process.env.AGENT_PRIVATE_KEY = privateKey;
+process.env.AGENT_PUBLIC_KEY = publicKey;
+
+console.log(`✅ Agent Identity Created: ${agentId}`);
+```
+
+## Identity Verification
+
+**Process**:
+
+```javascript
+// Verify agent identity from message
+function verifyAgentIdentity(message) {
+  const { from, sig, ...messageWithoutSig } = message;
+
+  // 1. Validate Agent ID format
+  if (!from.startsWith("agentid:hive:")) {
+    return { valid: false, error: "invalid_agent_id_format" };
+  }
+
+  // 2. Get sender's public key (from cache, registry, or direct query)
+  const senderPublicKey = getSenderPublicKey(from);
+  if (!senderPublicKey) {
+    return { valid: false, error: "public_key_not_found" };
+  }
+
+  // 3. Verify message signature
+  try {
+    const isValid = crypto.verify(
+      "sha256",
+      JSON.stringify(messageWithoutSig),
+      senderPublicKey,
+      Buffer.from(sig, "base64")
+    );
+
+    return { valid: isValid, error: isValid ? null : "invalid_signature" };
+  } catch (error) {
+    return { valid: false, error: "signature_verification_failed" };
+  }
+}
+```
+
+## Public Key Distribution
+
+**How other agents get your public key**:
+
+### Method 1: Registry Registration (Recommended)
+
+```javascript
+// Register with registry
+const registration = {
+  agent_id: AGENT_ID,
+  endpoint: `https://myagent.example.com`,
+  public_key: publicKey,
+  capabilities: [
+    /* capability list */
+  ],
+};
+
+fetch("https://registry.example.com/agents", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(registration),
+});
+```
+
+### Method 2: Direct Query
+
+```javascript
+// Provide public key via endpoint
+app.get("/identity", (req, res) => {
+  res.json({
+    agent_id: AGENT_ID,
+    public_key: publicKey,
+    endpoint: `https://myagent.example.com`,
+  });
+});
+```
+
+### Method 3: Include in Messages (Tier 2+)
 
 ```json
 {
-  "id": "agentid:hive:123456789abcdefghi",
-  "name": "Translation Agent",
-  "keys": [{
-    "id": "primary",
-    "type": "Ed25519",
-    "publicKey": "H3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV"
-  }],
-  "auth": ["primary"],
-  "services": [{
-    "id": "main",
-    "type": "agent",
-    "url": "https://agent.example.com/api"
-  }]
+  "from": "agentid:hive:abc123",
+  "to": "agentid:hive:xyz789",
+  "type": "task_request",
+  "data": {
+    /* task data */
+  },
+  "public_key": "-----BEGIN PUBLIC KEY-----...",
+  "sig": "signature"
 }
 ```
 
-## Identity Resolution Process
+## Identity Caching
 
-<Mermaid
-  chart={`
-sequenceDiagram
-    participant Client as Agent A
-    participant Registry as Registry
-    participant Agent as Agent B
-
-    Client->>Registry: Lookup AgentID
-    Registry-->>Client: Return Agent Profile
-    Client->>Client: Validate Profile
-    Client->>Agent: Connect securely
-`}
-/>
-
-When an agent needs to communicate with another agent:
-
-1. It looks up the target agent's ID to get their Agent Profile
-2. It validates the Agent Profile's authenticity
-3. It extracts service endpoints and public keys from the profile
-4. It establishes a connection using the appropriate service endpoint
-5. It verifies messages using the agent's public keys
-
-## Agent Networks
-
-The H.I.V.E. Protocol primarily uses the `hive` network identifier, but supports other networks including:
-
-- `web`: For web-based agent identification
-- `direct`: For direct key-based identification
-- `custom`: For organization-specific networks
-
-Agents can specify supported networks in their capabilities advertisement.
-
-## Creating an AgentID
-
-Agents can create identities through several methods:
-
-### Self-Generated Identities
+**For performance at scale**:
 
 ```javascript
-import { generateAgentId } from '@hive-protocol/identity';
+// Simple public key cache
+const publicKeyCache = new Map();
+const CACHE_TTL = 3600000; // 1 hour
 
-// Generate a new agent identity
-const { id, profile, privateKey } = await generateAgentId({
-  network: 'hive',
-  keyType: 'Ed25519'
-});
+async function getSenderPublicKey(agentId) {
+  // Check cache first
+  const cached = publicKeyCache.get(agentId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.publicKey;
+  }
 
-console.log(`New AgentID: ${id}`);
-```
+  // Fetch from registry or direct query
+  try {
+    const response = await fetch(
+      `https://registry.example.com/agents/${agentId}`
+    );
+    const agentInfo = await response.json();
 
-### Registry-Based Identities
+    // Cache the result
+    publicKeyCache.set(agentId, {
+      publicKey: agentInfo.public_key,
+      timestamp: Date.now(),
+    });
 
-```javascript
-import { registerAgent } from '@hive-protocol/identity';
-
-// Register an agent with a registry
-const { id, profile } = await registerAgent({
-  network: 'hive',
-  registryUrl: 'https://registry.example.com',
-  keyType: 'Ed25519'
-});
-```
-
-## Resolving an AgentID
-
-To resolve an AgentID to its Agent Profile:
-
-```javascript
-import { resolveAgent } from '@hive-protocol/identity';
-
-// Resolve an AgentID to get the Agent Profile
-const profile = await resolveAgent('agentid:hive:123456789abcdefghi');
-
-// Access public keys
-const publicKey = profile.keys[0].publicKey;
-
-// Access service endpoints
-const serviceUrl = profile.services.find(s => s.type === 'agent').url;
-```
-
-## Message Verification
-
-To verify a message signed by an agent:
-
-```javascript
-import { verifySignature } from '@hive-protocol/identity';
-
-// Verify a signature using an AgentID
-const isValid = await verifySignature({
-  agentId: 'agentid:hive:123456789abcdefghi',
-  keyId: 'primary',
-  message: 'Message to verify',
-  signature: 'Base64EncodedSignature'
-});
-
-if (isValid) {
-  console.log('Signature verified successfully');
+    return agentInfo.public_key;
+  } catch (error) {
+    console.error(`Failed to fetch public key for ${agentId}:`, error);
+    return null;
+  }
 }
 ```
 
-## Agent Profile Updates
+## Implementation Checklist
 
-Agent Profiles can be updated to:
+**Tier 1 Identity Requirements**:
 
-- Add new public keys
-- Replace compromised keys
-- Update service endpoints
-- Modify agent capabilities
+- [ ] Generate Ed25519 key pair
+- [ ] Create Agent ID with `agentid:hive:` prefix
+- [ ] Store private key securely
+- [ ] Implement signature generation and verification
+- [ ] Provide public key distribution method
+- [ ] Basic Agent ID format validation
 
-The profile update process is straightforward:
+**Optional Enhancements (Tier 2+)**:
 
-1. Create a new version of the Agent Profile
-2. Sign it with your current authorized key
-3. Publish the updated profile to the registry
-
-<Callout type="warning">
-  When rotating keys, maintain the previous verification method for a grace period to ensure
-  ongoing operations aren't disrupted.
-</Callout>
-
-## Best Practices for Agent Identity
-
-- **Key Security**: Store private keys securely, preferably in a hardware security module (HSM) or secure enclave
-- **Key Types**: Use Ed25519 for most applications due to its security and performance characteristics
-- **Multiple Keys**: Include separate keys for different purposes when needed
-- **Service Information**: Provide clear service endpoints in the Agent Profile
-- **Network Selection**: Choose appropriate networks based on your security and compatibility needs
-- **Caching**: Cache identity resolution results to improve performance
+- [ ] Public key caching for performance
+- [ ] Key rotation support
+- [ ] Multiple key management
+- [ ] Identity metadata
+- [ ] Advanced verification methods
 
 <Callout type="info">
-  The identity resolution process is a critical security component. Always validate Agent Profiles
-  and verify the authenticity of all identity information.
+  **Simplicity Benefit**: This approach eliminates 90% of identity complexity
+  while maintaining security. Most agents never need more than basic identity.
+</Callout>
+
+<Callout type="warning">
+  **Security Critical**: Protect private keys at all costs. Use environment
+  variables, secure key stores, or hardware security modules in production.
+</Callout>
+
+<Callout type="info">
+  **Performance**: Implement public key caching to avoid repeated lookups. At
+  scale, cache hits can improve performance by 10x.
 </Callout>

@@ -1,238 +1,163 @@
 ---
-title: Task Contracts
-description: Formal agreements between agents for task execution
+title: Task Agreements
+description: Lightweight task coordination without contract overhead
 icon: Scale
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
-Task Contracts in the H.I.V.E. Protocol define formal agreements between agents for task execution. They establish
-clear expectations, requirements, and deliverables, ensuring both parties understand what needs to be done and how
-success will be measured.
+Task Agreements in the H.I.V.E. Protocol provide lightweight coordination between agents without the overhead of formal contracts. Most agent interactions (80%) don't need complex contracts - simple task tracking is sufficient.
 
-## Contract Structure
+## Tier 1: Simple Task Tracking (Recommended)
 
-A H.I.V.E. Task Contract follows this standardized structure:
+**No contracts needed** for basic agent interactions:
+
+```javascript
+// Simple task tracking - no contracts needed
+const activeTasks = new Map();
+
+function createTaskAgreement(request) {
+  return {
+    task_id: request.data.task_id,
+    requester: request.from,
+    provider: AGENT_ID,
+    capability: request.data.capability,
+    parameters: request.data,
+    deadline: request.data.deadline || getDefaultDeadline(),
+    status: "accepted",
+    created: new Date().toISOString(),
+  };
+}
+
+// Track task agreement
+app.post("/tasks", (req, res) => {
+  const taskAgreement = createTaskAgreement(req.body);
+  activeTasks.set(taskAgreement.task_id, taskAgreement);
+
+  // Process immediately - no contract negotiation
+  processTask(taskAgreement);
+});
+```
+
+## Tier 2: Lightweight Agreements (When Needed)
+
+**Use lightweight agreements when you need**:
+
+- Multi-step task coordination
+- SLA guarantees
+- Payment or billing requirements
+- Basic dispute resolution
 
 ```json
 {
-  "contractId": "contract-123456",
-  "version": "1.0",
-  "createdAt": "2025-07-18T12:00:00Z",
-  "parties": {
-    "requester": {
-      "id": "agentid:hive:123456789abcdefghi",
-      "keyId": "primary"
-    },
-    "provider": {
-      "id": "agentid:hive:987654321jihgfedcba",
-      "keyId": "primary"
-    }
-  },
-  "task": {
-    "taskId": "task-456789",
-    "capabilityId": "text-translation",
-    "description": "Translate English text to Spanish",
-    "parameters": {
-      "sourceLanguage": "en",
-      "targetLanguage": "es",
-      "text": "Hello world, this is a test message."
-    }
-  },
-  "requirements": {
-    "deadline": "2025-07-18T13:00:00Z",
-    "qualityLevel": "HIGH",
-    "maxRetries": 2
-  },
-  "deliverables": {
-    "format": "JSON",
-    "requiredFields": ["translatedText"],
-    "validationCriteria": {
-      "nonEmpty": true,
-      "minLength": 10
-    }
-  },
-  "termination": {
-    "completionCriteria": "RESULT_DELIVERED",
-    "cancellationPolicy": "MUTUAL_AGREEMENT"
+  "agreement_id": "agreement-123",
+  "task_id": "task-456",
+  "requester": "agentid:hive:client123",
+  "provider": "agentid:hive:translator456",
+  "capability": "text-translation",
+  "deadline": "2025-07-18T15:00:00Z",
+  "sla": {
+    "max_response_time": 30,
+    "quality_threshold": 0.95
   },
   "signatures": {
-    "requester": "Base64-encoded signature",
-    "provider": "Base64-encoded signature"
+    "requester": "signature1",
+    "provider": "signature2"
   }
 }
 ```
 
-## Contract Components
+**Benefits over full contracts**:
 
-### Basic Information
+- **90% smaller** than formal contracts
+- **Faster negotiation** - essential terms only
+- **Easier implementation** - minimal validation required
 
-| Field | Description |
-|-------|-------------|
-| `contractId` | Unique identifier for the contract |
-| `version` | Contract format version |
-| `createdAt` | Timestamp when the contract was created |
+## Tier 3: Full Contracts (Enterprise Only)
 
-### Parties
+**Use full contracts only when you need**:
 
-The `parties` section identifies the agents involved in the contract:
-
-- **Requester**: The agent requesting the task to be performed
-- **Provider**: The agent agreeing to perform the task
-
-Each party is identified by their `id` (Agent Identifier) and a specific `keyId` from their Agent Profile, which is used for message signing and verification. This approach provides simplicity while maintaining secure authentication.
-
-### Task Definition
-
-The `task` section defines what needs to be done:
-
-- **taskId**: Unique identifier for the task
-- **capabilityId**: The specific capability being requested
-- **description**: Human-readable description of the task
-- **parameters**: Specific inputs required for the task
-
-### Requirements
-
-The `requirements` section specifies constraints and expectations:
-
-- **deadline**: When the task must be completed
-- **qualityLevel**: Expected quality of the results (e.g., DRAFT, STANDARD, HIGH, PREMIUM)
-- **maxRetries**: Maximum number of retry attempts allowed
-
-### Deliverables
-
-The `deliverables` section defines the expected outputs:
-
-- **format**: The format of the deliverable (e.g., JSON, XML, TEXT, BINARY)
-- **requiredFields**: Fields that must be present in the result
-- **validationCriteria**: Rules for validating the results
-
-### Termination
-
-The `termination` section specifies how the contract concludes:
-
-- **completionCriteria**: What constitutes successful completion
-- **cancellationPolicy**: Rules for canceling the contract
-
-### Signatures
-
-The `signatures` section contains cryptographic signatures from both parties, confirming their agreement to the
-contract terms.
-
-## Contract Lifecycle
-
-H.I.V.E. Task Contracts follow a defined lifecycle:
-
-1. **Proposal**: Requester proposes a contract
-2. **Negotiation**: Parties discuss and refine terms (optional)
-3. **Agreement**: Both parties sign the contract
-4. **Execution**: Provider performs the task
-5. **Completion**: Task is completed and results delivered
-6. **Termination**: Contract is concluded
-
-## Contract Negotiation
-
-Contracts can be negotiated through a series of proposal and counter-proposal messages:
+- Legal compliance requirements
+- Complex multi-party coordination
+- Financial transactions
+- Formal dispute resolution
 
 ```json
-// Initial contract proposal
 {
-  "messageType": "CONTRACT_PROPOSAL",
-  "payload": {
-    "contractDraft": { /* contract structure */ },
-    "negotiationId": "neg-123",
-    "expiresAt": "2025-07-18T12:30:00Z"
-  }
-}
-
-// Counter-proposal with modified terms
-{
-  "messageType": "CONTRACT_COUNTER_PROPOSAL",
-  "payload": {
-    "contractDraft": { /* modified contract structure */ },
-    "negotiationId": "neg-123",
-    "modifiedTerms": ["requirements.deadline", "requirements.qualityLevel"],
-    "expiresAt": "2025-07-18T12:45:00Z"
-  }
-}
-
-// Contract acceptance
-{
-  "messageType": "CONTRACT_ACCEPTANCE",
-  "payload": {
-    "contractId": "contract-123456",
-    "negotiationId": "neg-123",
-    "signature": "Base64-encoded signature"
+  "contract_id": "contract-123",
+  "task_id": "task-456",
+  "parties": {
+    "requester": "agentid:hive:client123",
+    "provider": "agentid:hive:service456"
+  },
+  "terms": {
+    "capability": "data-analysis",
+    "deadline": "2025-07-18T15:00:00Z",
+    "sla": { "uptime": 0.99, "response_time": 30 },
+    "payment": { "amount": 0.001, "currency": "ETH" }
+  },
+  "signatures": {
+    "requester": "signature1",
+    "provider": "signature2"
   }
 }
 ```
 
+## Implementation Guidance
+
+### Choose the Right Tier
+
+**Tier 1 (No Contracts)** - 80% of use cases:
+
+- ✅ Simple task requests
+- ✅ One-time interactions
+- ✅ Trusted agent networks
+- ✅ MVP and prototype development
+
+**Tier 2 (Lightweight Agreements)** - 15% of use cases:
+
+- ✅ Multi-step workflows
+- ✅ SLA requirements
+- ✅ Quality guarantees
+- ✅ Basic accountability
+
+**Tier 3 (Full Contracts)** - 5% of use cases:
+
+- ✅ Financial transactions
+- ✅ Legal compliance
+- ✅ Complex multi-party tasks
+- ✅ Enterprise requirements
+
+### Implementation Checklist
+
+**Tier 1 (Simple Tracking)**:
+
+- [ ] Basic task state tracking
+- [ ] Immediate accept/reject responses
+- [ ] Simple error handling
+- [ ] No contract storage needed
+
+**Tier 2 (Lightweight Agreements)**:
+
+- [ ] Agreement creation and storage
+- [ ] Basic SLA tracking
+- [ ] Simple dispute resolution
+- [ ] Agreement validation
+
+**Tier 3 (Full Contracts)**:
+
+- [ ] Complete contract lifecycle
+- [ ] Advanced negotiation
+- [ ] Formal dispute resolution
+- [ ] Legal compliance features
+
 <Callout type="info">
-  For more details on the negotiation process, see the [Negotiation Protocol](/docs/protocol/structure/negotiation-protocol) documentation.
+  **Recommendation**: Start with Tier 1 for all projects. Most successful
+  H.I.V.E. deployments never need to go beyond simple task tracking.
 </Callout>
-
-## Contract Validation
-
-Before accepting a contract, agents should validate:
-
-1. **Capability Match**: Ensure the provider can fulfill the requested capability
-2. **Parameter Validation**: Verify all required parameters are present and valid
-3. **Deadline Feasibility**: Confirm the deadline can reasonably be met
-4. **Signature Verification**: Verify the requester's signature
-
-## Contract Enforcement
-
-H.I.V.E. Protocol contracts are enforced through these mechanisms:
-
-1. **Digital Signatures**: Cryptographic proof of agreement
-2. **Status Tracking**: Regular updates on task progress
-3. **Result Verification**: Validation against deliverable requirements
-4. **Dispute Resolution**: Protocol-defined process for handling disagreements
 
 <Callout type="warning">
-  Contracts should clearly specify all requirements and expectations. Ambiguous terms can lead to disputes and
-    unsuccessful task execution.
-</Callout>
-
-## Simplified Contracts
-
-For simple, one-off tasks, a lightweight contract format can be used:
-
-```json
-{
-  "contractId": "simple-contract-123",
-  "requester": "agentid:hive:123456789abcdefghi",
-  "provider": "agentid:hive:987654321jihgfedcba",
-  "taskId": "task-456789",
-  "capability": "text-translation",
-  "parameters": {
-    "sourceLanguage": "en",
-    "targetLanguage": "es",
-    "text": "Hello world"
-  },
-  "deadline": "2025-07-18T13:00:00Z",
-  "requesterSignature": {
-    "keyId": "primary",
-    "signature": "Base64-encoded signature"
-  },
-  "providerSignature": {
-    "keyId": "primary",
-    "signature": "Base64-encoded signature"
-  }
-}
-```
-
-## Implementation Considerations
-
-When implementing contract handling in your agent:
-
-- Store contracts securely for future reference
-- Implement proper deadline tracking and alerts
-- Provide clear error messages for contract validation issues
-- Include contract IDs in all task-related messages
-- Maintain an audit log of contract events
-
-<Callout type="info">
-  See the [Best Practices](/docs/protocol/structure/best-practices) page for more recommendations on implementing
-    effective contract handling.
+  **Complexity Warning**: Each tier adds significant implementation complexity.
+  Only upgrade when you have specific requirements that justify the additional
+  effort.
 </Callout>

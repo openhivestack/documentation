@@ -1,156 +1,166 @@
 ---
 title: Communication Layer
-description: How agents connect, identify themselves, and exchange information
+description: Simple HTTP communication designed for scale
 icon: Network
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 import { Mermaid } from "@/components/mdx/mermaid";
 
-The Communication Layer forms the foundation of the H.I.V.E. Protocol, enabling secure and reliable connections
-between AI agents. This layer handles the fundamental aspects of agent connectivity, identity verification, and
-capability sharing.
+The Communication Layer provides simple HTTP-based communication between agents. It's designed for scale with minimal overhead and developer productivity in mind.
 
-## Layer Overview
+## Design Goals
+
+- **HTTP-First**: Use familiar web technologies
+- **Efficient Overhead**: Compact message structures
+- **Fast Implementation**: Quick communication setup
+- **Scale Optimized**: Efficient for concurrent agent operations
+
+## Communication Flow
 
 <Mermaid
   chart={`
 flowchart LR
-    A[Transport Protocol] --> B[Message Formats]
-    B --> C[Security & Authentication]
+    A[Agent A] -->|HTTP POST /tasks| B[Agent B]
+    B -->|HTTP Response| A
+    A -->|GET /capabilities| B
+    B -->|Capability List| A
 `}
 />
 
-## Transport Protocols
+## HTTP-Only Communication (Tier 1)
 
-The H.I.V.E. Protocol supports multiple transport protocols to accommodate different deployment scenarios:
+**Three simple endpoints handle everything**:
 
-### HTTP/HTTPS
-
-HTTP/HTTPS is the primary protocol for request-response interactions between agents.
-
-- **RESTful API**: Agents expose RESTful endpoints for discovery, capability sharing, and task management
-- **Request/Response Pattern**: Suitable for discrete, transactional interactions
-- **Status Codes**: Standard HTTP status codes are used to indicate success or failure
+### 1. Task Submission: `POST /tasks`
 
 ```http
-POST /api/tasks HTTP/1.1
+POST /tasks HTTP/1.1
 Host: agent.example.com
 Content-Type: application/json
-Authorization: Bearer <token>
 
 {
-  "taskType": "text-processing",
-  "inputs": {
-    "text": "Process this text for sentiment analysis"
-  }
+  "from": "agentid:hive:client123",
+  "to": "agentid:hive:agent456",
+  "type": "task_request",
+  "data": {
+    "task_id": "task-789",
+    "capability": "text-processing",
+    "text": "Hello world",
+    "operation": "uppercase"
+  },
+  "sig": "ed25519_signature"
 }
 ```
 
-### WebSockets
+### 2. Capability Discovery: `GET /capabilities`
 
-WebSockets provide real-time, bidirectional communication for scenarios requiring ongoing connections.
+```http
+GET /capabilities HTTP/1.1
+Host: agent.example.com
 
-- **Persistent Connections**: Enables real-time updates and notifications
-- **Streaming Updates**: Ideal for long-running tasks that require progress updates
-- **Lower Overhead**: Reduces handshake overhead compared to repeated HTTP requests
-
-```javascript
-// Client-side WebSocket connection example
-const socket = new WebSocket('wss://agent.example.com/ws');
-
-socket.onopen = () => {
-  socket.send(JSON.stringify({
-    type: 'TASK_UPDATE',
-    taskId: 'task-123',
-    status: 'IN_PROGRESS',
-    progress: 0.75
-  }));
-};
-
-socket.onmessage = (event) => {
-  const message = JSON.parse(event.data);
-  console.log('Received:', message);
-};
+# Response:
+{
+  "capabilities": [
+    {
+      "id": "text-processing",
+      "input": { "text": "string", "operation": "string" },
+      "output": { "result": "string" }
+    }
+  ]
+}
 ```
 
-## Message Formats
+### 3. Health Check: `GET /status`
 
-All communications in the H.I.V.E. Protocol use a standardized message format to ensure consistency and interoperability.
+```http
+GET /status HTTP/1.1
+Host: agent.example.com
 
-### Base Message Structure
+# Response:
+{
+  "agent_id": "agentid:hive:agent456",
+  "status": "online",
+  "capabilities": ["text-processing"],
+  "uptime": 86400
+}
+```
+
+## Message Format
+
+All H.I.V.E. messages use this 5-field format:
 
 ```json
 {
-  "messageId": "msg-123456",
-  "timestamp": "2025-07-18T12:30:45Z",
-  "sender": {
-    "id": "agentid:hive:123456789abcdefghi",
-    "keyId": "primary"
-  },
-  "recipient": {
-    "id": "agentid:hive:987654321jihgfedcba",
-    "keyId": "primary"
-  },
-  "messageType": "TASK_REQUEST",
-  "payload": { /* message-specific content */ },
-  "signature": {
-    "type": "Ed25519",
-    "created": "2025-07-18T12:30:45Z",
-    "keyId": "primary",
-    "value": "58DAdFfa9SkqZMVPxAQpic6FNGVeCcW7reirYHuF2i1eFUXdpzVoNXn7RNmwevYcK7Sn" 
-  }
+  "from": "agentid:hive:sender123",
+  "to": "agentid:hive:receiver456",
+  "type": "task_request",
+  "data": { "capability": "text-processing", "text": "hello" },
+  "sig": "ed25519_signature"
 }
 ```
 
+**Benefits**:
+
+- **Faster parsing** and processing
+- **Easy to implement** in any programming language
+- **Human readable** for debugging
+
 <Callout type="info">
-  See the [Message Formats](/docs/protocol/structure/message-formats) page for detailed specifications of all message types.
+  See the [Message Formats](/docs/protocol/structure/message-formats) page for
+  complete examples and implementation details.
 </Callout>
 
-## Security & Authentication
+## Security (Essential Only)
 
-The Communication Layer incorporates robust security measures to ensure the integrity and confidentiality of agent
-interactions.
+**Required Security Measures**:
 
-### Message Authentication
+- **TLS encryption** for all HTTP communications
+- **Ed25519 signatures** for message authentication
+- **Agent ID validation** to prevent impersonation
 
-- All messages include a cryptographic signature created using the sender's private key
-- Recipients verify the signature using the public key from the sender's Agent Profile
-- Supports multiple signature formats including Ed25519 and RSA
-- Ensures message authenticity and non-repudiation
+**Signature Process**:
 
-### Transport Security
+1. Create message without `sig` field
+2. Generate JSON string of the message
+3. Sign with Ed25519 private key
+4. Add signature as `sig` field
 
-- TLS encryption for all HTTP and WebSocket connections
-- Mutual TLS (mTLS) supported for enhanced security in high-sensitivity deployments
-- Certificate validation to prevent man-in-the-middle attacks
+```javascript
+// Simple signature generation
+const messageToSign = { from, to, type, data };
+const signature = crypto.sign(
+  "sha256",
+  JSON.stringify(messageToSign),
+  privateKey
+);
+const finalMessage = { ...messageToSign, sig: signature.toString("base64") };
+```
 
-### Authentication Methods
+## Implementation for Scale
 
-- **Key-based Authentication**: Primary authentication using public/private key pairs
-- **Credentials**: Optional authentication using verifiable credentials
-- **Agent JWT**: JWT tokens incorporating agent identity for enhanced security
-- **API Keys**: Simplified authentication for controlled environments
+**For large-scale systems**:
 
-## Integration with Other Layers
+- **Connection pooling**: Reuse HTTP connections
+- **Keep-alive**: Reduce connection overhead
+- **Compression**: Gzip large payloads
+- **Caching**: Cache agent public keys
+- **Rate limiting**: Prevent abuse
 
-The Communication Layer works seamlessly with other H.I.V.E. Protocol components:
+**Simple Implementation Checklist**:
 
-- Provides the foundation for [Agent Identity & Discovery](/docs/protocol/layers/discovery-identity)
-- Enables secure message exchange for [Agent Collaboration](/docs/protocol/layers/collaboration)
-- Supports the execution of the [Task Lifecycle](/docs/protocol/structure/lifecycle)
-
-## Implementation Considerations
-
-When implementing the Communication Layer, developers should consider:
-
-- Network reliability and latency requirements
-- Message size limitations
-- Rate limiting and throttling strategies
-- Error handling and retry mechanisms
-- Logging and monitoring capabilities
+- [ ] HTTP server with `/tasks`, `/capabilities`, `/status` endpoints
+- [ ] Ed25519 key generation and signature verification
+- [ ] 5-field message parsing and validation
+- [ ] Basic error handling and responses
+- [ ] TLS configuration
 
 <Callout type="warning">
-  The Communication Layer must handle network failures gracefully. Implement proper error handling and retry
-    mechanisms to ensure reliable agent interactions.
+  **Security**: Always verify message signatures before processing. Use TLS for
+  all communications in production.
+</Callout>
+
+<Callout type="info">
+  **Performance**: For high-throughput scenarios, implement connection pooling
+  and message batching to reduce overhead.
 </Callout>

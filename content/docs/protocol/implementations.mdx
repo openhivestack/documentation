@@ -1,215 +1,244 @@
 ---
 title: Implementations
-description: Guide to implementing the H.I.V.E. Protocol
-icon: Puzzle
+description: simple implementations optimized for rapid development
+icon: Package
 ---
 
-import { Cards, Card } from "fumadocs-ui/components/card";
 import { Callout } from "fumadocs-ui/components/callout";
-import { Code } from "lucide-react";
+import { Cards, Card } from "fumadocs-ui/components/card";
 
-This guide provides an overview of how to implement the H.I.V.E. Protocol in your own agent systems. The protocol
-is designed to be language-agnostic and adaptable to different programming environments.
+H.I.V.E. Protocol implementations are designed for maximum simplicity and minimum dependencies. No complex SDKs required - just standard HTTP libraries and crypto functions available in every programming language.
 
-## Implementation Approaches
+## Implementation Philosophy
 
-There are several ways to implement the H.I.V.E. Protocol based on your specific needs and constraints:
+**No SDK Required**: H.I.V.E. is so simple that you don't need a special SDK. Use your language's standard HTTP and crypto libraries.
+
+**Minimal Dependencies**: Most implementations need only:
+
+- HTTP server library (Express, Flask, etc.)
+- JSON parsing (built into most languages)
+- Ed25519 crypto library
+- TLS support (usually built-in)
+
+## Language Examples
+
+### JavaScript/Node.js
+
+**Dependencies**: `express` only (crypto is built-in)
+
+```javascript
+const express = require("express");
+const crypto = require("crypto");
+
+const app = express();
+app.use(express.json());
+
+const AGENT_ID = "agentid:hive:" + crypto.randomBytes(8).toString("hex");
+const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
+
+app.post("/tasks", (req, res) => {
+  const { from, data } = req.body;
+  const result = { result: data.text.toUpperCase() };
+  const response = {
+    from: AGENT_ID,
+    to: from,
+    type: "task_result",
+    data: { task_id: data.task_id, result },
+  };
+  res.json({
+    ...response,
+    sig: crypto
+      .sign("sha256", Buffer.from(JSON.stringify(response)), privateKey)
+      .toString("base64"),
+  });
+});
+
+app.get("/capabilities", (req, res) =>
+  res.json({
+    capabilities: [
+      {
+        id: "text-processing",
+        input: { text: "string" },
+        output: { result: "string" },
+      },
+    ],
+  })
+);
+app.listen(3000);
+```
+
+### Python/Flask
+
+**Dependencies**: `flask`, `cryptography`
+
+```python
+from flask import Flask, request, jsonify
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+import json
+import secrets
+
+app = Flask(__name__)
+
+# Generate agent identity
+private_key = Ed25519PrivateKey.generate()
+public_key = private_key.public_key()
+AGENT_ID = f"agentid:hive:{secrets.token_hex(8)}"
+
+def sign_message(message):
+    message_bytes = json.dumps(message, sort_keys=True).encode()
+    signature = private_key.sign(message_bytes)
+    return signature.hex()
+
+@app.route('/tasks', methods=['POST'])
+def handle_task():
+    data = request.json
+    task_data = data['data']
+
+    # Process task
+    result = {"result": task_data['text'].upper()}
+
+    response = {
+        "from": AGENT_ID,
+        "to": data['from'],
+        "type": "task_result",
+        "data": {"task_id": task_data['task_id'], "result": result}
+    }
+
+    response['sig'] = sign_message(response)
+    return jsonify(response)
+
+@app.route('/capabilities')
+def get_capabilities():
+    return jsonify({
+        "capabilities": [{
+            "id": "text-processing",
+            "input": {"text": "string"},
+            "output": {"result": "string"}
+        }]
+    })
+
+if __name__ == '__main__':
+    app.run(port=3000)
+```
+
+### Go
+
+**Dependencies**: Standard library only
+
+```go
+package main
+
+import (
+    "crypto/ed25519"
+    "crypto/rand"
+    "encoding/hex"
+    "encoding/json"
+    "fmt"
+    "net/http"
+)
+
+type Agent struct {
+    ID         string
+    PrivateKey ed25519.PrivateKey
+    PublicKey  ed25519.PublicKey
+}
+
+func (a *Agent) signMessage(message map[string]interface{}) string {
+    data, _ := json.Marshal(message)
+    signature := ed25519.Sign(a.PrivateKey, data)
+    return hex.EncodeToString(signature)
+}
+
+func (a *Agent) handleTasks(w http.ResponseWriter, r *http.Request) {
+    var req map[string]interface{}
+    json.NewDecoder(r.Body).Decode(&req)
+
+    data := req["data"].(map[string]interface{})
+    text := data["text"].(string)
+
+    result := map[string]interface{}{
+        "result": strings.ToUpper(text),
+    }
+
+    response := map[string]interface{}{
+        "from": a.ID,
+        "to":   req["from"],
+        "type": "task_result",
+        "data": map[string]interface{}{
+            "task_id": data["task_id"],
+            "result":  result,
+        },
+    }
+
+    response["sig"] = a.signMessage(response)
+    json.NewEncoder(w).Encode(response)
+}
+
+func main() {
+    // Generate identity
+    publicKey, privateKey, _ := ed25519.GenerateKey(rand.Reader)
+    agentID := fmt.Sprintf("agentid:hive:%s", hex.EncodeToString(rand.Read(8)))
+
+    agent := &Agent{ID: agentID, PrivateKey: privateKey, PublicKey: publicKey}
+
+    http.HandleFunc("/tasks", agent.handleTasks)
+    http.ListenAndServe(":3000", nil)
+}
+```
+
+## Implementation Tiers
 
 <Cards>
   <Card
-    title="Full Implementation"
-    description="Implement all protocol components for complete functionality"
-    icon={<Code className="text-blue-500" />}
-    href="/docs/protocol/implementation/quick-start"
+    title="🟢 Tier 1: Minimal (30 minutes)"
+    description="HTTP endpoints, basic tasks, Ed25519 signatures"
+    href="/docs/protocol/implementation/tiers#tier-1-minimal"
   />
   <Card
-    title="Minimal Implementation"
-    description="Implement only essential components for basic interoperability"
-    icon={<Code className="text-green-500" />}
-    href="/docs/protocol/implementation/example-agent"
+    title="🟡 Tier 2: Standard (1-2 weeks)"
+    description="+ WebSockets, task agreements, multiple discovery"
+    href="/docs/protocol/implementation/tiers#tier-2-standard"
   />
   <Card
-    title="Client-Only Implementation"
-    description="Implement client capabilities to interact with existing agents"
-    icon={<Code className="text-purple-500" />}
-    href="/docs/protocol/implementation/testing"
+    title="🔴 Tier 3: Full (4-6 weeks)"
+    description="+ Advanced security, formal contracts, federation"
+    href="/docs/protocol/implementation/tiers#tier-3-full"
   />
 </Cards>
 
-## Core Requirements
+## Getting Started
 
-Regardless of your implementation approach, all H.I.V.E. Protocol implementations must satisfy these core requirements:
+**Choose your approach**:
 
-1. **Message Format Compliance**: Implement the standard message format and serialization
-2. **Cryptographic Verification**: Support message signing and verification
-3. **Basic Task Lifecycle**: Handle the essential task states and transitions
-4. **Error Handling**: Implement standardized error codes and responses
+1. **🚀 Quick Start**: [30-minute implementation guide](/docs/protocol/implementation/quick-start)
+2. **📋 Implementation Tiers**: [Choose your complexity level](/docs/protocol/implementation/tiers)
+3. **💻 Example Code**: [Complete working agent](/docs/protocol/implementation/example-agent)
+4. **🧪 Testing**: [Verify your implementation](/docs/protocol/implementation/testing)
 
-## Implementation Checklist
+## Community Implementations
 
-Use this checklist to ensure your implementation covers the essential protocol components:
+**Contribute your implementation**:
 
-- [ ] **Identity Management**
-  - [ ] Generate and manage cryptographic key pairs
-  - [ ] Create and verify message signatures
-  - [ ] Store agent identities securely
+- Share your H.I.V.E. agent implementations
+- Language bindings and examples
+- Performance optimizations
+- Production deployment guides
 
-- [ ] **Communication Layer**
-  - [ ] Implement HTTP/HTTPS endpoints
-  - [ ] Support WebSocket connections (if needed)
-  - [ ] Handle message serialization/deserialization
-  - [ ] Implement proper error handling
+**Submission guidelines**:
 
-- [ ] **Agent Discovery**
-  - [ ] Register with discovery services
-  - [ ] Query for other agents
-  - [ ] Advertise capabilities
-
-- [ ] **Task Management**
-  - [ ] Create and parse task proposals
-  - [ ] Handle task state transitions
-  - [ ] Manage task execution
-  - [ ] Deliver task results
-
-- [ ] **Contract Handling**
-  - [ ] Create and validate contracts
-  - [ ] Store contract state
-  - [ ] Enforce contract terms
-
-## Implementation Libraries
-
-The following libraries can help you implement the H.I.V.E. Protocol in different languages:
-
-### JavaScript/TypeScript
-
-```bash
-# Install the H.I.V.E. Protocol SDK
-npm install @hive-protocol/sdk
-
-# Or with yarn
-yarn add @hive-protocol/sdk
-```
-
-```typescript
-import { HiveAgent, Capability, TaskContract } from '@hive-protocol/sdk';
-
-// Create an agent
-const agent = new HiveAgent({
-  agentId: 'my-agent-id',
-  // Generate or load keys
-  keyPair: await HiveAgent.generateKeyPair()
-});
-
-// Define a capability
-const translateCapability = new Capability({
-  id: 'text-translation',
-  parameters: {
-    sourceLanguage: { type: 'string', required: true },
-    targetLanguage: { type: 'string', required: true },
-    text: { type: 'string', required: true }
-  },
-  handler: async (params) => {
-    // Implement capability logic
-    const translated = await translateText(
-      params.text, 
-      params.sourceLanguage, 
-      params.targetLanguage
-    );
-
-    return { translatedText: translated };
-  }
-});
-
-// Register the capability
-agent.registerCapability(translateCapability);
-
-// Start the agent
-await agent.start({
-  port: 3000,
-  discoveryService: 'https://registry.example.com'
-});
-
-console.log('Agent started on port 3000');
-```
-
-### Python
-
-```bash
-# Install the H.I.V.E. Protocol package
-pip install hive-protocol
-```
-
-```python
-from hive_protocol import HiveAgent, Capability
-
-# Create an agent
-agent = HiveAgent(
-    agent_id="my-python-agent",
-    # Generate or load keys
-    key_pair=HiveAgent.generate_key_pair()
-)
-
-# Define a capability
-@agent.capability(
-    id="text-translation",
-    parameters={
-        "sourceLanguage": {"type": "string", "required": True},
-        "targetLanguage": {"type": "string", "required": True},
-        "text": {"type": "string", "required": True}
-    }
-)
-async def translate_text(params):
-    # Implement capability logic
-    translated = await translate(
-        params["text"],
-        params["sourceLanguage"],
-        params["targetLanguage"]
-    )
-
-    return {"translatedText": translated}
-
-# Start the agent
-agent.start(
-    port=3000,
-    discovery_service="https://registry.example.com"
-)
-
-print("Agent started on port 3000")
-```
-
-## Conformance Testing
-
-To ensure your implementation correctly follows the H.I.V.E. Protocol specification, use the conformance testing suite:
-
-```bash
-# Install the test suite
-npm install -g @hive-protocol/conformance-tests
-
-# Run tests against your implementation
-hive-conformance-test --endpoint http://localhost:3000
-```
-
-The test suite verifies:
-- Message format compliance
-- Signature generation and verification
-- Task lifecycle handling
-- Error responses
-- Contract validation
+- Must implement Tier 1 requirements
+- Include working example and tests
+- Document any language-specific considerations
+- Provide performance benchmarks
 
 <Callout type="info">
-  For more detailed implementation guidance, refer to the [Quick Start Guide](/docs/protocol/implementation/quick-start)
-    and [Example Agent Implementation](/docs/protocol/implementation/example-agent).
+  **Language Agnostic**: H.I.V.E. works with any language that supports HTTP and
+  Ed25519 cryptography. The examples above show how simple it is to implement in
+  different environments.
 </Callout>
 
-## Implementation Tips
-
-1. **Start Simple**: Begin with a minimal implementation and add features incrementally
-2. **Focus on Security**: Prioritize proper key management and message verification
-3. **Test Thoroughly**: Use the conformance tests early and often
-4. **Handle Errors Gracefully**: Implement robust error handling from the start
-5. **Consider Scaling**: Design your implementation with future scaling in mind
-
 <Callout type="warning">
-  Security is critical in H.I.V.E. Protocol implementations. Never expose private keys, always verify signatures,
-    and implement proper authentication and authorization checks.
+  **Production Ready**: These examples demonstrate the core concepts. Add proper
+  error handling, input validation, and security measures for production use.
 </Callout>

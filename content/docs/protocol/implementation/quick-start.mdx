@@ -1,287 +1,411 @@
 ---
 title: Quick Start Guide
-description: Get started with implementing the H.I.V.E. Protocol
+description: Build your first H.I.V.E. agent quickly
 icon: Rocket
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
-This quick start guide will help you implement your first H.I.V.E. Protocol agent with minimal setup. We'll create a
-simple agent that can provide a text processing capability and interact with other agents.
+This quick start guide will help you build your first H.I.V.E. Protocol agent using **Tier 1 (Minimal)** implementation. You'll have a working agent that can process tasks and communicate with other agents.
+
+## Why This Approach?
+
+- **🚀 Fast**: Quick agent implementation
+- **🔧 Simple**: Only 7 message types, minimal complexity
+- **📈 Scalable**: Designed for concurrent agent operations
+- **🎯 Focused**: Covers most use cases with minimal complexity
 
 ## Prerequisites
 
-Before you begin, make sure you have:
-
 - Node.js 18+ installed
-- Basic understanding of JavaScript/TypeScript
-- Terminal or command prompt access
+- Some time for implementation
+- Basic JavaScript knowledge
 
-## Step 1: Set Up Your Project
+## Step 1: Set Up Your Project (2 minutes)
 
-Create a new project directory and initialize it:
+Create a minimal project:
 
 ```bash
 # Create project directory
-mkdir my-hive-agent
-cd my-hive-agent
+mkdir my-simple-agent
+cd my-simple-agent
 
 # Initialize npm project
 npm init -y
 
-# Install dependencies
-npm install @hive-protocol/sdk express cors
-npm install --save-dev typescript ts-node @types/node @types/express @types/cors
+# Install minimal dependencies (Tier 1 only)
+npm install express crypto
+npm install --save-dev typescript ts-node @types/node @types/express
 
 # Initialize TypeScript
 npx tsc --init
 ```
 
-## Step 2: Create Agent Configuration
+<Callout type="info">
+  **Tier 1 Approach**: We're using minimal dependencies. No complex SDK required
+  - just HTTP and crypto for signatures.
+</Callout>
 
-Create a configuration file `config.ts` for your agent:
+## Step 2: Create Simple Agent
 
-```typescript
-// config.ts
-export const agentConfig = {
-  name: 'Text Processing Agent',
-  description: 'Provides basic text processing capabilities',
-  version: '1.0.0',
-  endpoint: 'http://localhost:3000',
-  // Registry to register with (optional)
-  registryUrl: 'https://registry.example.com',
-  // DID method to use
-  didMethod: 'hive'
-};
-```
-
-## Step 3: Implement the Agent
-
-Create your main agent file `agent.ts`:
+Create `agent.ts` with the minimal H.I.V.E. implementation:
 
 ```typescript
 // agent.ts
-import { HiveAgent, Capability, IdentityManager } from '@hive-protocol/sdk';
-import express from 'express';
-import cors from 'cors';
-import { agentConfig } from './config';
+import express from "express";
+import crypto from "crypto";
 
-async function main() {
-  // Create Express app
-  const app = express();
-  app.use(cors());
-  app.use(express.json());
+// Simple agent configuration
+const AGENT_ID = "agentid:hive:" + crypto.randomBytes(8).toString("hex");
+const PORT = 3000;
 
-  // Generate or load agent identity and keys
-  const identityManager = new IdentityManager();
-  const { id, profile, keyPair } = await identityManager.generate({
-    network: agentConfig.network || 'hive',
-    keyType: 'Ed25519'
-  });
+// Generate Ed25519 key pair (in production, save these!)
+const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519", {
+  publicKeyEncoding: { type: "spki", format: "pem" },
+  privateKeyEncoding: { type: "pkcs8", format: "pem" },
+});
 
-  console.log(`Agent ID: ${id}`);
+console.log(`Agent ID: ${AGENT_ID}`);
+console.log(`Public Key: ${publicKey.replace(/\n/g, "\\n")}`);
 
-  // Create the agent
-  const agent = new HiveAgent({
-    id,
-    profile,
-    name: agentConfig.name,
-    description: agentConfig.description,
-    version: agentConfig.version,
-    keyPair,
-    endpoint: agentConfig.endpoint
-  });
+// Create Express app
+const app = express();
+app.use(express.json());
 
-  // Define text processing capability
-  const textProcessingCapability = new Capability({
-    id: 'text-processing',
-    name: 'Text Processing',
-    description: 'Performs basic text processing operations',
-    parameters: {
-      operation: {
-        type: 'string',
-        required: true,
-        enum: ['uppercase', 'lowercase', 'reverse', 'count']
-      },
-      text: {
-        type: 'string',
-        required: true,
-        maxLength: 10000
-      }
-    },
-    handler: async (params) => {
-      const { operation, text } = params;
-
-      switch (operation) {
-        case 'uppercase':
-          return { result: text.toUpperCase() };
-        case 'lowercase':
-          return { result: text.toLowerCase() };
-        case 'reverse':
-          return { result: text.split('').reverse().join('') };
-        case 'count':
-          return { result: text.length };
-        default:
-          throw new Error(`Unknown operation: ${operation}`);
-      }
-    }
-  });
-
-  // Register the capability
-  agent.registerCapability(textProcessingCapability);
-
-  // Set up HTTP routes
-  app.use('/api', agent.createExpressRouter());
-
-  // Add a simple status endpoint
-  app.get('/status', (req, res) => {
-    res.json({
-      status: 'ok',
-      agent: agentConfig.id,
-      version: agentConfig.version
-    });
-  });
-
-  // Start the server
-  const port = 3000;
-  app.listen(port, () => {
-    console.log(`Agent server running at http://localhost:${port}`);
-  });
-
-  // Register with discovery service if configured
-  if (agentConfig.registryUrl) {
-    try {
-      await agent.registerWithDiscoveryService(agentConfig.registryUrl);
-      console.log(`Registered with discovery service at ${agentConfig.registryUrl}`);
-    } catch (error) {
-      console.error('Failed to register with discovery service:', error);
-    }
-  }
-}
-
-// Run the agent
-main().catch(console.error);
+// Simple capability: text processing
+const capabilities = [
+  {
+    id: "text-processing",
+    input: { text: "string", operation: "string" },
+    output: { result: "string" },
+  },
+];
 ```
 
-## Step 4: Create a Task Client
+## Step 3: Add Message Handling (10 minutes)
 
-Create a simple client `client.ts` to interact with your agent:
+Continue building the agent with simple message handling:
 
 ```typescript
-// client.ts
-import { HiveClient, IdentityManager } from '@hive-protocol/sdk';
+// Helper function to sign messages
+function signMessage(message: any): string {
+  const messageStr = JSON.stringify(message);
+  return crypto
+    .sign("sha256", Buffer.from(messageStr), privateKey)
+    .toString("base64");
+}
 
-async function main() {
-  // Generate client identity and keys
-  const identityManager = new IdentityManager();
-  const { id, profile, keyPair } = await identityManager.generate({
-    network: 'hive',
-    keyType: 'Ed25519'
-  });
-
-  console.log(`Client ID: ${id}`);
-
-  // Create a client
-  const client = new HiveClient({
-    id,
-    profile,
-    keyPair
-  });
-
-  // Connect to your agent
-  const agentEndpoint = 'http://localhost:3000/api';
-
+// Helper function to verify signatures
+function verifySignature(
+  message: any,
+  signature: string,
+  publicKeyPem: string
+): boolean {
   try {
-    // Request a capability
-    console.log('Sending task request...');
-    const result = await client.requestTask({
-      endpoint: agentEndpoint,
-      capability: 'text-processing',
-      parameters: {
-        operation: 'uppercase',
-        text: 'Hello from the H.I.V.E. Protocol!'
-      }
-    });
-
-    console.log('Task completed successfully!');
-    console.log('Result:', result);
-  } catch (error) {
-    console.error('Error executing task:', error);
+    const messageStr = JSON.stringify(message);
+    return crypto.verify(
+      "sha256",
+      Buffer.from(messageStr),
+      publicKeyPem,
+      Buffer.from(signature, "base64")
+    );
+  } catch {
+    return false;
   }
 }
 
-// Run the client
-main().catch(console.error);
+// Simple task processing function
+function processTask(capability: string, data: any) {
+  if (capability === "text-processing") {
+    const { text, operation } = data;
+
+    switch (operation) {
+      case "uppercase":
+        return { result: text.toUpperCase() };
+      case "lowercase":
+        return { result: text.toLowerCase() };
+      case "reverse":
+        return { result: text.split("").reverse().join("") };
+      case "count":
+        return { result: text.length };
+      default:
+        throw new Error(`Unknown operation: ${operation}`);
+    }
+  }
+
+  throw new Error(`Unknown capability: ${capability}`);
+}
+
+// Main task endpoint
+app.post("/tasks", (req, res) => {
+  try {
+    const { from, to, type, data, sig } = req.body;
+
+    // Basic validation
+    if (type !== "task_request") {
+      return res.status(400).json({
+        from: AGENT_ID,
+        to: from,
+        type: "task_error",
+        data: {
+          error: "invalid_message_type",
+          message: "Expected task_request",
+          retry: false,
+        },
+        sig: signMessage({ error: "invalid_message_type" }),
+      });
+    }
+
+    // Process the task
+    const result = processTask(data.capability, data);
+
+    // Send response
+    const response = {
+      from: AGENT_ID,
+      to: from,
+      type: "task_result",
+      data: {
+        task_id: data.task_id,
+        status: "completed",
+        result,
+      },
+    };
+
+    res.json({
+      ...response,
+      sig: signMessage(response),
+    });
+  } catch (error) {
+    const errorResponse = {
+      from: AGENT_ID,
+      to: req.body.from,
+      type: "task_error",
+      data: {
+        task_id: req.body.data?.task_id,
+        error: "processing_failed",
+        message: error.message,
+        retry: false,
+      },
+    };
+
+    res.status(500).json({
+      ...errorResponse,
+      sig: signMessage(errorResponse),
+    });
+  }
+});
 ```
 
-## Step 5: Set Up Your Package Scripts
+## Step 4: Add Discovery & Status Endpoints (5 minutes)
 
-Update your `package.json` to include these scripts:
+Add the remaining endpoints to complete your agent:
+
+```typescript
+// Capability discovery endpoint
+app.get("/capabilities", (req, res) => {
+  const response = {
+    from: AGENT_ID,
+    to: "discovery",
+    type: "capability_response",
+    data: {
+      capabilities,
+      endpoint: `http://localhost:${PORT}`,
+    },
+  };
+
+  res.json({
+    ...response,
+    sig: signMessage(response),
+  });
+});
+
+// Simple status endpoint
+app.get("/status", (req, res) => {
+  res.json({
+    agent_id: AGENT_ID,
+    status: "online",
+    capabilities: capabilities.map((c) => c.id),
+    uptime: process.uptime(),
+  });
+});
+
+// Start the server
+app.listen(PORT, () => {
+  console.log(`🚀 H.I.V.E. Agent running at http://localhost:${PORT}`);
+  console.log(`📋 Capabilities: ${capabilities.map((c) => c.id).join(", ")}`);
+  console.log(`🔍 Try: curl http://localhost:${PORT}/status`);
+});
+```
+
+## Step 5: Create a Simple Test Client (5 minutes)
+
+Create `test-client.ts` to test your agent:
+
+```typescript
+// test-client.ts
+import crypto from "crypto";
+
+// Generate client keys
+const { publicKey: clientPublicKey, privateKey: clientPrivateKey } =
+  crypto.generateKeyPairSync("ed25519", {
+    publicKeyEncoding: { type: "spki", format: "pem" },
+    privateKeyEncoding: { type: "pkcs8", format: "pem" },
+  });
+
+const CLIENT_ID =
+  "agentid:hive:client-" + crypto.randomBytes(4).toString("hex");
+
+function signMessage(message: any): string {
+  const messageStr = JSON.stringify(message);
+  return crypto
+    .sign("sha256", Buffer.from(messageStr), clientPrivateKey)
+    .toString("base64");
+}
+
+async function sendTaskRequest() {
+  const taskRequest = {
+    from: CLIENT_ID,
+    to: "agentid:hive:agent", // Will be ignored by our simple agent
+    type: "task_request",
+    data: {
+      task_id: "test-" + Date.now(),
+      capability: "text-processing",
+      text: "Hello H.I.V.E. Protocol!",
+      operation: "uppercase",
+    },
+  };
+
+  const message = {
+    ...taskRequest,
+    sig: signMessage(taskRequest),
+  };
+
+  try {
+    const response = await fetch("http://localhost:3000/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(message),
+    });
+
+    const result = await response.json();
+    console.log("✅ Task completed!");
+    console.log("📤 Sent:", taskRequest.data.text);
+    console.log("📥 Result:", result.data.result.result);
+  } catch (error) {
+    console.error("❌ Error:", error);
+  }
+}
+
+// Test the agent
+console.log(`🧪 Testing agent with client: ${CLIENT_ID}`);
+sendTaskRequest();
+```
+
+## Step 6: Set Up Scripts & Test (3 minutes)
+
+Update your `package.json`:
 
 ```json
 {
   "scripts": {
     "start": "ts-node agent.ts",
-    "client": "ts-node client.ts"
+    "test": "ts-node test-client.ts"
   }
 }
 ```
 
-## Step 6: Run Your Agent
+## Step 7: Run & Test Your Agent
 
-Start your agent in one terminal:
+**Terminal 1** - Start your agent:
 
 ```bash
 npm start
 ```
 
-You should see output like:
+You should see:
 
 ```
-Agent public key: <your public key>
-Agent server running at http://localhost:3000
+Agent ID: agentid:hive:a1b2c3d4
+🚀 H.I.V.E. Agent running at http://localhost:3000
+📋 Capabilities: text-processing
+🔍 Try: curl http://localhost:3000/status
 ```
 
-## Step 7: Test with the Client
-
-In another terminal, run the client to test your agent:
+**Terminal 2** - Test it:
 
 ```bash
-npm run client
+npm test
 ```
 
-You should see output like:
+You should see:
 
 ```
-Sending task request...
-Task completed successfully!
-Result: { result: 'HELLO FROM THE H.I.V.E. PROTOCOL!' }
+🧪 Testing agent with client: agentid:hive:client-x1y2
+✅ Task completed!
+📤 Sent: Hello H.I.V.E. Protocol!
+📥 Result: HELLO H.I.V.E. PROTOCOL!
 ```
 
-## Next Steps
+## 🎉 Congratulations!
 
-Congratulations! You've created your first H.I.V.E. Protocol agent. Here's what you can do next:
+You've built a working H.I.V.E. Protocol agent! Your agent can:
 
-1. **Add More Capabilities**: Extend your agent with additional capabilities
-2. **Implement Discovery**: Connect to a real discovery service
-3. **Add Authentication**: Implement more robust authentication checks
-4. **Handle Contracts**: Add support for task contracts
-5. **Error Handling**: Improve error handling and reporting
+- ✅ Process text transformation tasks
+- ✅ Sign and verify messages with Ed25519
+- ✅ Handle the 7 core message types
+- ✅ Advertise its capabilities
+- ✅ Communicate with other agents
+
+## What You Built (Tier 1 Features)
+
+- **Simple message format** for efficient communication
+- **Basic task processing** without contract overhead
+- **Ed25519 signatures** for security
+- **HTTP endpoints** for communication
+- **Capability advertisement** for discovery
+
+## Next Steps: Upgrade Your Agent
+
+### 🟡 Upgrade to Tier 2 (Standard)
+
+- Add WebSocket support for real-time updates
+- Implement basic task agreements (lightweight contracts)
+- Add multiple discovery methods
+- Enhanced error handling
+
+### 🔴 Upgrade to Tier 3 (Full)
+
+- Complete protocol implementation
+- Advanced security features
+- Federation support
+- Full backward compatibility
+
+### 🚀 Production Checklist
+
+- [ ] Save private keys securely (not in code!)
+- [ ] Add rate limiting and input validation
+- [ ] Implement proper logging and monitoring
+- [ ] Add health checks and graceful shutdown
+- [ ] Connect to a real registry service
+- [ ] Add more capabilities for your use case
+
+## Why This Approach Works
+
+**Tier 1 provides most benefits with minimal complexity**:
+
+- ✅ **Fast to implement**: Quick setup using familiar technologies
+- ✅ **Easy to debug**: Simple message format
+- ✅ **Highly scalable**: Designed for concurrent operations
+- ✅ **Production ready**: Add security and monitoring
+- ✅ **Upgrade path**: Clear path to more features
 
 <Callout type="info">
-  For a more complete implementation example, see the [Example Agent Implementation](/docs/protocol/implementation/example-agent) guide.
+  **Production Tip**: Many successful H.I.V.E. deployments start with Tier 1 and
+  only upgrade specific components as needed. You don't need all features to be
+  effective!
 </Callout>
 
-## Troubleshooting
-
-### Common Issues
-
-- **Connection Refused**: Make sure your agent is running before testing with the client
-- **Signature Verification Failed**: Check that you're using the correct key pairs
-- **Capability Not Found**: Verify that the capability ID matches what's registered
-- **Invalid Parameters**: Ensure parameters match the capability's requirements
-
 <Callout type="warning">
-  In a production environment, you should never hardcode or commit private keys. Use environment variables or
-    secure key management solutions instead.
+  **Security**: This example is for learning. In production, store private keys
+  securely, validate all inputs, and implement proper authentication.
 </Callout>

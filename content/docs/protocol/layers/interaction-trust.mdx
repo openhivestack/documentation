@@ -1,252 +1,205 @@
 ---
 title: Interaction & Trust
-description: How agents establish trust and securely interact
+description: Essential security without complexity
 icon: ShieldCheck
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 import { Mermaid } from "@/components/mdx/mermaid";
 
-The Interaction & Trust layer of the H.I.V.E. Protocol establishes the foundation for secure, verifiable
-interactions between agents. It defines how agents authenticate each other, maintain trust, and ensure the
-integrity of their communications.
+The Interaction & Trust layer provides essential security for agent communications while maintaining simple implementation. Focus on what's critical: message authentication and basic trust verification.
 
-## Layer Overview
+## Essential Security Only
 
 <Mermaid
   chart={`
 flowchart LR
-    A[Authentication] --> B[Authorization]
-    B --> C[Trust Establishment]
-    C --> D[Verification]
+    A[TLS Encryption] --> B[Ed25519 Signatures]
+    B --> C[Agent ID Validation]
 `}
 />
 
-## Authentication
+**Tier 1 Security Requirements**:
 
-Authentication in the H.I.V.E. Protocol ensures that agents can verify the identity of other agents they interact with.
+- **TLS encryption** for all HTTP communications
+- **Ed25519 signatures** for message authentication
+- **Agent ID validation** to prevent basic impersonation
+- **Basic error handling** for security violations
 
-### Authentication Methods
+## Simple Message Authentication
 
-The protocol supports several authentication mechanisms:
+**Tier 1 Approach**: Every message is signed, no complex challenge-response needed.
 
-1. **Signature-Based Authentication**
-   - Each message is signed with the sender's private key
-   - Recipients verify the signature using the sender's public key
-   - Provides non-repudiation and message integrity
+### Basic Authentication Flow
 
-2. **Challenge-Response**
-   - Agent A sends a random challenge to Agent B
-   - Agent B signs the challenge with its private key
-   - Agent A verifies the signature using Agent B's public key
-   - Prevents replay attacks and confirms active possession of keys
-
-3. **Token-Based Authentication**
-   - JWT or similar tokens for session-based authentication
-   - Useful for repeated interactions in a session
-   - Can include claims about agent capabilities and permissions
-
-### Authentication Flow
+1. **Sign every message** with Ed25519 private key
+2. **Verify every incoming message** with sender's public key
+3. **Reject invalid signatures** immediately
 
 ```javascript
-// Challenge-Response Authentication Example
+// Simple authentication implementation
+function authenticateMessage(message, senderPublicKey) {
+  const { sig, ...messageWithoutSig } = message;
 
-// Agent A generates and sends a challenge
-const challenge = generateRandomChallenge();
-send(agentBId, {
-  messageType: 'AUTHENTICATION_CHALLENGE',
-  challenge: challenge
-});
+  try {
+    const isValid = crypto.verify(
+      "sha256",
+      JSON.stringify(messageWithoutSig),
+      senderPublicKey,
+      Buffer.from(sig, "base64")
+    );
 
-// Agent B creates a signature for the challenge using their key
-receive(message => {
-  if (message.messageType === 'AUTHENTICATION_CHALLENGE') {
-    const signature = createSignature({
-      keyId: 'primary',
-      challenge: message.challenge,
-      domain: 'hive.example.com'
-    });
+    return isValid;
+  } catch (error) {
+    return false;
+  }
+}
 
-    send(agentAId, {
-      messageType: 'AUTHENTICATION_RESPONSE',
-      challenge: message.challenge,
-      signature: signature
+// Use in your endpoint
+app.post("/tasks", (req, res) => {
+  const message = req.body;
+
+  // Get sender's public key (from cache, registry, or direct query)
+  const senderPublicKey = getSenderPublicKey(message.from);
+
+  if (!authenticateMessage(message, senderPublicKey)) {
+    return res.status(401).json({
+      error: "invalid_signature",
+      message: "Message signature verification failed",
     });
   }
+
+  // Process authenticated message
+  processTask(message);
 });
+```
 
-// Agent A verifies the signature using Agent B's profile
-receive(message => {
-  if (message.messageType === 'AUTHENTICATION_RESPONSE') {
-    // Resolve the Agent ID to get the Agent Profile
-    const profile = await resolveAgent(agentBId);
+**Benefits**:
 
-    // Verify the signature using the public key from the Agent Profile
-    const isValid = await verifySignature(message.challenge, message.signature, profile);
+- **No complex handshakes** - authentication happens with every message
+- **Stateless** - no session management required
+- **Simple to implement** - just sign and verify
+- **Replay protection** - each message is unique
 
-    if (isValid) {
-      // Authentication successful
-      establishSecureChannel(agentBId);
+## Basic Authorization (Tier 1)
+
+**Simple approach**: If an agent advertises a capability, any authenticated agent can use it.
+
+```javascript
+// Basic authorization check
+function isAuthorized(message) {
+  // 1. Message is authenticated (signature verified)
+  // 2. Capability exists on this agent
+  // 3. Basic rate limiting (optional)
+
+  const capability = findCapability(message.data.capability);
+  return capability !== null;
+}
+
+app.post("/tasks", (req, res) => {
+  const message = req.body;
+
+  // Authenticate
+  if (!authenticateMessage(message, getSenderPublicKey(message.from))) {
+    return res.status(401).json({ error: "authentication_failed" });
+  }
+
+  // Authorize
+  if (!isAuthorized(message)) {
+    return res.status(403).json({ error: "capability_not_found" });
+  }
+
+  // Process task
+  processTask(message);
+});
+```
+
+**Advanced authorization** (roles, permissions, etc.) is only needed for Tier 2+.
+
+## Simple Trust (Tier 1)
+
+**Basic approach**: Trust agents that provide valid signatures and deliver results.
+
+### Trust Indicators
+
+**Immediate trust signals**:
+
+- ✅ Valid Ed25519 signature
+- ✅ Agent ID format is correct
+- ✅ TLS connection is secure
+- ✅ Responds to capability queries
+
+**Optional trust tracking** (Tier 2+):
+
+- Task completion rate
+- Response time reliability
+- Result quality assessment
+
+```javascript
+// Simple trust implementation
+const agentStats = new Map(); // Simple in-memory tracking
+
+function recordTaskResult(agentId, success) {
+  if (!agentStats.has(agentId)) {
+    agentStats.set(agentId, { total: 0, successful: 0 });
+  }
+
+  const stats = agentStats.get(agentId);
+  stats.total++;
+  if (success) stats.successful++;
+}
+
+function getTrustScore(agentId) {
+  const stats = agentStats.get(agentId);
+  if (!stats || stats.total === 0) return 0.5; // Neutral for new agents
+  return stats.successful / stats.total;
+}
+```
+
+## Basic Verification (Tier 1)
+
+**Essential verification only**:
+
+```javascript
+// Verify task result format matches capability output specification
+function verifyResult(capability, result) {
+  const outputSpec = capability.output;
+
+  for (const [field, type] of Object.entries(outputSpec)) {
+    if (typeof result[field] !== type) {
+      return false;
     }
   }
-});
-```
 
-## Authorization
-
-Once authenticated, authorization determines what actions an agent is permitted to perform.
-
-### Permission Models
-
-H.I.V.E. supports several authorization models:
-
-1. **Capability-Based Authorization**
-   - Agents present unforgeable tokens (capabilities) that grant specific permissions
-   - Follows the principle of least privilege
-   - Capabilities can be delegated and revoked
-
-2. **Role-Based Authorization**
-   - Agents are assigned roles that determine their permissions
-   - Simplifies permission management for groups of agents
-   - Supports hierarchical role structures
-
-3. **Attribute-Based Authorization**
-   - Permissions are granted based on agent attributes
-   - Enables fine-grained access control
-   - Supports complex authorization rules
-
-### Authorization Decision
-
-```json
-// Authorization Request
-{
-  "messageType": "AUTHORIZATION_REQUEST",
-  "resource": "data-processing-pipeline",
-  "action": "EXECUTE",
-  "context": {
-    "priority": "high",
-    "dataType": "financial"
-  }
-}
-
-// Authorization Response
-{
-  "messageType": "AUTHORIZATION_RESPONSE",
-  "resource": "data-processing-pipeline",
-  "action": "EXECUTE",
-  "decision": "PERMIT",
-  "constraints": {
-    "maxDataSize": 100000,
-    "timeLimit": 3600,
-    "auditRequired": true
-  }
+  return true;
 }
 ```
 
-## Trust Establishment
+## Implementation Checklist
 
-Trust establishment defines how agents build and maintain trust relationships over time.
+**Tier 1 Security (Required)**:
 
-### Trust Models
+- [ ] TLS encryption for all communications
+- [ ] Ed25519 signature generation and verification
+- [ ] Agent ID format validation
+- [ ] Basic capability-based authorization
+- [ ] Simple error responses for security violations
 
-1. **Direct Trust**
-   - Trust is established directly between two agents
-   - Based on direct interactions and experience
-   - Strongest form of trust in the protocol
+**Tier 2+ Enhancements (Optional)**:
 
-2. **Delegated Trust**
-   - Trust is established through a trusted third party
-   - Useful when agents have no prior relationship
-   - Requires trust in the delegating authority
-
-3. **Reputation-Based Trust**
-   - Trust is established based on an agent's reputation
-   - Aggregates feedback from multiple agents
-   - Evolves over time based on behavior
-
-### Trust Metrics
-
-Agents can track various metrics to evaluate trustworthiness:
-
-- **Reliability**: Percentage of successfully completed tasks
-- **Timeliness**: Adherence to agreed-upon deadlines
-- **Quality**: Assessment of output quality compared to expectations
-- **Honesty**: Accuracy of capability advertisements and progress reports
-
-<Mermaid
-  chart={`
-stateDiagram-v2
-    [*] --> Unknown
-    Unknown --> Provisional: Initial verification
-    Provisional --> Trusted: Successful interactions
-    Provisional --> Untrusted: Failed verification/interactions
-    Trusted --> Verified: Long-term reliability
-    Trusted --> Provisional: Trust issues
-    Verified --> Trusted: Minor issues
-    Untrusted --> Provisional: Redemption period
-`}
-/>
-
-## Verification
-
-Verification ensures that interactions and outcomes can be validated.
-
-### Verification Methods
-
-1. **Cryptographic Verification**
-   - Digital signatures to verify message authenticity
-   - Hash validation for data integrity
-   - Zero-knowledge proofs for privacy-preserving verification
-
-2. **Consensus Verification**
-   - Multiple agents verify the same result
-   - Useful for critical tasks requiring high confidence
-   - Can detect malicious or faulty agents
-
-3. **Outcome Verification**
-   - Validation that task results meet the agreed requirements
-   - Can involve automated tests, sampling, or human review
-   - Essential for maintaining quality standards
-
-### Audit Trail
-
-The H.I.V.E. Protocol maintains a comprehensive audit trail of interactions:
-
-```json
-{
-  "auditRecords": [
-    {
-      "timestamp": "2025-07-18T12:30:45Z",
-      "eventType": "TASK_COMPLETED",
-      "taskId": "task-123",
-      "agentId": "agent-xyz789",
-      "outcome": "SUCCESS",
-      "verificationMethod": "digital-signature",
-      "verificationResult": "VERIFIED",
-      "evidence": {
-        "resultHash": "sha256:1234567890abcdef...",
-        "signature": "..."
-      }
-    }
-  ]
-}
-```
-
-## Implementation Considerations
-
-When implementing the Interaction & Trust layer, developers should consider:
-
-- Balancing security with performance requirements
-- Handling trust revocation and recovery processes
-- Implementing proper key management and rotation
-- Establishing clear verification criteria for different task types
-- Privacy implications of trust and audit information
-
-<Callout type="warning">
-  Trust is fragile and hard to rebuild. Implement robust security measures and verification processes to maintain
-    trust in your agent ecosystem.
-</Callout>
+- [ ] Trust scoring and reputation tracking
+- [ ] Advanced authorization rules
+- [ ] Audit logging
+- [ ] Challenge-response authentication
+- [ ] Multi-party verification
 
 <Callout type="info">
-  For more details on security implementation, see the [Security Considerations](/docs/protocol/structure/security-considerations) documentation.
+  **Security Philosophy**: Tier 1 provides essential security without
+  complexity. Most agents don't need advanced trust models - just reliable
+  message authentication.
+</Callout>
+
+<Callout type="warning">
+  **Critical**: Always verify message signatures before processing. This is your
+  primary defense against impersonation and tampering.
 </Callout>

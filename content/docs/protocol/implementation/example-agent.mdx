@@ -1,1000 +1,198 @@
 ---
 title: Example Agent Implementation
-description: A comprehensive example of a H.I.V.E. Protocol agent
+description: Ultra-simple agent implementation in under 100 lines
 icon: Code
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
-This guide provides a comprehensive example of implementing a H.I.V.E. Protocol agent with multiple capabilities,
-proper error handling, and full contract support. We'll build a more advanced agent than the one in the Quick Start Guide.
+This guide shows how to build a complete H.I.V.E. Protocol agent in under 100 lines of code. The example demonstrates the Tier 1 approach optimized for simplicity and fast implementation.
 
-## Project Structure
+## Complete Agent (< 100 lines)
 
-Our example agent will have the following structure:
+```javascript
+const express = require("express");
+const crypto = require("crypto");
 
-```
-advanced-hive-agent/
-├── src/
-│   ├── agent.ts             # Main agent implementation
-│   ├── capabilities/        # Capability implementations
-│   │   ├── index.ts         # Capability exports
-│   │   ├── text.ts          # Text processing capability
-│   │   └── image.ts         # Image processing capability
-│   ├── config.ts            # Configuration
-│   ├── contracts/           # Contract handling
-│   │   ├── index.ts         # Contract exports
-│   │   └── manager.ts       # Contract management
-│   ├── discovery/           # Discovery service integration
-│   │   ├── index.ts         # Discovery exports
-│   │   └── registry.ts      # Registry client
-│   ├── middleware/          # Express middleware
-│   │   ├── index.ts         # Middleware exports
-│   │   ├── auth.ts          # Authentication middleware
-│   │   └── logging.ts       # Logging middleware
-│   ├── storage/             # Data persistence
-│   │   ├── index.ts         # Storage exports
-│   │   └── store.ts         # Data store implementation
-│   └── utils/               # Utility functions
-│       ├── index.ts         # Utility exports
-│       ├── crypto.ts        # Cryptographic utilities
-│       └── validation.ts    # Input validation
-├── tests/                   # Test files
-├── package.json
-└── tsconfig.json
-```
+// Agent setup
+const AGENT_ID = "agentid:hive:" + crypto.randomBytes(8).toString("hex");
+const PORT = 3000;
 
-## Step 1: Set Up Your Project
+// Generate keys (save these in production!)
+const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519", {
+  publicKeyEncoding: { type: "spki", format: "pem" },
+  privateKeyEncoding: { type: "pkcs8", format: "pem" },
+});
 
-```bash
-# Create project directory
-mkdir advanced-hive-agent
-cd advanced-hive-agent
-
-# Initialize npm project
-npm init -y
-
-# Install dependencies
-npm install @hive-protocol/sdk express cors winston mongoose
-npm install --save-dev typescript ts-node @types/node @types/express @types/cors jest ts-jest @types/jest
-
-# Initialize TypeScript
-npx tsc --init
-```
-
-## Step 2: Configure TypeScript
-
-Update `tsconfig.json`:
-
-```json
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+// Capabilities
+const capabilities = [
+  {
+    id: "text-processing",
+    input: { text: "string", operation: "string" },
+    output: { result: "string" },
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "**/*.test.ts"]
-}
-```
-
-## Step 3: Create Configuration
-
-Create `src/config.ts`:
-
-```typescript
-// src/config.ts
-import dotenv from 'dotenv';
-
-// Load environment variables
-dotenv.config();
-
-export const config = {
-  agent: {
-    name: process.env.AGENT_NAME || 'Advanced H.I.V.E. Agent',
-    description: process.env.AGENT_DESCRIPTION || 'A comprehensive H.I.V.E. Protocol agent implementation',
-    version: process.env.AGENT_VERSION || '1.0.0',
-    endpoint: process.env.AGENT_ENDPOINT || 'http://localhost:3000/api',
-    network: process.env.AGENT_NETWORK || 'hive'
+  {
+    id: "math-calculation",
+    input: { expression: "string" },
+    output: { result: "number" },
   },
-  server: {
-    port: parseInt(process.env.PORT || '3000', 10),
-    host: process.env.HOST || 'localhost'
-  },
-  identity: {
-    profilePath: process.env.AGENT_PROFILE_PATH,
-    keyPath: process.env.AGENT_KEY_PATH
-  },
-  discovery: {
-    registryUrl: process.env.REGISTRY_URL || 'https://registry.example.com',
-    refreshInterval: parseInt(process.env.REGISTRY_REFRESH_INTERVAL || '3600000', 10) // 1 hour
-  },
-  storage: {
-    mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/hive-agent',
-    redisUrl: process.env.REDIS_URL
-  },
-  logging: {
-    level: process.env.LOG_LEVEL || 'info',
-    file: process.env.LOG_FILE
-  }
-};
-```
+];
 
-## Step 4: Set Up Utilities
+const app = express();
+app.use(express.json());
 
-Create cryptographic utilities in `src/utils/crypto.ts`:
-
-```typescript
-// src/utils/crypto.ts
-import { IdentityManager } from '@hive-protocol/sdk';
-import fs from 'fs/promises';
-import path from 'path';
-import { config } from '../config';
-
-// Load or generate agent identity and key pair
-export async function getAgentIdentity() {
-  const identityManager = new IdentityManager();
-
-  // If profile path is provided, try to load existing identity
-  if (config.identity.profilePath && config.identity.keyPath) {
-    try {
-      const profileJson = await fs.readFile(config.identity.profilePath, 'utf-8');
-      const keyJson = await fs.readFile(config.identity.keyPath, 'utf-8');
-
-      const profile = JSON.parse(profileJson);
-      const keyPair = JSON.parse(keyJson);
-
-      return { id: profile.id, profile, keyPair };
-    } catch (error) {
-      console.warn('Failed to load existing identity, generating new one', error);
-    }
-  }
-
-  // Generate new identity
-  const { id, profile, keyPair } = await identityManager.generate({
-    network: config.agent.network,
-    keyType: 'Ed25519'
-  });
-
-  // Save DID and keys if paths are provided
-  if (config.did.documentPath && config.did.keyPath) {
-    try {
-      // Ensure directories exist
-      await fs.mkdir(path.dirname(config.did.documentPath), { recursive: true });
-      await fs.mkdir(path.dirname(config.did.keyPath), { recursive: true });
-
-      // Save DID document and keys
-      await fs.writeFile(config.did.documentPath, JSON.stringify(didDocument, null, 2));
-      await fs.writeFile(config.did.keyPath, JSON.stringify(keyPair, null, 2));
-
-      console.log('Generated and saved new DID');
-    } catch (error) {
-      console.error('Failed to save generated DID', error);
-    }
-  }
-
-  return { did, didDocument, keyPair };
+// Helper functions
+function signMessage(message) {
+  return crypto
+    .sign("sha256", Buffer.from(JSON.stringify(message)), privateKey)
+    .toString("base64");
 }
 
-// Verify a signature
-export async function verifySignature(
-  data: string | object,
-  signature: {
-    type: string;
-    keyId: string;
-    value: string;
-  },
-  profile: any
-): Promise<boolean> {
-  try {
-    const dataStr = typeof data === 'string' ? data : JSON.stringify(data);
-    const identityManager = new IdentityManager();
-
-    return identityManager.verifySignature({
-      data: dataStr,
-      signature,
-      profile
-    });
-  } catch (error) {
-    console.error('Signature verification failed', error);
-    return false;
-  }
-}
-```
-
-Create validation utilities in `src/utils/validation.ts`:
-
-```typescript
-// src/utils/validation.ts
-import { Capability } from '@hive-protocol/sdk';
-
-// Validate parameters against capability requirements
-export function validateParameters(
-  capability: Capability,
-  params: Record<string, any>
-): { valid: boolean; errors?: string[] } {
-  const errors: string[] = [];
-
-  // Check for required parameters
-  for (const [paramName, paramDef] of Object.entries(capability.parameters)) {
-    if (paramDef.required && (params[paramName] === undefined || params[paramName] === null)) {
-      errors.push(`Missing required parameter: ${paramName}`);
-      continue;
-    }
-
-    if (params[paramName] !== undefined) {
-      // Type checking
-      if (paramDef.type && typeof params[paramName] !== paramDef.type) {
-        errors.push(`Parameter ${paramName} should be of type ${paramDef.type}`);
-      }
-
-      // Enum validation
-      if (paramDef.enum && !paramDef.enum.includes(params[paramName])) {
-        errors.push(`Parameter ${paramName} must be one of: ${paramDef.enum.join(', ')}`);
-      }
-
-      // String length validation
-      if (paramDef.type === 'string') {
-        if (paramDef.maxLength !== undefined && params[paramName].length > paramDef.maxLength) {
-          errors.push(`Parameter ${paramName} exceeds maximum length of ${paramDef.maxLength}`);
-        }
-        if (paramDef.minLength !== undefined && params[paramName].length < paramDef.minLength) {
-          errors.push(`Parameter ${paramName} is shorter than minimum length of ${paramDef.minLength}`);
-        }
-      }
-
-      // Number range validation
-      if (paramDef.type === 'number') {
-        if (paramDef.maximum !== undefined && params[paramName] > paramDef.maximum) {
-          errors.push(`Parameter ${paramName} exceeds maximum value of ${paramDef.maximum}`);
-        }
-        if (paramDef.minimum !== undefined && params[paramName] < paramDef.minimum) {
-          errors.push(`Parameter ${paramName} is less than minimum value of ${paramDef.minimum}`);
-        }
-      }
-    }
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors: errors.length > 0 ? errors : undefined
-  };
-}
-```
-
-Create index file in `src/utils/index.ts`:
-
-```typescript
-// src/utils/index.ts
-export * from './crypto';
-export * from './validation';
-```
-
-## Step 5: Implement Capabilities
-
-Create the text processing capability in `src/capabilities/text.ts`:
-
-```typescript
-// src/capabilities/text.ts
-import { Capability } from '@hive-protocol/sdk';
-
-export const textProcessingCapability = new Capability({
-  id: 'text-processing',
-  name: 'Text Processing',
-  description: 'Performs various text processing operations',
-  version: '1.0.0',
-  categories: ['text', 'utility'],
-  parameters: {
-    operation: {
-      type: 'string',
-      required: true,
-      description: 'The operation to perform on the text',
-      enum: ['uppercase', 'lowercase', 'reverse', 'count', 'sentiment', 'summarize']
-    },
-    text: {
-      type: 'string',
-      required: true,
-      description: 'The input text to process',
-      maxLength: 10000
-    },
-    options: {
-      type: 'object',
-      required: false,
-      description: 'Additional operation-specific options'
-    }
-  },
-  handler: async (params) => {
-    const { operation, text, options = {} } = params;
-
+function processTask(capability, data) {
+  if (capability === "text-processing") {
+    const { text, operation } = data;
     switch (operation) {
-      case 'uppercase':
+      case "uppercase":
         return { result: text.toUpperCase() };
-
-      case 'lowercase':
+      case "lowercase":
         return { result: text.toLowerCase() };
-
-      case 'reverse':
-        return { result: text.split('').reverse().join('') };
-
-      case 'count':
-        const countWords = options.countWords === true;
-        if (countWords) {
-          const wordCount = text.trim().split(/\s+/).length;
-          return { result: wordCount, type: 'word_count' };
-        } else {
-          return { result: text.length, type: 'character_count' };
-        }
-
-      case 'sentiment':
-        // Simple sentiment analysis (in a real agent, use a proper NLP library)
-        const positiveWords = ['good', 'great', 'excellent', 'happy', 'positive', 'love', 'like'];
-        const negativeWords = ['bad', 'terrible', 'sad', 'negative', 'hate', 'dislike'];
-
-        const words = text.toLowerCase().match(/\w+/g) || [];
-        let score = 0;
-
-        words.forEach(word => {
-          if (positiveWords.includes(word)) score += 1;
-          if (negativeWords.includes(word)) score -= 1;
-        });
-
-        const normalized = words.length ? score / words.length : 0;
-        return {
-          sentiment: normalized > 0.05 ? 'positive' : normalized < -0.05 ? 'negative' : 'neutral',
-          score: normalized
-        };
-
-      case 'summarize':
-        // Simple summarization (in a real agent, use a proper NLP library)
-        const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
-        if (sentences.length <= 2) return { result: text };
-
-        const maxSentences = options.maxSentences || 3;
-        const summary = sentences.slice(0, maxSentences).join(' ');
-        return { result: summary };
-
+      case "reverse":
+        return { result: text.split("").reverse().join("") };
       default:
         throw new Error(`Unknown operation: ${operation}`);
     }
-  },
-  examples: [
-    {
-      description: 'Convert text to uppercase',
-      request: {
-        operation: 'uppercase',
-        text: 'Hello world'
-      },
-      response: {
-        result: 'HELLO WORLD'
-      }
-    },
-    {
-      description: 'Count words in text',
-      request: {
-        operation: 'count',
-        text: 'Hello world, this is a test.',
-        options: { countWords: true }
-      },
-      response: {
-        result: 6,
-        type: 'word_count'
-      }
-    }
-  ]
-});
-```
-
-Create the image processing capability in `src/capabilities/image.ts`:
-
-```typescript
-// src/capabilities/image.ts
-import { Capability } from '@hive-protocol/sdk';
-
-export const imageProcessingCapability = new Capability({
-  id: 'image-processing',
-  name: 'Image Processing',
-  description: 'Performs various image processing operations',
-  version: '1.0.0',
-  categories: ['image', 'utility'],
-  parameters: {
-    operation: {
-      type: 'string',
-      required: true,
-      description: 'The operation to perform on the image',
-      enum: ['resize', 'format-convert', 'metadata', 'analyze']
-    },
-    imageUrl: {
-      type: 'string',
-      required: true,
-      description: 'URL of the image to process'
-    },
-    options: {
-      type: 'object',
-      required: false,
-      description: 'Operation-specific options'
-    }
-  },
-  handler: async (params) => {
-    const { operation, imageUrl, options = {} } = params;
-
-    // In a real implementation, you would process the image
-    // This is a simplified mock implementation
-    switch (operation) {
-      case 'resize':
-        return {
-          result: 'Image resized successfully',
-          outputUrl: `${imageUrl}?width=${options.width || 300}&height=${options.height || 200}`,
-          dimensions: {
-            width: options.width || 300,
-            height: options.height || 200
-          }
-        };
-
-      case 'format-convert':
-        const targetFormat = options.format || 'jpeg';
-        return {
-          result: `Image converted to ${targetFormat}`,
-          outputUrl: `${imageUrl.split('.').slice(0, -1).join('.')}.${targetFormat}`,
-          format: targetFormat
-        };
-
-      case 'metadata':
-        // Mock metadata extraction
-        return {
-          dimensions: { width: 1200, height: 800 },
-          format: 'jpeg',
-          size: 423500,
-          createdAt: '2025-01-15T10:30:00Z',
-          hasExif: true
-        };
-
-      case 'analyze':
-        // Mock image analysis
-        return {
-          dominantColors: ['#336699', '#CCDDEE', '#223344'],
-          brightness: 0.72,
-          contrast: 0.65,
-          detectedObjects: ['person', 'building', 'tree']
-        };
-
-      default:
-        throw new Error(`Unknown operation: ${operation}`);
-    }
-  },
-  examples: [
-    {
-      description: 'Resize an image',
-      request: {
-        operation: 'resize',
-        imageUrl: 'https://example.com/image.jpg',
-        options: { width: 800, height: 600 }
-      },
-      response: {
-        result: 'Image resized successfully',
-        outputUrl: 'https://example.com/image.jpg?width=800&height=600',
-        dimensions: { width: 800, height: 600 }
-      }
-    }
-  ]
-});
-```
-
-Create index file in `src/capabilities/index.ts`:
-
-```typescript
-// src/capabilities/index.ts
-export * from './text';
-export * from './image';
-```
-
-## Step 6: Implement Contract Management
-
-Create contract manager in `src/contracts/manager.ts`:
-
-```typescript
-// src/contracts/manager.ts
-import { TaskContract } from '@hive-protocol/sdk';
-import crypto from 'crypto';
-
-interface ContractRecord {
-  contractId: string;
-  contract: TaskContract;
-  status: 'PROPOSED' | 'ACCEPTED' | 'ACTIVE' | 'COMPLETED' | 'FAILED' | 'CANCELED';
-  createdAt: Date;
-  updatedAt: Date;
-  result?: any;
+  }
+  if (capability === "math-calculation") {
+    return { result: Function(`"use strict"; return (${data.expression})`)() };
+  }
+  throw new Error(`Unknown capability: ${capability}`);
 }
 
-export class ContractManager {
-  private contracts: Map<string, ContractRecord> = new Map();
-  private did: string;
-  private didDocument: any;
-  private keyPair: any;
-
-  constructor({ did, didDocument, keyPair }) {
-    this.did = did;
-    this.didDocument = didDocument;
-    this.keyPair = keyPair;
-  }
-
-  // Create a new contract proposal
-  async createContract(taskId: string, requesterInfo: any, capability: string, parameters: any): Promise<TaskContract> {
-    const contractId = `contract-${crypto.randomBytes(8).toString('hex')}`;
-
-    const contract = new TaskContract({
-      contractId,
-      taskId,
-      parties: {
-        requester: requesterInfo,
-        provider: {
-          did: this.did,
-          verificationMethod: `${this.did}#keys-1`
-        }
-      },
-      task: {
-        capabilityId: capability,
-        parameters
-      },
-      requirements: {
-        deadline: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
-        maxRetries: 2
-      },
-      deliverables: {
-        format: 'JSON'
-      },
-      termination: {
-        completionCriteria: 'RESULT_DELIVERED'
-      }
-    });
-
-    // Store the contract
-    this.contracts.set(contractId, {
-      contractId,
-      contract,
-      status: 'PROPOSED',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
-
-    return contract;
-  }
-
-  // Accept a contract proposal
-  async acceptContract(contractId: string): Promise<TaskContract | null> {
-    const record = this.contracts.get(contractId);
-    if (!record) return null;
-
-    // Update status
-    record.status = 'ACCEPTED';
-    record.updatedAt = new Date();
-
-    // Sign the contract as provider
-    const contract = record.contract;
-    await contract.sign(this.keyPair);
-
-    // Update the record
-    this.contracts.set(contractId, record);
-
-    return contract;
-  }
-
-  // Get a contract by ID
-  getContract(contractId: string): TaskContract | null {
-    const record = this.contracts.get(contractId);
-    return record ? record.contract : null;
-  }
-
-  // Update contract status
-  updateContractStatus(contractId: string, status: ContractRecord['status'], result?: any): boolean {
-    const record = this.contracts.get(contractId);
-    if (!record) return false;
-
-    record.status = status;
-    record.updatedAt = new Date();
-
-    if (result !== undefined) {
-      record.result = result;
-    }
-
-    this.contracts.set(contractId, record);
-    return true;
-  }
-
-  // Get all contracts
-  getAllContracts(): ContractRecord[] {
-    return Array.from(this.contracts.values());
-  }
-
-  // Verify a contract
-  async verifyContract(contract: TaskContract): Promise<boolean> {
-    try {
-      // Verify requester signature
-      const isValid = await contract.verify();
-      return isValid;
-    } catch (error) {
-      console.error('Contract verification failed', error);
-      return false;
-    }
-  }
-}
-```
-
-Create index file in `src/contracts/index.ts`:
-
-```typescript
-// src/contracts/index.ts
-export * from './manager';
-```
-
-## Step 7: Implement the Main Agent
-
-Create the main agent file in `src/agent.ts`:
-
-```typescript
-// src/agent.ts
-import { HiveAgent, ErrorCode } from '@hive-protocol/sdk';
-import express from 'express';
-import cors from 'cors';
-import winston from 'winston';
-
-import { config } from './config';
-import { getAgentDid, validateParameters } from './utils';
-import { textProcessingCapability, imageProcessingCapability } from './capabilities';
-import { ContractManager } from './contracts';
-
-// Set up logger
-const logger = winston.createLogger({
-  level: config.logging.level,
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
-  transports: [
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      )
-    })
-  ]
-});
-
-// Add file transport if configured
-if (config.logging.file) {
-  logger.add(new winston.transports.File({ filename: config.logging.file }));
-}
-
-async function main() {
+// Endpoints
+app.post("/tasks", (req, res) => {
   try {
-    // Load or generate DID and keys
-    logger.info('Initializing agent DID');
-    const { did, didDocument, keyPair } = await getAgentDid();
-    logger.info(`Agent DID: ${did}`);
+    const { from, type, data } = req.body;
+    if (type !== "task_request") throw new Error("Invalid message type");
 
-    // Create contract manager
-    const contractManager = new ContractManager({ did, didDocument, keyPair });
-
-    // Create Express app
-    const app = express();
-    app.use(cors());
-    app.use(express.json({ limit: '10mb' }));
-
-    // Add logging middleware
-    app.use((req, res, next) => {
-      logger.info(`${req.method} ${req.path}`, {
-        ip: req.ip,
-        userAgent: req.get('user-agent')
-      });
-      next();
-    });
-
-    // Create the agent
-    const agent = new HiveAgent({
-      did,
-      didDocument,
-      name: config.agent.name,
-      description: config.agent.description,
-      version: config.agent.version,
-      keyPair,
-      endpoint: config.agent.endpoint,
-      // Custom task handler to integrate with contract manager
-      taskHandler: async (message) => {
-        try {
-          const { taskId, capabilityId, parameters } = message.payload;
-
-          // Find the requested capability
-          const capability = agent.getCapability(capabilityId);
-          if (!capability) {
-            return {
-              errorCode: ErrorCode.CAPABILITY_NOT_FOUND,
-              message: `Capability '${capabilityId}' not found`
-            };
-          }
-
-          // Validate parameters
-          const validation = validateParameters(capability, parameters);
-          if (!validation.valid) {
-            return {
-              errorCode: ErrorCode.INVALID_TASK_PARAMETERS,
-              message: 'Invalid parameters for capability',
-              details: { errors: validation.errors }
-            };
-          }
-
-          // Create a contract for this task
-          const contract = await contractManager.createContract(
-            taskId,
-            message.sender,
-            capabilityId,
-            parameters
-          );
-
-          // Accept the contract
-          await contractManager.acceptContract(contract.contractId);
-
-          // Update contract status to active
-          contractManager.updateContractStatus(contract.contractId, 'ACTIVE');
-
-          // Execute the capability
-          try {
-            logger.info(`Executing capability ${capabilityId}`, { taskId, contractId: contract.contractId });
-            const result = await capability.handler(parameters);
-
-            // Update contract status to completed with result
-            contractManager.updateContractStatus(contract.contractId, 'COMPLETED', result);
-
-            return {
-              taskId,
-              contractId: contract.contractId,
-              status: 'COMPLETED',
-              result
-            };
-          } catch (error) {
-            logger.error(`Error executing capability ${capabilityId}`, {
-              taskId,
-              contractId: contract.contractId,
-              error: error.message
-            });
-
-            // Update contract status to failed
-            contractManager.updateContractStatus(contract.contractId, 'FAILED', {
-              error: error.message
-            });
-
-            return {
-              errorCode: ErrorCode.TASK_EXECUTION_ERROR,
-              message: `Error executing capability: ${error.message}`,
-              details: { error: error.stack }
-            };
-          }
-        } catch (error) {
-          logger.error('Task handler error', { error: error.message });
-          return {
-            errorCode: ErrorCode.INTERNAL_ERROR,
-            message: `Internal error: ${error.message}`
-          };
-        }
-      }
-    });
-
-    // Register capabilities
-    agent.registerCapability(textProcessingCapability);
-    agent.registerCapability(imageProcessingCapability);
-
-    // Set up HTTP routes
-    app.use('/api', agent.createExpressRouter());
-
-    // Add status endpoint
-    app.get('/status', (req, res) => {
-      res.json({
-        status: 'ok',
-        agent: config.agent.id,
-        version: config.agent.version,
-        uptime: process.uptime(),
-        capabilities: [
-          textProcessingCapability.id,
-          imageProcessingCapability.id
-        ]
-      });
-    });
-
-    // Add contracts endpoint
-    app.get('/contracts', (req, res) => {
-      const contracts = contractManager.getAllContracts().map(record => ({
-        contractId: record.contractId,
-        status: record.status,
-        createdAt: record.createdAt,
-        updatedAt: record.updatedAt,
-        taskId: record.contract.taskId,
-        capability: record.contract.task.capabilityId
-      }));
-
-      res.json({ contracts });
-    });
-
-    // Add contract details endpoint
-    app.get('/contracts/:contractId', (req, res) => {
-      const { contractId } = req.params;
-      const contract = contractManager.getContract(contractId);
-
-      if (!contract) {
-        return res.status(404).json({
-          error: 'Contract not found',
-          contractId
-        });
-      }
-
-      res.json({ contract });
-    });
-
-    // Start the server
-    const { port, host } = config.server;
-    app.listen(port, host, () => {
-      logger.info(`Agent server running at http://${host}:${port}`);
-    });
-
-    // Register with discovery service if configured
-    if (config.discovery.registryUrl) {
-      try {
-        await agent.registerWithDiscoveryService(config.discovery.registryUrl);
-        logger.info(`Registered with discovery service at ${config.discovery.registryUrl}`);
-
-        // Set up periodic registration refresh
-        setInterval(async () => {
-          try {
-            await agent.registerWithDiscoveryService(config.discovery.registryUrl);
-            logger.info('Refreshed registration with discovery service');
-          } catch (error) {
-            logger.error('Failed to refresh registration with discovery service', {
-              error: error.message
-            });
-          }
-        }, config.discovery.refreshInterval);
-      } catch (error) {
-        logger.error('Failed to register with discovery service', {
-          error: error.message
-        });
-      }
-    }
-
-    logger.info('Agent initialization complete');
+    const result = processTask(data.capability, data);
+    const response = {
+      from: AGENT_ID,
+      to: from,
+      type: "task_result",
+      data: { task_id: data.task_id, status: "completed", result },
+    };
+    res.json({ ...response, sig: signMessage(response) });
   } catch (error) {
-    logger.error('Failed to start agent', { error: error.stack });
-    process.exit(1);
+    const errorResponse = {
+      from: AGENT_ID,
+      to: req.body.from,
+      type: "task_error",
+      data: { error: "processing_failed", message: error.message },
+    };
+    res.status(500).json({ ...errorResponse, sig: signMessage(errorResponse) });
   }
-}
-
-// Run the agent
-main().catch(error => {
-  console.error('Unhandled error:', error);
-  process.exit(1);
 });
+
+app.get("/capabilities", (req, res) => res.json({ capabilities }));
+app.get("/status", (req, res) =>
+  res.json({
+    agent_id: AGENT_ID,
+    status: "online",
+    capabilities: capabilities.map((c) => c.id),
+  })
+);
+
+app.listen(PORT, () =>
+  console.log(`🚀 Agent running at http://localhost:${PORT}`)
+);
 ```
 
-## Step 8: Set Up Package Scripts
+## Test Client
 
-Update your `package.json` to include scripts:
+```javascript
+const crypto = require("crypto");
 
-```json
-{
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/agent.js",
-    "dev": "ts-node src/agent.ts",
-    "test": "jest"
-  }
+const { privateKey: clientPrivateKey } = crypto.generateKeyPairSync("ed25519", {
+  privateKeyEncoding: { type: "pkcs8", format: "pem" },
+});
+const CLIENT_ID =
+  "agentid:hive:client-" + crypto.randomBytes(4).toString("hex");
+
+function signMessage(message) {
+  return crypto
+    .sign("sha256", Buffer.from(JSON.stringify(message)), clientPrivateKey)
+    .toString("base64");
 }
-```
 
-## Step 9: Create a Simple Test Client
+async function testAgent() {
+  const taskRequest = {
+    from: CLIENT_ID,
+    to: "agentid:hive:agent",
+    type: "task_request",
+    data: {
+      task_id: "test-" + Date.now(),
+      capability: "text-processing",
+      text: "Hello!",
+      operation: "uppercase",
+    },
+  };
 
-Create a test client file in the project root (not in src) as `test-client.ts`:
-
-```typescript
-// test-client.ts
-import { HiveClient, KeyPair } from '@hive-protocol/sdk';
-
-async function main() {
-  // Generate client keys
-  const keyPair = await KeyPair.generate('Ed25519');
-
-  // Create a client
-  const client = new HiveClient({
-    id: 'test-client',
-    keyPair
+  const response = await fetch("http://localhost:3000/tasks", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...taskRequest, sig: signMessage(taskRequest) }),
   });
 
-  // Connect to your agent
-  const agentEndpoint = 'http://localhost:3000/api';
-
-  try {
-    console.log('Testing text processing capability...');
-    const textResult = await client.requestTask({
-      endpoint: agentEndpoint,
-      capability: 'text-processing',
-      parameters: {
-        operation: 'sentiment',
-        text: 'I really love the H.I.V.E. Protocol! It makes agent collaboration so much easier.'
-      }
-    });
-
-    console.log('Text processing result:', textResult);
-
-    console.log('\nTesting image processing capability...');
-    const imageResult = await client.requestTask({
-      endpoint: agentEndpoint,
-      capability: 'image-processing',
-      parameters: {
-        operation: 'analyze',
-        imageUrl: 'https://example.com/test-image.jpg'
-      }
-    });
-
-    console.log('Image processing result:', imageResult);
-  } catch (error) {
-    console.error('Error executing task:', error);
-  }
+  const result = await response.json();
+  console.log("✅ Result:", result.data.result.result);
 }
 
-// Run the client
-main().catch(console.error);
+testAgent();
 ```
 
-Add a script to run the test client:
+## Running
 
-```json
-{
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/agent.js",
-    "dev": "ts-node src/agent.ts",
-    "test": "jest",
-    "test-client": "ts-node test-client.ts"
-  }
+```bash
+# Terminal 1
+npm install express
+node simple-agent.js
+
+# Terminal 2
+node test-client.js
+```
+
+## Production Enhancements
+
+```javascript
+// 1. Secure keys
+const privateKey = process.env.AGENT_PRIVATE_KEY;
+
+// 2. Input validation
+function validateInput(capability, data) {
+  const cap = capabilities.find((c) => c.id === capability);
+  return (
+    cap &&
+    Object.keys(cap.input).every(
+      (field) => typeof data[field] === cap.input[field]
+    )
+  );
 }
+
+// 3. Rate limiting
+const rateLimit = require("express-rate-limit");
+app.use("/tasks", rateLimit({ windowMs: 60000, max: 100 }));
+
+// 4. HTTPS
+const https = require("https");
+https.createServer(tlsOptions, app).listen(443);
 ```
-
-## Running the Advanced Agent
-
-1. Start the agent in development mode:
-
-```bash
-npm run dev
-```
-
-2. In another terminal, run the test client:
-
-```bash
-npm run test-client
-```
-
-## Conclusion
-
-This example demonstrates a more comprehensive H.I.V.E. Protocol agent implementation with:
-
-- Multiple capabilities with different functionality
-- Contract management for tracking task agreements
-- Proper parameter validation
-- Structured error handling
-- Configuration management
-- Logging
-- Key management
-- Discovery service integration
-
-You can extend this example with additional features like:
-
-- Database integration for persistent storage
-- Authentication middleware for API security
-- Rate limiting and quota management
-- More sophisticated contract negotiation
-- Support for advanced discovery mechanisms
 
 <Callout type="info">
-  This example focuses on functionality rather than security. In a production environment, you should implement
-    additional security measures like input sanitization, rate limiting, and proper authentication.
+  **Perfect Starting Point**: This 100-line agent demonstrates all essential
+  H.I.V.E. features. Start here and add complexity only when needed.
+</Callout>
+
+<Callout type="warning">
+  **Security**: Add proper key management, input validation, and HTTPS for
+  production use.
 </Callout>
