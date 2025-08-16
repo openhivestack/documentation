@@ -6,7 +6,7 @@ icon: UserCheck
 
 import { Callout } from "fumadocs-ui/components/callout";
 
-Agent Identity in the H.I.V.E. Protocol uses the simplest possible approach to uniquely identify agents. 
+Agent Identity in the H.I.V.E. Protocol uses the simplest possible approach to uniquely identify agents.
 
 ## Simple Identity (Tier 1)
 
@@ -115,7 +115,7 @@ const registration = {
   ],
 };
 
-fetch("https://registry.example.com/agents", {
+fetch("https://registry.openhive.sh/agents", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(registration),
@@ -169,7 +169,7 @@ async function getSenderPublicKey(agentId) {
   // Fetch from registry or direct query
   try {
     const response = await fetch(
-      `https://registry.example.com/agents/${agentId}`
+      `https://registry.openhive.sh/agents/${agentId}`
     );
     const agentInfo = await response.json();
 

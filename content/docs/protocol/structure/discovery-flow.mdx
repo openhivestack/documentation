@@ -36,7 +36,7 @@ flowchart LR
 
 ```http
 GET /agents?capability=text-translation HTTP/1.1
-Host: registry.example.com
+Host: registry.openhive.sh
 
 # Response:
 {
@@ -64,7 +64,7 @@ Host: registry.example.com
 async function findAndUseAgent(capability, taskData) {
   // 1. Discover agents
   const response = await fetch(
-    `https://registry.example.com/agents?capability=${capability}`
+    `https://registry.openhive.sh/agents?capability=${capability}`
   );
   const { agents } = await response.json();
 

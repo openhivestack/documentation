@@ -84,7 +84,7 @@ console.log(`Your Agent ID: ${agentId}`);
 
 ```http
 POST /agents HTTP/1.1
-Host: registry.example.com
+Host: registry.openhive.sh
 Content-Type: application/json
 
 {
@@ -104,7 +104,7 @@ Content-Type: application/json
 
 ```http
 GET /agents?capability=text-translation HTTP/1.1
-Host: registry.example.com
+Host: registry.openhive.sh
 
 # Response:
 {
@@ -184,7 +184,7 @@ const registration = {
 };
 
 // POST to registry
-fetch("https://registry.example.com/agents", {
+fetch("https://registry.openhive.sh/agents", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(registration),

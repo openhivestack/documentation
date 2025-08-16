@@ -5,6 +5,8 @@
 .contentlayer
 .content-collections
 .source
+tmp
+.temp
 
 # test & build
 /coverage
@@ -29,3 +31,4 @@ next-env.d.ts
 
 # IDEs
 .idea
+.cursorrules*
