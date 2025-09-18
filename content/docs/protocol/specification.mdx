@@ -34,7 +34,7 @@ compatibility with existing infrastructure.
 ### 2.1. Agent Identification
 
 - Agents identify themselves using Ed25519 key pairs (recommended) or RSA
-- Agent ID format: `agentid:hive:uniqueIdentifier` (e.g., `agentid:hive:abc123`)
+- Agent ID format: `hive:agentid:uniqueIdentifier` (e.g., `hive:agentid:abc123`)
 - Messages are signed with the private key for verification
 - No complex DID resolution - simple and fast
 
@@ -68,8 +68,8 @@ All messages use this minimal format:
 
 ```json
 {
-  "from": "agentid:hive:abc123",
-  "to": "agentid:hive:xyz789",
+  "from": "hive:agentid:abc123",
+  "to": "hive:agentid:xyz789",
   "type": "task_request",
   "data": {
     "capability": "text-translation",

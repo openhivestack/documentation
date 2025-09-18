@@ -52,8 +52,8 @@ app.post("/tasks", (req, res) => {
 {
   "agreement_id": "agreement-123",
   "task_id": "task-456",
-  "requester": "agentid:hive:client123",
-  "provider": "agentid:hive:translator456",
+  "requester": "hive:agentid:client123",
+  "provider": "hive:agentid:translator456",
   "capability": "text-translation",
   "deadline": "2025-07-18T15:00:00Z",
   "sla": {
@@ -87,8 +87,8 @@ app.post("/tasks", (req, res) => {
   "contract_id": "contract-123",
   "task_id": "task-456",
   "parties": {
-    "requester": "agentid:hive:client123",
-    "provider": "agentid:hive:service456"
+    "requester": "hive:agentid:client123",
+    "provider": "hive:agentid:service456"
   },
   "terms": {
     "capability": "data-analysis",

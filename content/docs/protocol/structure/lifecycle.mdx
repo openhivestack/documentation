@@ -40,8 +40,8 @@ Task has been sent to a provider agent.
 
 ```json
 {
-  "from": "agentid:hive:client123",
-  "to": "agentid:hive:provider456",
+  "from": "hive:agentid:client123",
+  "to": "hive:agentid:provider456",
   "type": "task_request",
   "data": {
     "task_id": "task-123",
@@ -59,8 +59,8 @@ Provider will perform the task.
 
 ```json
 {
-  "from": "agentid:hive:provider456",
-  "to": "agentid:hive:client123",
+  "from": "hive:agentid:provider456",
+  "to": "hive:agentid:client123",
   "type": "task_response",
   "data": {
     "task_id": "task-123",
@@ -76,8 +76,8 @@ Task finished successfully with results.
 
 ```json
 {
-  "from": "agentid:hive:provider456",
-  "to": "agentid:hive:client123",
+  "from": "hive:agentid:provider456",
+  "to": "hive:agentid:client123",
   "type": "task_result",
   "data": {
     "task_id": "task-123",
@@ -94,8 +94,8 @@ Task couldn't be completed.
 
 ```json
 {
-  "from": "agentid:hive:provider456",
-  "to": "agentid:hive:client123",
+  "from": "hive:agentid:provider456",
+  "to": "hive:agentid:client123",
   "type": "task_error",
   "data": {
     "task_id": "task-123",

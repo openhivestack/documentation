@@ -15,7 +15,7 @@ const express = require("express");
 const crypto = require("crypto");
 
 // Agent setup
-const AGENT_ID = "agentid:hive:" + crypto.randomBytes(8).toString("hex");
+const AGENT_ID = "hive:agentid:" + crypto.randomBytes(8).toString("hex");
 const PORT = 3000;
 
 // Generate keys (save these in production!)
@@ -116,7 +116,7 @@ const { privateKey: clientPrivateKey } = crypto.generateKeyPairSync("ed25519", {
   privateKeyEncoding: { type: "pkcs8", format: "pem" },
 });
 const CLIENT_ID =
-  "agentid:hive:client-" + crypto.randomBytes(4).toString("hex");
+  "hive:agentid:client-" + crypto.randomBytes(4).toString("hex");
 
 function signMessage(message) {
   return crypto
@@ -127,7 +127,7 @@ function signMessage(message) {
 async function testAgent() {
   const taskRequest = {
     from: CLIENT_ID,
-    to: "agentid:hive:agent",
+    to: "hive:agentid:agent",
     type: "task_request",
     data: {
       task_id: "test-" + Date.now(),

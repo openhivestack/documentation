@@ -12,7 +12,7 @@ Agent Identity in the H.I.V.E. Protocol uses the simplest possible approach to u
 
 **Everything you need for agent identity**:
 
-1. **Agent ID**: `agentid:hive:uniqueIdentifier`
+1. **Agent ID**: `hive:agentid:uniqueIdentifier`
 2. **Ed25519 Key Pair**: For signing and verification
 3. **Endpoint URL**: Where to reach the agent
 
@@ -21,18 +21,18 @@ That's it! No profiles, metadata, or complex resolution needed.
 ## Agent ID Format
 
 ```
-agentid:hive:uniqueIdentifier
+hive:agentid:uniqueIdentifier
 ```
 
 **Examples**:
 
-- `agentid:hive:abc123def456` (random)
-- `agentid:hive:translator-service-v1` (descriptive)
-- `agentid:hive:company-chatbot-2024` (organizational)
+- `hive:agentid:abc123def456` (random)
+- `hive:agentid:translator-service-v1` (descriptive)
+- `hive:agentid:company-chatbot-2024` (organizational)
 
 **Requirements**:
 
-- Must start with `agentid:hive:`
+- Must start with `hive:agentid:`
 - Unique identifier can be any string (alphanumeric + hyphens recommended)
 - Maximum length: 64 characters total
 - Case sensitive
@@ -52,7 +52,7 @@ const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519", {
 const uniqueId = crypto.randomBytes(8).toString("hex");
 
 // 3. Form Agent ID
-const agentId = `agentid:hive:${uniqueId}`;
+const agentId = `hive:agentid:${uniqueId}`;
 
 // 4. Save securely (environment variables in production)
 process.env.AGENT_ID = agentId;
@@ -72,7 +72,7 @@ function verifyAgentIdentity(message) {
   const { from, sig, ...messageWithoutSig } = message;
 
   // 1. Validate Agent ID format
-  if (!from.startsWith("agentid:hive:")) {
+  if (!from.startsWith("hive:agentid:")) {
     return { valid: false, error: "invalid_agent_id_format" };
   }
 
@@ -139,8 +139,8 @@ app.get("/identity", (req, res) => {
 
 ```json
 {
-  "from": "agentid:hive:abc123",
-  "to": "agentid:hive:xyz789",
+  "from": "hive:agentid:abc123",
+  "to": "hive:agentid:xyz789",
   "type": "task_request",
   "data": {
     /* task data */
@@ -192,7 +192,7 @@ async function getSenderPublicKey(agentId) {
 **Tier 1 Identity Requirements**:
 
 - [ ] Generate Ed25519 key pair
-- [ ] Create Agent ID with `agentid:hive:` prefix
+- [ ] Create Agent ID with `hive:agentid:` prefix
 - [ ] Store private key securely
 - [ ] Implement signature generation and verification
 - [ ] Provide public key distribution method

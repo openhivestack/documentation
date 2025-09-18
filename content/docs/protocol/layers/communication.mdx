@@ -40,8 +40,8 @@ Host: agent.example.com
 Content-Type: application/json
 
 {
-  "from": "agentid:hive:client123",
-  "to": "agentid:hive:agent456",
+  "from": "hive:agentid:client123",
+  "to": "hive:agentid:agent456",
   "type": "task_request",
   "data": {
     "task_id": "task-789",
@@ -79,7 +79,7 @@ Host: agent.example.com
 
 # Response:
 {
-  "agent_id": "agentid:hive:agent456",
+  "agent_id": "hive:agentid:agent456",
   "status": "online",
   "capabilities": ["text-processing"],
   "uptime": 86400
@@ -92,8 +92,8 @@ All H.I.V.E. messages use this 5-field format:
 
 ```json
 {
-  "from": "agentid:hive:sender123",
-  "to": "agentid:hive:receiver456",
+  "from": "hive:agentid:sender123",
+  "to": "hive:agentid:receiver456",
   "type": "task_request",
   "data": { "capability": "text-processing", "text": "hello" },
   "sig": "ed25519_signature"

@@ -27,7 +27,7 @@ const AGENT_ENDPOINT = "http://localhost:3000";
 const { privateKey: testPrivateKey } = crypto.generateKeyPairSync("ed25519", {
   privateKeyEncoding: { type: "pkcs8", format: "pem" },
 });
-const TEST_CLIENT_ID = "agentid:hive:test-client";
+const TEST_CLIENT_ID = "hive:agentid:test-client";
 
 function signMessage(message) {
   return crypto
@@ -41,7 +41,7 @@ async function testMessageFormat() {
 
   const validMessage = {
     from: TEST_CLIENT_ID,
-    to: "agentid:hive:agent",
+    to: "hive:agentid:agent",
     type: "task_request",
     data: {
       task_id: "test-1",
@@ -81,7 +81,7 @@ async function testCapabilities() {
   for (const test of tests) {
     const taskRequest = {
       from: TEST_CLIENT_ID,
-      to: "agentid:hive:agent",
+      to: "hive:agentid:agent",
       type: "task_request",
       data: {
         task_id: `test-${Date.now()}`,
@@ -110,7 +110,7 @@ async function testErrorHandling() {
 
   const invalidRequest = {
     from: TEST_CLIENT_ID,
-    to: "agentid:hive:agent",
+    to: "hive:agentid:agent",
     type: "task_request",
     data: { task_id: "error-test", capability: "nonexistent", text: "test" },
   };

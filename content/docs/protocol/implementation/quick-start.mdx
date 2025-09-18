@@ -56,7 +56,7 @@ import express from "express";
 import crypto from "crypto";
 
 // Simple agent configuration
-const AGENT_ID = "agentid:hive:" + crypto.randomBytes(8).toString("hex");
+const AGENT_ID = "hive:agentid:" + crypto.randomBytes(8).toString("hex");
 const PORT = 3000;
 
 // Generate Ed25519 key pair (in production, save these!)
@@ -253,7 +253,7 @@ const { publicKey: clientPublicKey, privateKey: clientPrivateKey } =
   });
 
 const CLIENT_ID =
-  "agentid:hive:client-" + crypto.randomBytes(4).toString("hex");
+  "hive:agentid:client-" + crypto.randomBytes(4).toString("hex");
 
 function signMessage(message: any): string {
   const messageStr = JSON.stringify(message);
@@ -265,7 +265,7 @@ function signMessage(message: any): string {
 async function sendTaskRequest() {
   const taskRequest = {
     from: CLIENT_ID,
-    to: "agentid:hive:agent", // Will be ignored by our simple agent
+    to: "hive:agentid:agent", // Will be ignored by our simple agent
     type: "task_request",
     data: {
       task_id: "test-" + Date.now(),
@@ -325,7 +325,7 @@ npm start
 You should see:
 
 ```
-Agent ID: agentid:hive:a1b2c3d4
+Agent ID: hive:agentid:a1b2c3d4
 🚀 H.I.V.E. Agent running at http://localhost:3000
 📋 Capabilities: text-processing
 🔍 Try: curl http://localhost:3000/status
@@ -340,7 +340,7 @@ npm test
 You should see:
 
 ```
-🧪 Testing agent with client: agentid:hive:client-x1y2
+🧪 Testing agent with client: hive:agentid:client-x1y2
 ✅ Task completed!
 📤 Sent: Hello H.I.V.E. Protocol!
 📥 Result: HELLO H.I.V.E. PROTOCOL!

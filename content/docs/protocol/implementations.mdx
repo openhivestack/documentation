@@ -33,7 +33,7 @@ const crypto = require("crypto");
 const app = express();
 app.use(express.json());
 
-const AGENT_ID = "agentid:hive:" + crypto.randomBytes(8).toString("hex");
+const AGENT_ID = "hive:agentid:" + crypto.randomBytes(8).toString("hex");
 const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
 
 app.post("/tasks", (req, res) => {
@@ -83,7 +83,7 @@ app = Flask(__name__)
 # Generate agent identity
 private_key = Ed25519PrivateKey.generate()
 public_key = private_key.public_key()
-AGENT_ID = f"agentid:hive:{secrets.token_hex(8)}"
+AGENT_ID = f"hive:agentid:{secrets.token_hex(8)}"
 
 def sign_message(message):
     message_bytes = json.dumps(message, sort_keys=True).encode()
@@ -178,7 +178,7 @@ func (a *Agent) handleTasks(w http.ResponseWriter, r *http.Request) {
 func main() {
     // Generate identity
     publicKey, privateKey, _ := ed25519.GenerateKey(rand.Reader)
-    agentID := fmt.Sprintf("agentid:hive:%s", hex.EncodeToString(rand.Read(8)))
+    agentID := fmt.Sprintf("hive:agentid:%s", hex.EncodeToString(rand.Read(8)))
 
     agent := &Agent{ID: agentID, PrivateKey: privateKey, PublicKey: publicKey}
 

@@ -53,8 +53,8 @@ H.I.V.E. uses a streamlined 5-field message structure:
 
 ```json
 {
-  "from": "agentid:hive:abc123",
-  "to": "agentid:hive:xyz789",
+  "from": "hive:agentid:abc123",
+  "to": "hive:agentid:xyz789",
   "type": "task_request",
   "data": { "capability": "text-processing", "text": "hello" },
   "sig": "ed25519_signature"

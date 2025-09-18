@@ -22,8 +22,8 @@ All H.I.V.E. Protocol messages follow this streamlined structure:
 
 ```json
 {
-  "from": "agentid:hive:abc123",
-  "to": "agentid:hive:xyz789",
+  "from": "hive:agentid:abc123",
+  "to": "hive:agentid:xyz789",
   "type": "task_request",
   "data": {
     /* Message-specific content */
@@ -85,8 +85,8 @@ Request an agent to perform a capability:
 
 ```json
 {
-  "from": "agentid:hive:client123",
-  "to": "agentid:hive:translator456",
+  "from": "hive:agentid:client123",
+  "to": "hive:agentid:translator456",
   "type": "task_request",
   "data": {
     "task_id": "task-789",
@@ -105,8 +105,8 @@ Accept or reject a task request:
 
 ```json
 {
-  "from": "agentid:hive:translator456",
-  "to": "agentid:hive:client123",
+  "from": "hive:agentid:translator456",
+  "to": "hive:agentid:client123",
   "type": "task_response",
   "data": {
     "task_id": "task-789",
@@ -123,8 +123,8 @@ Deliver completed task results:
 
 ```json
 {
-  "from": "agentid:hive:translator456",
-  "to": "agentid:hive:client123",
+  "from": "hive:agentid:translator456",
+  "to": "hive:agentid:client123",
   "type": "task_result",
   "data": {
     "task_id": "task-789",
@@ -143,7 +143,7 @@ Advertise agent capabilities (ultra-simple format):
 
 ```json
 {
-  "from": "agentid:hive:translator456",
+  "from": "hive:agentid:translator456",
   "to": "registry",
   "type": "capability_response",
   "data": {
@@ -166,8 +166,8 @@ Simple error handling:
 
 ```json
 {
-  "from": "agentid:hive:translator456",
-  "to": "agentid:hive:client123",
+  "from": "hive:agentid:translator456",
+  "to": "hive:agentid:client123",
   "type": "task_error",
   "data": {
     "task_id": "task-789",
@@ -185,8 +185,8 @@ Request capabilities from an agent or registry:
 
 ```json
 {
-  "from": "agentid:hive:client123",
-  "to": "agentid:hive:translator456",
+  "from": "hive:agentid:client123",
+  "to": "hive:agentid:translator456",
   "type": "capability_query",
   "data": {
     "capabilities": ["text-translation", "image-processing"]
@@ -201,7 +201,7 @@ Request capabilities from an agent or registry:
 
 1. **Structure Check**: Ensure all required fields are present
 2. **Signature Verification**: Verify Ed25519 signature using sender's public key
-3. **Agent ID Format**: Validate agent ID format (`agentid:hive:identifier`)
+3. **Agent ID Format**: Validate agent ID format (`hive:agentid:identifier`)
 4. **Data Validation**: Check data payload against capability requirements
 
 ### Signature Generation
@@ -209,8 +209,8 @@ Request capabilities from an agent or registry:
 ```javascript
 // Example signature generation (pseudo-code)
 const messageToSign = JSON.stringify({
-  from: "agentid:hive:abc123",
-  to: "agentid:hive:xyz789",
+  from: "hive:agentid:abc123",
+  to: "hive:agentid:xyz789",
   type: "task_request",
   data: {
     /* payload */
@@ -226,8 +226,8 @@ For invalid messages, respond with:
 
 ```json
 {
-  "from": "agentid:hive:receiver",
-  "to": "agentid:hive:sender",
+  "from": "hive:agentid:receiver",
+  "to": "hive:agentid:sender",
   "type": "task_error",
   "data": {
     "error": "invalid_message_format",

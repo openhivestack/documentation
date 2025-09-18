@@ -42,8 +42,8 @@ H.I.V.E. eliminates complex negotiation flows by using immediate accept/reject r
 ```json
 // Task Request (all parameters included)
 {
-  "from": "agentid:hive:client123",
-  "to": "agentid:hive:translator456",
+  "from": "hive:agentid:client123",
+  "to": "hive:agentid:translator456",
   "type": "task_request",
   "data": {
     "task_id": "task-123",
@@ -58,8 +58,8 @@ H.I.V.E. eliminates complex negotiation flows by using immediate accept/reject r
 
 // Immediate Response
 {
-  "from": "agentid:hive:translator456",
-  "to": "agentid:hive:client123",
+  "from": "hive:agentid:translator456",
+  "to": "hive:agentid:client123",
   "type": "task_response",
   "data": {
     "task_id": "task-123",
@@ -88,8 +88,8 @@ All you need to track:
 {
   "task_id": "task-123",
   "capability": "text-translation",
-  "requester": "agentid:hive:client123",
-  "provider": "agentid:hive:translator456",
+  "requester": "hive:agentid:client123",
+  "provider": "hive:agentid:translator456",
   "status": "in_progress",
   "created": "2025-07-18T14:30:00Z",
   "deadline": "2025-07-18T15:00:00Z"
@@ -149,8 +149,8 @@ For long-running tasks, progress updates:
 
 ```json
 {
-  "from": "agentid:hive:provider",
-  "to": "agentid:hive:requester",
+  "from": "hive:agentid:provider",
+  "to": "hive:agentid:requester",
   "type": "task_update",
   "data": {
     "task_id": "task-123",
@@ -167,8 +167,8 @@ For long-running tasks, progress updates:
 
 ```json
 {
-  "from": "agentid:hive:provider",
-  "to": "agentid:hive:requester",
+  "from": "hive:agentid:provider",
+  "to": "hive:agentid:requester",
   "type": "task_result",
   "data": {
     "task_id": "task-123",
@@ -187,8 +187,8 @@ For large results, use simple file references:
 
 ```json
 {
-  "from": "agentid:hive:provider",
-  "to": "agentid:hive:requester",
+  "from": "hive:agentid:provider",
+  "to": "hive:agentid:requester",
   "type": "task_result",
   "data": {
     "task_id": "task-123",
@@ -206,8 +206,8 @@ For large results, use simple file references:
 
 ```json
 {
-  "from": "agentid:hive:provider",
-  "to": "agentid:hive:requester",
+  "from": "hive:agentid:provider",
+  "to": "hive:agentid:requester",
   "type": "task_error",
   "data": {
     "task_id": "task-123",

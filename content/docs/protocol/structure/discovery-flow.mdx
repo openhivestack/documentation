@@ -42,13 +42,13 @@ Host: registry.openhive.sh
 {
   "agents": [
     {
-      "agent_id": "agentid:hive:translator123",
+      "agent_id": "hive:agentid:translator123",
       "endpoint": "https://translator123.example.com",
       "capabilities": ["text-translation"],
       "last_seen": "2025-07-18T14:30:00Z"
     },
     {
-      "agent_id": "agentid:hive:translator456",
+      "agent_id": "hive:agentid:translator456",
       "endpoint": "https://translator456.example.com",
       "capabilities": ["text-translation", "text-summarization"],
       "last_seen": "2025-07-18T14:29:45Z"
@@ -235,7 +235,7 @@ app.post("/agents/:agentId/heartbeat", (req, res) => {
 
 **Tier 1 Discovery Requirements**:
 
-- [ ] Generate unique Agent ID with `agentid:hive:` prefix
+- [ ] Generate unique Agent ID with `hive:agentid:` prefix
 - [ ] Register with HTTP registry (optional)
 - [ ] Query registry for capability discovery
 - [ ] Implement basic agent selection
