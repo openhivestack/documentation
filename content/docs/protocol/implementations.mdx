@@ -48,7 +48,7 @@ app.post("/tasks", (req, res) => {
   res.json({
     ...response,
     sig: crypto
-      .sign("sha256", Buffer.from(JSON.stringify(response)), privateKey)
+      .sign(null, Buffer.from(JSON.stringify(response)), privateKey)
       .toString("base64"),
   });
 });

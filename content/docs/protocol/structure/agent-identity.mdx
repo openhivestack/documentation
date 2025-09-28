@@ -62,6 +62,16 @@ process.env.AGENT_PUBLIC_KEY = publicKey;
 console.log(`✅ Agent Identity Created: ${agentId}`);
 ```
 
+## Key Management (Simplified)
+
+**Tier 1 Requirements**:
+
+- **One key type**: Ed25519 only
+- **One key pair**: Public key for verification, private key for signing
+- **Simple storage**: Save keys securely (environment variables or key files)
+
+**Advanced key management** (multiple keys, rotation, etc.) is only needed for Tier 2+.
+
 ## Identity Verification
 
 **Process**:

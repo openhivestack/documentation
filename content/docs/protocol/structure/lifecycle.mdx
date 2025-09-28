@@ -7,7 +7,33 @@ icon: LifeBuoy
 import { Callout } from "fumadocs-ui/components/callout";
 import { Mermaid } from "@/components/mdx/mermaid";
 
-The H.I.V.E. Protocol uses an simplified 4-state task lifecycle that eliminates unnecessary complexity while maintaining clear task progression. Perfect for high-throughput systems with millions of agents.
+The H.I.V.E. Protocol uses a simplified 4-state task lifecycle that eliminates unnecessary complexity while maintaining clear task progression, perfect for high-throughput systems.
+
+This approach enables fast, direct task execution between agents. Tasks can be initiated and completed with minimal overhead.
+
+## Direct Execution Flow
+
+<Mermaid
+  chart={`
+flowchart LR
+    A[Task Request] --> B[Immediate Accept/Reject]
+    B --> C[Task Execution]
+    C --> D[Results Delivery]
+`}
+/>
+
+**Key Simplifications**:
+
+- **No contract negotiation**: immediate accept/reject.
+- **No formal agreements**: simple task tracking is sufficient for Tier 1.
+- **Minimal state management**: 4 basic task states.
+- **Fast execution**: optimized for high throughput.
+
+H.I.V.E. eliminates complex negotiation flows by using immediate accept/reject responses.
+
+1.  **Request**: Agent sends a `task_request` with all parameters.
+2.  **Immediate Response**: The provider immediately accepts (and begins execution) or rejects.
+3.  **Result**: Results are delivered in a `task_result` message upon completion.
 
 ## Simplified Task States
 
@@ -27,16 +53,15 @@ stateDiagram-v2
 
 **Key Simplifications**:
 
-- **Removed "PROPOSED"**: Tasks go directly to REQUESTED
-- **Removed "IN_PROGRESS"**: Tasks go from ACCEPTED to COMPLETED/FAILED
-- **Removed "CANCELED"**: Keep it simple - tasks either complete or fail
-- **4 states total**: Down from 7+ in complex protocols
+- **Removed "PROPOSED"**: Tasks go directly to `REQUESTED`.
+- **No "IN_PROGRESS" state for Tier 1**: For simplicity, tasks go from `ACCEPTED` to `COMPLETED` or `FAILED`. Progress updates are a Tier 2 feature.
+- **Removed "CANCELED"**: Tasks either complete or fail.
 
-## Task States
+### Task States
 
-### REQUESTED
+#### REQUESTED
 
-Task has been sent to a provider agent.
+A `task_request` has been sent to a provider agent.
 
 ```json
 {
@@ -46,16 +71,18 @@ Task has been sent to a provider agent.
   "data": {
     "task_id": "task-123",
     "capability": "text-processing",
-    "text": "hello world",
-    "operation": "uppercase"
+    "params": {
+      "text": "hello world",
+      "operation": "uppercase"
+    }
   },
   "sig": "signature"
 }
 ```
 
-### ACCEPTED
+#### ACCEPTED
 
-Provider will perform the task.
+Provider will perform the task. An explicit `task_response` with `accepted` status is optional for simple, synchronous tasks but recommended for asynchronous operations.
 
 ```json
 {
@@ -70,9 +97,9 @@ Provider will perform the task.
 }
 ```
 
-### COMPLETED
+#### COMPLETED
 
-Task finished successfully with results.
+Task finished successfully with results in a `task_result` message.
 
 ```json
 {
@@ -88,9 +115,9 @@ Task finished successfully with results.
 }
 ```
 
-### REJECTED or FAILED
+#### REJECTED or FAILED
 
-Task couldn't be completed.
+Task couldn't be completed, communicated via a `task_error` message.
 
 ```json
 {
@@ -107,111 +134,29 @@ Task couldn't be completed.
 }
 ```
 
-## Implementation
+## Implementation (Tier 1)
 
-### Basic Task Lifecycle (Tier 1)
+**Required for basic collaboration**:
 
-```javascript
-// task lifecycle implementation
-const tasks = new Map(); // in-memory task tracking
+- [ ] Handle `task_request` messages.
+- [ ] Process tasks and send `task_result`.
+- [ ] Handle errors with `task_error`.
+- [ ] Basic task state tracking (in-memory is fine for simple agents).
 
-app.post("/tasks", (req, res) => {
-  const message = req.body;
-  const taskId = message.data.task_id;
+**Optional (Tier 2+)**:
 
-  // 1. REQUESTED state (implicit - task received)
-  tasks.set(taskId, {
-    state: "requested",
-    from: message.from,
-    capability: message.data.capability,
-    data: message.data,
-    timestamp: new Date().toISOString(),
-  });
-
-  try {
-    // 2. ACCEPTED state (immediate processing)
-    tasks.set(taskId, { ...tasks.get(taskId), state: "accepted" });
-
-    // Process task
-    const result = processTask(message.data.capability, message.data);
-
-    // 3. COMPLETED state
-    tasks.set(taskId, { ...tasks.get(taskId), state: "completed", result });
-
-    res.json({
-      from: AGENT_ID,
-      to: message.from,
-      type: "task_result",
-      data: {
-        task_id: taskId,
-        status: "completed",
-        result,
-      },
-      sig: signMessage({ result }),
-    });
-  } catch (error) {
-    // 4. FAILED state
-    tasks.set(taskId, {
-      ...tasks.get(taskId),
-      state: "failed",
-      error: error.message,
-    });
-
-    res.status(500).json({
-      from: AGENT_ID,
-      to: message.from,
-      type: "task_error",
-      data: {
-        task_id: taskId,
-        error: "processing_failed",
-        message: error.message,
-        retry: true,
-      },
-      sig: signMessage({ error: error.message }),
-    });
-  }
-});
-
-// Simple task status query
-app.get("/tasks/:taskId", (req, res) => {
-  const task = tasks.get(req.params.taskId);
-  if (!task) {
-    return res.status(404).json({ error: "task_not_found" });
-  }
-
-  res.json({
-    task_id: req.params.taskId,
-    state: task.state,
-    timestamp: task.timestamp,
-  });
-});
-```
-
-## Implementation Checklist
-
-**Tier 1 Requirements**:
-
-- [ ] Track 4 basic task states: REQUESTED, ACCEPTED, COMPLETED, FAILED
-- [ ] Handle immediate accept/reject decisions
-- [ ] Process tasks synchronously when possible
-- [ ] Send appropriate result or error messages
-- [ ] Simple task state storage (in-memory or database)
-
-**Optional Enhancements (Tier 2+)**:
-
-- [ ] Progress updates for long-running tasks
-- [ ] Task timeout handling
-- [ ] Retry logic for failed tasks
-- [ ] Task history and audit trails
-- [ ] Batch task processing
+- [ ] Send explicit `task_response` for long-running tasks.
+- [ ] Send `task_update` messages with progress for long tasks.
+- [ ] Implement task timeouts.
+- [ ] Use persistent storage for task history and audit trails.
 
 <Callout type="info">
   **Simplicity Benefit**: By removing complex state transitions, implementation
-  becomes 70% simpler while still handling the vast majority of use cases
+  becomes significantly simpler while still handling the vast majority of use cases
   effectively.
 </Callout>
 
 <Callout type="warning">
   **Task Tracking**: Even in Tier 1, maintain basic task state tracking to
-  handle duplicate requests and provide status queries.
+  handle duplicate requests and provide status queries if needed.
 </Callout>

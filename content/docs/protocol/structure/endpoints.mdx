@@ -1,0 +1,89 @@
+---
+title: Endpoints
+description: Official HTTP endpoints for the H.I.V.E. Protocol
+icon: Route
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+For Tier 1 compliance, H.I.V.E. agents implement a minimal set of HTTP endpoints for communication, discovery, and health checks. This keeps the implementation simple and leverages standard web technologies.
+
+## Core Endpoints (Tier 1)
+
+These are the three essential endpoints for a minimal H.I.V.E. agent.
+
+### 1. `POST /tasks`
+
+This is the primary endpoint for receiving and processing tasks from other agents.
+
+- **Method**: `POST`
+- **Request Body**: A standard H.I.V.E. message with `type: "task_request"`.
+- **Success Response**: A H.I.V.E. message with `type: "task_result"` and HTTP status `200 OK`.
+- **Error Response**: A H.I.V.E. message with `type: "task_error"` and an appropriate HTTP status code (e.g., `400`, `401`, `500`).
+
+### 2. `GET /capabilities`
+
+This endpoint allows other agents to discover the capabilities of this agent.
+
+- **Method**: `GET`
+- **Response Body**: A JSON object containing a list of the agent's capabilities.
+
+```json
+{
+  "capabilities": [
+    {
+      "id": "text-processing",
+      "input": { "text": "string", "operation": "string" },
+      "output": { "result": "string" }
+    }
+  ]
+}
+```
+
+### 3. `GET /status`
+
+A simple health check endpoint.
+
+- **Method**: `GET`
+- **Response Body**: A JSON object indicating the agent's status.
+
+```json
+{
+  "agent_id": "hive:agentid:agent456",
+  "status": "online",
+  "capabilities": ["text-processing"],
+  "uptime": 86400
+}
+```
+
+## Optional Endpoints (Tier 2+)
+
+As agents implement higher tiers, they may add more specialized endpoints.
+
+### `GET /tasks/{taskId}`
+
+Allows querying the status of a specific task.
+
+- **Method**: `GET`
+- **URL Parameter**: `taskId` - The unique ID of the task.
+- **Response Body**: A JSON object with the current state of the task.
+
+### `GET /identity`
+
+Provides the agent's public identity information, including its public key. This can be used as a fallback for public key distribution if a registry is not used.
+
+- **Method**: `GET`
+- **Response Body**:
+
+```json
+{
+  "agent_id": "hive:agentid:agent456",
+  "public_key": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+}
+```
+
+<Callout type="info">
+  **Simplicity**: By standardizing on a small number of RESTful endpoints, the
+  protocol remains easy to implement and debug using common web development
+  tools.
+</Callout>
