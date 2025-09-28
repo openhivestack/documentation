@@ -34,6 +34,3 @@ jobs:
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
-          usedocker: false
-          buildpack: "https://buildpack-registry.s3.amazonaws.com/buildpacks/heroku/nodejs.tgz"
-          appdir: "."
