@@ -21,7 +21,7 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
-        run: corepack enable && yarn install --frozen-lockfile
+        run: corepack enable && npm i -g heroku && yarn install --frozen-lockfile
 
       - name: Build application
         run: yarn build
