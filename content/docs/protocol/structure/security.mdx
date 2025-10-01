@@ -43,7 +43,7 @@ function authenticateMessage(message, senderPublicKey) {
 
   try {
     const isValid = crypto.verify(
-      "sha256",
+      null,
       JSON.stringify(messageWithoutSig),
       senderPublicKey,
       Buffer.from(sig, "base64")

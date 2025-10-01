@@ -29,9 +29,9 @@ const { privateKey: testPrivateKey } = crypto.generateKeyPairSync("ed25519", {
 });
 const TEST_CLIENT_ID = "hive:agentid:test-client";
 
-function signMessage(message) {
+function signMessage(message) {  
   return crypto
-    .sign("sha256", Buffer.from(JSON.stringify(message)), testPrivateKey)
+    .sign(null, Buffer.from(JSON.stringify(message)), testPrivateKey)
     .toString("base64");
 }
 
