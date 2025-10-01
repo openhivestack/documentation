@@ -193,7 +193,7 @@ Directly querying an agent for its capabilities:
 
 ```json
 {
-  "messageType": "CAPABILITY_QUERY",
+  "messageType": "capability_query",
   "payload": {
     "queryType": "ALL"
   }
@@ -204,7 +204,7 @@ Or for specific capabilities:
 
 ```json
 {
-  "messageType": "CAPABILITY_QUERY",
+  "messageType": "capability_query",
   "payload": {
     "queryType": "SPECIFIC",
     "capabilityIds": ["text-translation", "image-generation"]
