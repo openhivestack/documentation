@@ -264,23 +264,7 @@ For invalid messages, respond with:
 - Implement exponential backoff for retries
 - Log security violations for monitoring
 
-### Implementation Checklist
 
-**Tier 1 (Minimal) Requirements**:
-
-- [ ] Parse ultra-simple message format
-- [ ] Verify Ed25519 signatures
-- [ ] Handle 7 core message types
-- [ ] Implement basic error responses
-- [ ] Support HTTP transport
-
-**Optional Enhancements**:
-
-- [ ] Message compression for large payloads
-- [ ] WebSocket support for real-time updates
-- [ ] Connection pooling and keep-alive
-- [ ] Message deduplication
-- [ ] Comprehensive logging and monitoring
 
 <Callout type="warning">
   **Security Critical**: Always verify message signatures before processing.
