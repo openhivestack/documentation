@@ -231,23 +231,6 @@ app.post("/agents/:agentId/heartbeat", (req, res) => {
 });
 ```
 
-## Implementation Checklist
-
-**Tier 1 Discovery Requirements**:
-
-- [ ] Generate unique Agent ID with `hive:agentid:` prefix
-- [ ] Register with HTTP registry (optional)
-- [ ] Query registry for capability discovery
-- [ ] Implement basic agent selection
-- [ ] Handle discovery failures gracefully
-
-**Optional Enhancements (Tier 2+)**:
-
-- [ ] Smart agent selection algorithms
-- [ ] Local network discovery (mDNS)
-- [ ] Agent caching and offline handling
-- [ ] Discovery result ranking
-- [ ] Federated registry support
 
 <Callout type="info">
   **Scale Optimization**: The simplified discovery flow can handle millions of
