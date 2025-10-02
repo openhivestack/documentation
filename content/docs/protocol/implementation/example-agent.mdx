@@ -44,7 +44,7 @@ app.use(express.json());
 // Helper functions
 function signMessage(message) {
   return crypto
-    .sign("sha256", Buffer.from(JSON.stringify(message)), privateKey)
+    .sign(null, Buffer.from(JSON.stringify(message)), privateKey)
     .toString("base64");
 }
 
@@ -120,7 +120,7 @@ const CLIENT_ID =
 
 function signMessage(message) {
   return crypto
-    .sign("sha256", Buffer.from(JSON.stringify(message)), clientPrivateKey)
+    .sign(null, Buffer.from(JSON.stringify(message)), clientPrivateKey)
     .toString("base64");
 }
 

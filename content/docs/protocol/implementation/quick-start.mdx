@@ -35,7 +35,7 @@ npm init -y
 
 # Install minimal dependencies (Tier 1 only)
 npm install express crypto
-npm install --save-dev typescript ts-node @types/node @types/express
+npm install --save-dev typescript tsx @types/node @types/express
 
 # Initialize TypeScript
 npx tsc --init
@@ -91,7 +91,7 @@ Continue building the agent with simple message handling:
 function signMessage(message: any): string {
   const messageStr = JSON.stringify(message);
   return crypto
-    .sign("sha256", Buffer.from(messageStr), privateKey)
+    .sign(null, Buffer.from(messageStr), privateKey)
     .toString("base64");
 }
 
@@ -104,7 +104,7 @@ function verifySignature(
   try {
     const messageStr = JSON.stringify(message);
     return crypto.verify(
-      "sha256",
+      null,
       Buffer.from(messageStr),
       publicKeyPem,
       Buffer.from(signature, "base64")
@@ -258,7 +258,7 @@ const CLIENT_ID =
 function signMessage(message: any): string {
   const messageStr = JSON.stringify(message);
   return crypto
-    .sign("sha256", Buffer.from(messageStr), clientPrivateKey)
+    .sign(null, Buffer.from(messageStr), clientPrivateKey)
     .toString("base64");
 }
 
@@ -308,8 +308,8 @@ Update your `package.json`:
 ```json
 {
   "scripts": {
-    "start": "ts-node agent.ts",
-    "test": "ts-node test-client.ts"
+    "start": "tsx agent.ts",
+    "test": "tsx test-client.ts"
   }
 }
 ```

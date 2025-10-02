@@ -147,22 +147,6 @@ Content-Type: application/json
 }
 ```
 
-### Direct Broadcast
-
-Agents broadcast capability advertisements directly to known peers:
-
-```json
-{
-  "messageType": "CAPABILITY_ADVERTISEMENT",
-  "payload": {
-    "capabilities": [
-      /* capability objects */
-    ],
-    "expires": "2025-07-25T00:00:00Z"
-  }
-}
-```
-
 ### Capability Endpoint
 
 Agents expose a standard endpoint for capability discovery:
@@ -193,7 +177,7 @@ Directly querying an agent for its capabilities:
 
 ```json
 {
-  "messageType": "CAPABILITY_QUERY",
+  "messageType": "capability_query",
   "payload": {
     "queryType": "ALL"
   }
@@ -204,7 +188,7 @@ Or for specific capabilities:
 
 ```json
 {
-  "messageType": "CAPABILITY_QUERY",
+  "messageType": "capability_query",
   "payload": {
     "queryType": "SPECIFIC",
     "capabilityIds": ["text-translation", "image-generation"]

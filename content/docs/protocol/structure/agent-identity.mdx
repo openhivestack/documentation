@@ -95,7 +95,7 @@ function verifyAgentIdentity(message) {
   // 3. Verify message signature
   try {
     const isValid = crypto.verify(
-      "sha256",
+      null,
       JSON.stringify(messageWithoutSig),
       senderPublicKey,
       Buffer.from(sig, "base64")
