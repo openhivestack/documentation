@@ -230,23 +230,6 @@ async function sendTaskRequest(agentEndpoint, taskRequest) {
 }
 ```
 
-## Implementation Checklist
-
-**Tier 1 Error Handling**:
-
-- [ ] Implement 8 essential error codes
-- [ ] Use simple error message format
-- [ ] Map errors to appropriate HTTP status codes
-- [ ] Include retry flags for recoverable errors
-- [ ] Basic rate limiting
-
-**Optional Enhancements (Tier 2+)**:
-
-- [ ] Extended error code set
-- [ ] Detailed error context
-- [ ] Error analytics and monitoring
-- [ ] Advanced retry strategies
-- [ ] Error aggregation and reporting
 
 <Callout type="info">
   **Simplicity Focus**: The 8 essential error codes handle 95% of real-world

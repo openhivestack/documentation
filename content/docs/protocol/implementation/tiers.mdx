@@ -62,9 +62,9 @@ The H.I.V.E. Protocol offers three implementation tiers to match your needs and 
 6. `capability_response` - Advertise capabilities
 7. `task_update` - Progress updates
 
-### Implementation Checklist
+### Implementation Guidelines
 
-**Required (quick setup)**:
+**Tier 1 (quick setup)**:
 
 - [ ] Parse simple message format
 - [ ] Generate/verify Ed25519 signatures
@@ -128,7 +128,7 @@ app.post("/tasks", (req, res) => {
 
 **Additional Message Types**: 8. `heartbeat` - Agent availability signals 9. `auth_challenge` - Enhanced authentication 10. `task_agreement` - Lightweight contracts
 
-### Implementation Checklist
+### Implementation Guidelines
 
 **Tier 2 Additions (1-2 weeks)**:
 
@@ -198,7 +198,7 @@ wss.on("connection", (ws) => {
 
 **All Message Types**: 11. `contract_proposal` - Formal contract negotiation 12. `contract_acceptance` - Contract agreement 13. `contract_termination` - Contract cancellation 14. `auth_token` - Advanced authentication tokens 15. `federation_query` - Cross-registry discovery
 
-### Implementation Checklist
+### Implementation Guidelines
 
 **Tier 3 Additions (4-6 weeks)**:
 
