@@ -1,13 +1,11 @@
 ---
 title: Security
-description: Essential security without complexity
+description: The protocol provides essential security with focus on what's critical - message authentication and basic trust verification.
 icon: ShieldCheck
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 import { Mermaid } from "@/components/mdx/mermaid";
-
-The H.I.V.E. protocol provides essential security for agent communications while maintaining simple implementation. The focus is on what's critical: message authentication and basic trust verification.
 
 ## Essential Security Only
 
@@ -19,16 +17,16 @@ flowchart LR
 `}
 />
 
-**Tier 1 Security Requirements**:
+**Security Requirements**:
 
 - **TLS encryption** for all HTTP communications
 - **Ed25519 signatures** for message authentication
 - **Agent ID validation** to prevent basic impersonation
 - **Basic error handling** for security violations
 
-## Simple Message Authentication
+## Message Authentication
 
-**Tier 1 Approach**: Every message is signed, no complex challenge-response needed.
+**Approach**: Every message is signed.
 
 ### Basic Authentication Flow
 
@@ -81,7 +79,7 @@ app.post("/tasks", (req, res) => {
 - **Simple to implement** - just sign and verify
 - **Replay protection** - each message is unique
 
-## Basic Authorization (Tier 1)
+## Basic Authorization
 
 **Simple approach**: If an agent advertises a capability, any authenticated agent can use it.
 
@@ -114,9 +112,9 @@ app.post("/tasks", (req, res) => {
 });
 ```
 
-**Advanced authorization** (roles, permissions, etc.) is only needed for Tier 2+.
+**Advanced authorization** (roles, permissions, etc.) is only needed for advanced use cases.
 
-## Simple Trust (Tier 1)
+## Simple Trust
 
 **Basic approach**: Trust agents that provide valid signatures and deliver results.
 
@@ -129,7 +127,7 @@ app.post("/tasks", (req, res) => {
 - ✅ TLS connection is secure
 - ✅ Responds to capability queries
 
-**Optional trust tracking** (Tier 2+):
+**Optional trust tracking**:
 
 - Task completion rate
 - Response time reliability
@@ -156,7 +154,7 @@ function getTrustScore(agentId) {
 }
 ```
 
-## Basic Verification (Tier 1)
+## Basic Verification
 
 **Essential verification only**:
 
@@ -175,11 +173,10 @@ function verifyResult(capability, result) {
 }
 ```
 
-
 <Callout type="info">
-  **Security Philosophy**: Tier 1 provides essential security without
-  complexity. Most agents don't need advanced trust models - just reliable
-  message authentication.
+  **Security Philosophy**: provide essential security without complexity. Most
+  agents don't need advanced trust models - just reliable message
+  authentication.
 </Callout>
 
 <Callout type="warning">

@@ -1,53 +1,33 @@
 ---
 title: Introduction
-description: Simple AI agent collaboration protocol designed for scale and ease of adoption
+description: AI agent collaboration protocol designed for scale and multi-agent systems
 icon: Lightbulb
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 import { Cards, Card } from "fumadocs-ui/components/card";
 
-The **H.I.V.E. Protocol** (Hybrid Inter-Agent Verification & Execution Protocol) is a streamlined framework that enables AI agents to work together effectively. Built with simplicity, scale, and developer productivity in mind.
-
 ## What is H.I.V.E.?
 
-H.I.V.E. solves the fundamental challenge of AI agent collaboration at scale: how can agents built by different developers work together efficiently using familiar technologies?
+The **H.I.V.E. Protocol** (Hybrid Inter-Agent Verification & Execution Protocol) is a discovery & execution standard that enables AI agents to work together effectively.
+Built with simplicity, scale, and agent cluster stability in mind.
 
-The protocol provides:
+<Callout>
+  It solves the fundamental challenge of AI agent collaboration at scale: how
+  can agents built by different developers work together efficiently using
+  familiar technologies?
+</Callout>
+
+The protocol describes:
 
 - **Simple Communication**: Clean 5-field message format
 - **HTTP-First Architecture**: Standard web protocols and endpoints
 - **Direct Task Execution**: Immediate task processing without negotiation overhead
 - **Essential Security**: Ed25519 signatures and TLS encryption
 
-## Design Philosophy
-
-H.I.V.E. is built around three core principles:
-
-### Simplicity First
-
-The protocol uses familiar web technologies and standard patterns. Developers can implement a working agent quickly using tools they already know.
-
-### Progressive Enhancement
-
-Start with basic functionality and add features as needed:
-
-- **Tier 1**: HTTP endpoints and basic task processing
-- **Tier 2**: Real-time updates and lightweight agreements
-- **Tier 3**: Advanced security and formal contracts
-
-### Developer Experience
-
-Every aspect prioritizes ease of implementation:
-
-- Human-readable JSON messages
-- Standard HTTP endpoints
-- Clear error handling
-- Minimal required dependencies
-
 ## Core Features
 
-### 1. Clean Message Format
+### Message Format
 
 H.I.V.E. uses a streamlined 5-field message structure:
 
@@ -56,7 +36,7 @@ H.I.V.E. uses a streamlined 5-field message structure:
   "from": "hive:agentid:abc123",
   "to": "hive:agentid:xyz789",
   "type": "task_request",
-  "data": { "capability": "text-processing", "text": "hello" },
+  "data": { "capability": "text-processing", "params": { "text": "hello" } },
   "sig": "ed25519_signature"
 }
 ```
@@ -109,11 +89,6 @@ Capabilities are defined with just the essentials:
     title="🚀 Quick Start (30 minutes)"
     description="Build your first H.I.V.E. agent"
     href="/docs/protocol/implementation/quick-start"
-  />
-  <Card
-    title="📋 Implementation Tiers"
-    description="Choose your complexity level"
-    href="/docs/protocol/implementation/tiers"
   />
   <Card
     title="📖 Full Specification"

@@ -1,16 +1,14 @@
 ---
 title: Error Codes
-description: Essential error codes for simple error handling
+description: The Protocol uses a minimal set of essential error codes optimized for simplicity and fast implementation.
 icon: Bug
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
-The H.I.V.E. Protocol uses a minimal set of essential error codes optimized for simplicity and fast implementation.
+## Essential Error Codes
 
-## Essential Error Codes (Tier 1)
-
-**8 error codes cover 95% of scenarios**:
+**Total 8 error codes that cover 95% of scenarios**:
 
 | Error Code               | Description                           | Retry? | HTTP Status |
 | ------------------------ | ------------------------------------- | ------ | ----------- |
@@ -24,8 +22,6 @@ The H.I.V.E. Protocol uses a minimal set of essential error codes optimized for 
 | `agent_not_found`        | Target agent doesn't exist            | No     | 404         |
 
 ## Error Message Format
-
-simple error format:
 
 ```json
 {
@@ -172,7 +168,7 @@ function checkResourceAvailability() {
 }
 ```
 
-## Optional: Extended Error Codes (Tier 2+)
+## Optional: Extended Error Codes
 
 **Additional error codes for advanced implementations**:
 

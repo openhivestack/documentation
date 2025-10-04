@@ -1,15 +1,15 @@
 ---
 title: Task Lifecycle
-description: simple 4-state task lifecycle
+description: The Protocol uses a 4-state task lifecycle that eliminates unnecessary complexity while maintaining clear task progression, perfect for high-throughput systems.
 icon: LifeBuoy
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 import { Mermaid } from "@/components/mdx/mermaid";
 
-The H.I.V.E. Protocol uses a simplified 4-state task lifecycle that eliminates unnecessary complexity while maintaining clear task progression, perfect for high-throughput systems.
-
+<Callout>
 This approach enables fast, direct task execution between agents. Tasks can be initiated and completed with minimal overhead.
+</Callout>
 
 ## Direct Execution Flow
 
@@ -21,13 +21,6 @@ flowchart LR
     C --> D[Results Delivery]
 `}
 />
-
-**Key Simplifications**:
-
-- **No contract negotiation**: immediate accept/reject.
-- **No formal agreements**: simple task tracking is sufficient for Tier 1.
-- **Minimal state management**: 4 basic task states.
-- **Fast execution**: optimized for high throughput.
 
 H.I.V.E. eliminates complex negotiation flows by using immediate accept/reject responses.
 
@@ -50,7 +43,6 @@ stateDiagram-v2
     REJECTED --> [*]
 `}
 />
-
 
 ### Task States
 
@@ -129,7 +121,7 @@ Task couldn't be completed, communicated via a `task_error` message.
 }
 ```
 
-## Implementation (Tier 1)
+## Implementation
 
 **Required for basic collaboration**:
 
@@ -138,7 +130,7 @@ Task couldn't be completed, communicated via a `task_error` message.
 - [ ] Handle errors with `task_error`.
 - [ ] Basic task state tracking (in-memory is fine for simple agents).
 
-**Optional (Tier 2+)**:
+**Optional**:
 
 - [ ] Send explicit `task_response` for long-running tasks.
 - [ ] Send `task_update` messages with progress for long tasks.
@@ -152,6 +144,6 @@ Task couldn't be completed, communicated via a `task_error` message.
 </Callout>
 
 <Callout type="warning">
-  **Task Tracking**: Even in Tier 1, maintain basic task state tracking to
+  **Task Tracking**: maintain basic task state tracking to
   handle duplicate requests and provide status queries if needed.
 </Callout>

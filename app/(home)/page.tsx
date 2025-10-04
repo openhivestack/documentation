@@ -1,8 +1,53 @@
 import Link from "next/link";
 import { HexagonIcon } from "lucide-react";
-import BlueskyIcon from "@/components/social/bluesky-logo.png";
 import DiscordIcon from "@/components/social/discord-icon.png";
 import Image from "next/image";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "H.I.V.E. Protocol",
+  description:
+    "Simple AI agent collaboration & discovery protocol designed for scale and multi-agent systems",
+  keywords: [
+    "H.I.V.E. Protocol",
+    "AI agent collaboration",
+    "Simple Agent Collaboration Protocol",
+    "Multi-agent systems",
+    "AI agent collaboration and discovery protocol",
+    "AI agent collaboration protocol for multi-agent systems",
+  ],
+  openGraph: {
+    title: "H.I.V.E. Protocol",
+    description:
+      "Simple AI agent collaboration & discovery protocol designed for scale and multi-agent systems",
+    type: "website",
+    url: "https://openhive.sh",
+    siteName: "H.I.V.E. Protocol",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "H.I.V.E. Protocol",
+    description:
+      "Simple AI agent collaboration & discovery protocol designed for scale and multi-agent systems",
+  },
+  alternates: {
+    canonical: "https://openhive.sh",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  metadataBase: new URL("https://openhive.sh"),
+  creator: "OpenHive",
+  publisher: "OpenHive",
+  authors: [{ name: "OpenHive", url: "https://openhive.sh" }],
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+};
 
 export default function HomePage() {
   return (
@@ -33,7 +78,7 @@ export default function HomePage() {
           </li>
           <li>
             <span className="font-bold text-cyan-500">Value</span>: How can they
-            handle payments securely and ensure verified delivery of results?
+            ensure verified delivery of results?
           </li>
         </ul>
       </div>
@@ -41,8 +86,8 @@ export default function HomePage() {
         The H.I.V.E. Protocol addresses these fundamental challenges of{" "}
         <span className="font-bold">Discovery</span>,{" "}
         <span className="font-bold">Authorization</span>, and{" "}
-        <span className="font-bold">Execution</span> by providing a robust,
-        secure, and comprehensive framework for{" "}
+        <span className="font-bold">Execution</span> by providing a simple,
+        secure, and easy to implement framework for{" "}
         <span className="">
           <span className="text-cyan-500 font-bold text-lg pr-0.5">H</span>ybrid{" "}
           <span className="text-cyan-500 font-bold text-lg pr-0.5">I</span>
@@ -52,8 +97,8 @@ export default function HomePage() {
           <span className="text-cyan-500 font-bold text-lg pr-0.5">E</span>
           xecution
         </span>
-        . It serves as the foundational standard for seamless and trustworthy
-        interactions between agents (A2A) and within multi-agent systems (MAS).
+        . It serves as the foundational standard for seamless interactions
+        between agents (A2A) and within multi-agent systems (MAS).
       </p>
       <p className="text-fd-muted-foreground">
         Visit our{" "}
@@ -67,20 +112,7 @@ export default function HomePage() {
       </p>
       <div className="text-fd-muted-foreground flex gap-4">
         <Link
-          href="https://discord.gg/7Cty774G"
-          className="text-fd-foreground font-semibold underline"
-          target="_blank"
-        >
-          <Image
-            src={BlueskyIcon}
-            alt="Bluesky"
-            width={24}
-            height={24}
-            className="opacity-50 hover:opacity-100 transition-opacity duration-200"
-          />
-        </Link>
-        <Link
-          href="https://discord.gg/7Cty774G"
+          href="https://discord.gg/y4K8V7NzFD"
           className="text-fd-foreground font-semibold underline"
           target="_blank"
         >

@@ -1,25 +1,66 @@
 ---
 title: Endpoints
-description: Official HTTP endpoints for the H.I.V.E. Protocol
+description: Official endpoints for the H.I.V.E. Protocol
 icon: Route
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
-For Tier 1 compliance, H.I.V.E. agents implement a minimal set of HTTP endpoints for communication, discovery, and health checks. This keeps the implementation simple and leverages standard web technologies.
+## Core Endpoints
 
-## Core Endpoints (Tier 1)
-
-These are the three essential endpoints for a minimal H.I.V.E. agent.
+These are the three essential endpoints for a minimal agent.
 
 ### 1. `POST /tasks`
 
 This is the primary endpoint for receiving and processing tasks from other agents.
 
 - **Method**: `POST`
-- **Request Body**: A standard H.I.V.E. message with `type: "task_request"`.
-- **Success Response**: A H.I.V.E. message with `type: "task_result"` and HTTP status `200 OK`.
-- **Error Response**: A H.I.V.E. message with `type: "task_error"` and an appropriate HTTP status code (e.g., `400`, `401`, `500`).
+- **Request Body**: A standard message with `type: "task_request"`.
+
+```json
+{
+  "from": "hive:agentid:requester123",
+  "to": "hive:agentid:translator456",
+  "type": "task_request",
+  "data": {
+    "task_id": "task-123",
+    // capability specific task payload
+  },
+  "sig": "ed25519_signature_here"
+}
+```
+
+- **Success Response**: A message with `type: "task_result"` and HTTP status `200 OK`.
+
+```json
+{
+  "from": "hive:agentid:translator456",
+  "to": "hive:agentid:requester123",
+  "type": "task_result",
+  "data": {
+    "task_id": "task-123",
+    // task specific response
+  },
+  "sig": "ed25519_signature_here"
+}
+```
+
+- **Error Response**: A message with `type: "task_error"` and an appropriate HTTP status code (e.g., `400`, `401`, `500`).
+
+```json
+{
+  "from": "hive:agentid:translator456",
+  "to": "hive:agentid:requester123",
+  "type": "task_error",
+  "data": {
+    "task_id": "task-123",
+    "code": 400 /* H.I.V.E supported error formats */,
+    "error": "...",
+    // task specific error response
+  },
+  "sig": "ed25519_signature_here"
+}
+```
 
 ### 2. `GET /capabilities`
 
@@ -30,29 +71,41 @@ This endpoint allows other agents to discover the capabilities of this agent.
 
 ```json
 {
-  "capabilities": [
-    {
-      "id": "text-processing",
-      "input": { "text": "string", "operation": "string" },
-      "output": { "result": "string" }
-    }
-  ]
+  "from": "hive:agentid:translator456",
+  "to": "hive:agentid:requester123",
+  "type": "capability_response",
+  "data": {
+    "capabilities": [
+      {
+        "id": "text-translation",
+        "input": { "text": "string", "target_lang": "string" },
+        "output": { "translated_text": "string" }
+      }
+    ],
+    "endpoint": "https://translator456.example.com/api"
+  },
+  "sig": "ed25519_signature_here"
 }
 ```
 
 ### 3. `GET /status`
 
-A simple health check endpoint.
+A health check endpoint.
 
 - **Method**: `GET`
 - **Response Body**: A JSON object indicating the agent's status.
 
 ```json
 {
-  "agent_id": "hive:agentid:agent456",
-  "status": "online",
-  "capabilities": ["text-processing"],
-  "uptime": 86400
+  "from": "hive:agentid:translator456",
+  "to": "hive:agenti:requester123",
+  "type": "heartbeat",
+  "data": {
+    "status": "online",
+    "uptime": 86400,
+    "endpoint": "https://translator456.example.com/api"
+  },
+  "sig": "ed25519_signature_here"
 }
 ```
 
@@ -77,8 +130,15 @@ Provides the agent's public identity information, including its public key. This
 
 ```json
 {
-  "agent_id": "hive:agentid:agent456",
-  "public_key": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+  "from": "hive:agentid:translator456",
+  "to": "hive:agenti:requester123",
+  "type": "agent_identity",
+  "data": {
+    "agent_id": "hive:agentid:translator456",
+    "public_key": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+    "endpoint": "https://translator456.example.com/api"
+  },
+  "sig": "ed25519_signature_here"
 }
 ```
 

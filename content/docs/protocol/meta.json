@@ -16,13 +16,10 @@
     "structure/discovery-flow",
     "structure/capability-advertisement",
     "structure/lifecycle",
-    "structure/agreements",
     "structure/security",
     "structure/error-codes",
     "---Implementation---",
     "implementation/quick-start",
-    "implementation/tiers",
-    "implementation/example-agent",
-    "implementation/testing"
+    "implementation/example-agent"
   ]
 }

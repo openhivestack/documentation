@@ -1,14 +1,12 @@
 ---
 title: Agent Identity
-description: simple agent identification for massive scale
+description: The Protocol uses decentralized identify and cryptographic keys to create and verify an agent's identify profile.
 icon: UserCheck
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
-Agent Identity in the H.I.V.E. Protocol uses the simplest possible approach to uniquely identify agents.
-
-## Simple Identity (Tier 1)
+## Identity
 
 **Everything you need for agent identity**:
 
@@ -34,10 +32,10 @@ hive:agentid:uniqueIdentifier
 
 - Must start with `hive:agentid:`
 - Unique identifier can be any string (alphanumeric + hyphens recommended)
-- Maximum length: 64 characters total
-- Case sensitive
+- Maximum length: 80 characters total
+- Case insensitive
 
-## Identity Creation (30 seconds)
+## Identity Creation
 
 ```javascript
 import crypto from "crypto";
@@ -62,15 +60,13 @@ process.env.AGENT_PUBLIC_KEY = publicKey;
 console.log(`✅ Agent Identity Created: ${agentId}`);
 ```
 
-## Key Management (Simplified)
+## Key Management
 
-**Tier 1 Requirements**:
+**Requirements**:
 
 - **One key type**: Ed25519 only
 - **One key pair**: Public key for verification, private key for signing
-- **Simple storage**: Save keys securely (environment variables or key files)
-
-**Advanced key management** (multiple keys, rotation, etc.) is only needed for Tier 2+.
+- **Storage**: Save keys securely (environment variables or key files)
 
 ## Identity Verification
 
@@ -112,7 +108,7 @@ function verifyAgentIdentity(message) {
 
 **How other agents get your public key**:
 
-### Method 1: Registry Registration (Recommended)
+### Method 1: Registry Registration
 
 ```javascript
 // Register with registry
@@ -125,12 +121,14 @@ const registration = {
   ],
 };
 
-fetch("https://registry.openhive.sh/agents", {
+fetch("https://www.openhive.sh/agents", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(registration),
 });
 ```
+
+<Callout>Above registry is an example and not implemented yet</Callout>
 
 ### Method 2: Direct Query
 
@@ -145,7 +143,7 @@ app.get("/identity", (req, res) => {
 });
 ```
 
-### Method 3: Include in Messages (Tier 2+)
+### Method 3: Include in Messages
 
 ```json
 {
@@ -178,9 +176,7 @@ async function getSenderPublicKey(agentId) {
 
   // Fetch from registry or direct query
   try {
-    const response = await fetch(
-      `https://registry.openhive.sh/agents/${agentId}`
-    );
+    const response = await fetch(`https://www.openhive.sh/agents/${agentId}`);
     const agentInfo = await response.json();
 
     // Cache the result
@@ -196,7 +192,6 @@ async function getSenderPublicKey(agentId) {
   }
 }
 ```
-
 
 <Callout type="info">
   **Simplicity Benefit**: This approach eliminates 90% of identity complexity

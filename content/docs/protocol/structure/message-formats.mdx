@@ -1,13 +1,10 @@
 ---
 title: Message Formats
-description: simple message structures optimized for scale
+description: This document defines the message structures used by H.I.V.E agents.
 icon: MessageSquare
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
-
-The H.I.V.E. Protocol uses simplified message formats designed for scale and efficiency.
-This document defines the streamlined message structures that prioritize simplicity and performance.
 
 ## Design Goals
 
@@ -16,11 +13,12 @@ This document defines the streamlined message structures that prioritize simplic
 - **Easy implementation**: Developers can implement in any language quickly
 - **Human readable**: JSON-based for debugging and development
 
-## Simple Message Structure
+## Message Structure
 
-All H.I.V.E. Protocol messages follow this streamlined structure:
+All messages **MUST** follow this structure:
 
 ```json
+// Standard Message Format
 {
   "from": "hive:agentid:abc123",
   "to": "hive:agentid:xyz789",
@@ -42,38 +40,33 @@ All H.I.V.E. Protocol messages follow this streamlined structure:
 | `data` | Object | Message-specific payload         | Yes      |
 | `sig`  | String | Ed25519 signature of the message | Yes      |
 
-<Callout type="info">
-  **Efficiency Focus**: This format eliminates redundant fields like messageId,
-  timestamp, and verbose sender/recipient objects, resulting in more efficient
-  communication.
-</Callout>
-
 ## Message Types
 
-The H.I.V.E. Protocol defines these essential message types:
+The Protocol defines the following essential message types:
 
 ### Core Message Types
 
-| Type                  | Description                      | Tier |
-| --------------------- | -------------------------------- | ---- |
-| `task_request`        | Request a task to be performed   | 1    |
-| `task_response`       | Accept/reject a task request     | 1    |
-| `task_update`         | Progress update during execution | 1    |
-| `task_result`         | Final task results               | 1    |
-| `task_error`          | Error during task execution      | 1    |
-| `capability_query`    | Request agent capabilities       | 1    |
-| `capability_response` | Agent capability advertisement   | 1    |
+| Type                  | Description                      |
+| --------------------- | -------------------------------- |
+| `task_request`        | Request a task to be performed   |
+| `task_response`       | Accept/reject a task request     |
+| `task_update`         | Progress update during execution |
+| `task_result`         | Final task results               |
+| `task_error`          | Error during task execution      |
+| `capability_query`    | Request agent capabilities       |
+| `capability_response` | Agent capability advertisement   |
 
-### Optional Message Types (Tier 2+)
+### Optional Message Types
 
-| Type                | Description                 | Tier |
-| ------------------- | --------------------------- | ---- |
-| `heartbeat`         | Agent availability signal   | 2    |
-| `contract_proposal` | Formal contract negotiation | 3    |
-| `auth_challenge`    | Authentication challenge    | 2    |
+| Type                | Description                 |
+| ------------------- | --------------------------- |
+| `heartbeat`         | Agent availability signal   |
+| `agent_identity`    | Agent Identification        |
+| `contract_proposal` | Formal contract negotiation |
+| `auth_challenge`    | Authentication challenge    |
 
 <Callout type="info">
-  **Tier 1 Focus**: Most agents only need the 7 core message types. This covers
+  **Design Goal**: Most agents only need the 7 core message types. This covers
   the majority of use cases with minimal complexity.
 </Callout>
 
@@ -141,7 +134,7 @@ Deliver completed task results:
 
 ### Capability Advertisement
 
-Advertise agent capabilities (simple format):
+Advertise agent capabilities:
 
 ```json
 {
@@ -173,6 +166,7 @@ Simple error handling:
   "type": "task_error",
   "data": {
     "task_id": "task-789",
+    "code": 404,
     "error": "capability_not_found",
     "message": "text-translation not available",
     "retry": true
@@ -232,6 +226,7 @@ For invalid messages, respond with:
   "to": "hive:agentid:sender",
   "type": "task_error",
   "data": {
+    "code": 400,
     "error": "invalid_message_format",
     "message": "Missing required field: task_id",
     "retry": false

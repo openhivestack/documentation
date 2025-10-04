@@ -1,6 +1,6 @@
 ---
 title: Architecture
-description: Simple architecture designed for scale and developer productivity
+description: H.I.V.E uses a minimalistic architecture designed for scale and ease of implementation. Every layer focuses on essential functionality while maintaining flexibility for different use cases.
 icon: Hexagon
 ---
 
@@ -9,15 +9,13 @@ import { Callout } from "fumadocs-ui/components/callout";
 import { Mermaid } from "@/components/mdx/mermaid";
 import { PackageSearchIcon, InfinityIcon, Zap } from "lucide-react";
 
-The H.I.V.E. Protocol uses a streamlined architecture designed for scale and ease of implementation. Every component focuses on essential functionality while maintaining flexibility for different use cases.
-
-## H.I.V.E. Protocol Components
+## Components
 
 <Mermaid
   chart={`
 flowchart LR
-    A[HTTP Endpoints] --> B[Task Processing]
-    B --> C[Capability Discovery]
+    A[HTTP Endpoints] --> B[Capability Discovery]
+    B --> C[Task Processing]
 `}
 />
 
@@ -44,9 +42,7 @@ The protocol consists of three essential components:
   />
 </Cards>
 
-This streamlined architecture enables AI agents to work together efficiently at scale.
-
-## 1. HTTP Endpoints (Simple Communication)
+### 1. Endpoints
 
 **Three endpoints handle most use cases**:
 
@@ -56,23 +52,21 @@ This streamlined architecture enables AI agents to work together efficiently at 
 
 **Key Features**:
 
-- Standard HTTP/HTTPS only (no WebSockets required for Tier 1)
+- Standard HTTP/HTTPS only
 - Ed25519 signatures for security
 - 5-field message format
 - TLS encryption for all communications
 
-## 2. Task Processing (Direct Execution)
+### 2. Task Processing
 
 **Streamlined task execution**:
 
 - **Request**: Send task with capability and parameters
 - **Response**: Get immediate accept/reject
-- **Execution**: Simple status updates
+- **Execution**: status updates
 - **Result**: Receive completed output
 
-**Simple task agreements** specify what needs to be done without complex contract negotiation.
-
-## 3. Capability Discovery (Essential Format)
+## 3. Capability Discovery
 
 **Streamlined capability format**:
 
@@ -86,44 +80,11 @@ This streamlined architecture enables AI agents to work together efficiently at 
 
 **Discovery methods**:
 
-- **Primary**: HTTP registry lookup
-- **Fallback**: Direct agent connections
-- **Optional**: Local network discovery (mDNS)
-
-## Implementation Tiers
-
-<Mermaid
-  chart={`
-graph TD
-    A[Tier 1: Quick Start] --> B[HTTP + Basic Tasks]
-    C[Tier 2: Enhanced] --> D[WebSockets + Agreements]
-    E[Tier 3: Complete] --> F[Full Features + Security]
-    
-    B --> G[Most use cases]
-    D --> H[Advanced scenarios]  
-    F --> I[Enterprise needs]
-`}
-/>
-
-## Why This Architecture Works
-
-**For large-scale systems**:
-
-- **Efficient messaging**: Compact message format
-- **Fast processing**: Simple parsing and validation
-- **Easy debugging**: Human-readable JSON format
-- **Low latency**: Direct task execution
-- **High throughput**: Designed for performance
-
-**For developers**:
-
-- **Quick start**: Rapid agent implementation
-- **Easy maintenance**: Minimal code surface area
-- **Clear upgrade path**: Add complexity only when needed
-- **Standard tools**: Uses familiar HTTP and JSON
+- Registry lookup (requires setting up a local or global agent registry)
+- Direct agent connections 
+- Local network discovery (mDNS)
 
 <Callout type="info">
   **Scale Focus**: This architecture is designed for systems that need to handle
-  many concurrent agents. Every design decision prioritizes simplicity and
-  performance.
+  many concurrent agents. It prioritizes simplicity and performance.
 </Callout>

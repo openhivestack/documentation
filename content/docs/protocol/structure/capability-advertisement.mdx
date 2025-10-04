@@ -1,12 +1,10 @@
 ---
-title: Capability Advertisement
-description: Simple capability format designed for scale
+title: Capability Format
+description: The Protocol uses a streamlined format that focuses on essential information. This approach enables faster discovery and matching for scalable agent systems.
 icon: Wrench
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
-
-Capability Advertisement in the H.I.V.E. Protocol uses a streamlined format that focuses on essential information. This approach enables faster discovery and matching for scalable agent systems.
 
 ## Design Philosophy
 
@@ -16,9 +14,9 @@ The capability format focuses on what agents actually need to know:
 - What inputs it requires
 - What outputs it provides
 
-## Simple Capability Format
+## Capability Format
 
-Agents advertise capabilities using this essential format:
+Agents can advertise/register capabilities using this essential format:
 
 ```json
 {
@@ -66,7 +64,7 @@ Agents advertise capabilities using this essential format:
 | `input`  | Input parameter types        | Yes      |
 | `output` | Output field types           | Yes      |
 
-That's it! No version numbers, descriptions, categories, examples, or performance metrics in Tier 1.
+That's it! No version numbers, categories, examples, or performance metrics.
 
 ### Input/Output Specification
 
@@ -103,7 +101,7 @@ That's it! No version numbers, descriptions, categories, examples, or performanc
 }
 ```
 
-### Advanced Types (Tier 2+)
+### Advanced Types
 
 For more complex scenarios, you can add validation:
 
@@ -133,7 +131,7 @@ Agents register their capabilities with a central or federated registry:
 
 ```http
 POST /registry/agents HTTP/1.1
-Host: registry.openhive.sh
+Host: www.openhive.sh
 Content-Type: application/json
 
 {
@@ -167,7 +165,7 @@ Querying a registry for agents with specific capabilities:
 
 ```http
 GET /registry/agents?capability=text-translation&language=es HTTP/1.1
-Host: registry.openhive.sh
+Host: www.openhive.sh
 Accept: application/json
 ```
 
@@ -192,40 +190,6 @@ Or for specific capabilities:
   "payload": {
     "queryType": "SPECIFIC",
     "capabilityIds": ["text-translation", "image-generation"]
-  }
-}
-```
-
-## Capability Updates
-
-Agents should update their capability advertisements when changes occur:
-
-- When new capabilities are added
-- When existing capabilities are modified or removed
-- When performance characteristics change significantly
-
-Updates follow the same format as initial advertisements but include version information and change details.
-
-## Filtering and Matching
-
-When searching for capabilities, agents can apply filtering criteria:
-
-```json
-{
-  "messageType": "CAPABILITY_QUERY",
-  "payload": {
-    "queryType": "FILTERED",
-    "filters": {
-      "capabilityType": "text-translation",
-      "parameters": {
-        "sourceLanguage": "en",
-        "targetLanguage": "es"
-      },
-      "performance": {
-        "minUptime": 0.99,
-        "maxResponseTime": 1.0
-      }
-    }
   }
 }
 ```

@@ -1,65 +1,56 @@
 ---
 title: Specification
-description: Simple Agent Collaboration Protocol
+description: This document specifies the H.I.V.E. Protocol, defining how AI agents MUST communicate, collaborate, and integrate within the ecosystem.
 icon: NotebookText
 ---
 
-The H.I.V.E. Protocol defines how AI agents can work together to get tasks done efficiently. This specification provides a streamlined approach designed for scale and rapid adoption.
+## 1. Communication
 
-## 1. Communication Layer
+Agents **MUST** communicate using standard web technologies to ensure interoperability and compatibility with existing infrastructure. All network communications **MUST** be secured using TLS 1.2 or higher.
 
-Agents communicate using standard web technologies like HTTP and WebSockets. The focus is on simplicity and
-compatibility with existing infrastructure.
-
-## 2. Agent Identity & Discovery
+## 2. Discovery
 
 ### 2.1. Agent Identification
 
-- Agents identify themselves using Ed25519 key pairs (recommended) or RSA
-- Agent ID format: `hive:agentid:uniqueIdentifier` (e.g., `hive:agentid:abc123`)
-- Messages are signed with the private key for verification
-- No complex DID resolution - simple and fast
+- Agents **MUST** identify themselves using a cryptographic key pair. Ed25519 key pairs are **RECOMMENDED**.
+- The Agent ID format **MUST** be `hive:agentid:uniqueIdentifier` (e.g., `hive:agentid:abc123`).
+- All messages **MUST** be cryptographically signed with the agent's private key for verification.
 
 ### 2.2. Discovery
 
-- **Primary**: HTTP registry service for capability lookup
-- **Fallback**: Direct endpoint connections for known agents
-- **Optional**: mDNS for local network discovery
-- Registry uses simple REST API: `GET /agents?capability=text-translation`
+- The primary discovery method **SHOULD** be an HTTP registry service for capability lookup.
+- Implementations **MAY** support direct endpoint connections for known agents as a fallback.
+- Local network discovery via mDNS is **OPTIONAL**.
+- A registry **SHOULD** expose a simple REST API for querying agent capabilities (e.g., `GET /agents?capability=text-translation`).
 
 ### 2.3. Capability Sharing
 
-Agents describe capabilities in simple format:
+Agents **MUST** describe their capabilities in a simple, structured format to facilitate fast discovery and matching. The capability structure **MUST** contain three fields: `id`, `input`, and `output`.
 
 ```json
 {
-  "id": "text-translation",
-  "input": { "text": "string", "target_lang": "string" },
-  "output": { "translated_text": "string" }
+  "id": "capability-identifier",
+  "input": { "param1": "string" },
+  "output": { "result": "string" }
 }
 ```
 
-- Fast discovery and matching
-- Easy to generate programmatically
-
 ## 3. Task Collaboration
 
-### 3.1. Simple Message Format
+### 3.1. Message Format
 
-All messages use this minimal format:
+All messages exchanged between agents **MUST** adhere to the canonical 5-field message structure.
 
 ```json
 {
-  "from": "hive:agentid:abc123",
-  "to": "hive:agentid:xyz789",
+  "from": "hive:agentid:uniqueIdentifier",
+  "to": "hive:agentid:uniqueIdentifier",
   "type": "task_request",
   "data": {
-    "capability": "text-translation",
-    "params": {
-      "text": "hello",
-      "target_lang": "es"
-    }
+    "task_id": "uuid-v4",
+    "capability": "capability-id",
+    "params": {}
   },
-  "sig": "ed25519_signature"
+  "sig": "ed25519_signature_base64"
 }
 ```

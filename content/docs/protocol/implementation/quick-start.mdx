@@ -6,7 +6,7 @@ icon: Rocket
 
 import { Callout } from "fumadocs-ui/components/callout";
 
-This quick start guide will help you build your first H.I.V.E. Protocol agent using **Tier 1 (Minimal)** implementation. You'll have a working agent that can process tasks and communicate with other agents.
+This quick start guide will help you build your first H.I.V.E. Protocol agent. You'll have a working agent that can process tasks and communicate with other agents.
 
 ## Why This Approach?
 
@@ -21,7 +21,7 @@ This quick start guide will help you build your first H.I.V.E. Protocol agent us
 - Some time for implementation
 - Basic JavaScript knowledge
 
-## Step 1: Set Up Your Project (2 minutes)
+## Step 1: Set Up Your Project
 
 Create a minimal project:
 
@@ -33,7 +33,7 @@ cd my-simple-agent
 # Initialize npm project
 npm init -y
 
-# Install minimal dependencies (Tier 1 only)
+# Install minimal dependencies
 npm install express crypto
 npm install --save-dev typescript tsx @types/node @types/express
 
@@ -42,8 +42,8 @@ npx tsc --init
 ```
 
 <Callout type="info">
-  **Tier 1 Approach**: We're using minimal dependencies. No complex SDK required
-  - just HTTP and crypto for signatures.
+  **Approach**: We're using minimal dependencies. No complex SDK required - just
+  HTTP and crypto for signatures.
 </Callout>
 
 ## Step 2: Create Simple Agent
@@ -82,7 +82,13 @@ const capabilities = [
 ];
 ```
 
-## Step 3: Add Message Handling (10 minutes)
+<Callout>
+  For adding advanced AI processing capabilities, you can use: * [AI
+  SDK](https://ai-sdk.dev) [Node.js] *
+  [Langchain](https://docs.langchain.com/oss/python/langchain/overview) [Python]
+</Callout>
+
+## Step 3: Add Message Handling
 
 Continue building the agent with simple message handling:
 
@@ -196,7 +202,7 @@ app.post("/tasks", (req, res) => {
 });
 ```
 
-## Step 4: Add Discovery & Status Endpoints (5 minutes)
+## Step 4: Add Discovery & Status Endpoints
 
 Add the remaining endpoints to complete your agent:
 
@@ -237,7 +243,7 @@ app.listen(PORT, () => {
 });
 ```
 
-## Step 5: Create a Simple Test Client (5 minutes)
+## Step 5: Create a Simple Test Client
 
 Create `test-client.ts` to test your agent:
 
@@ -301,7 +307,7 @@ console.log(`🧪 Testing agent with client: ${CLIENT_ID}`);
 sendTaskRequest();
 ```
 
-## Step 6: Set Up Scripts & Test (3 minutes)
+## Step 6: Set Up Scripts & Test
 
 Update your `package.json`:
 
@@ -356,7 +362,7 @@ You've built a working H.I.V.E. Protocol agent! Your agent can:
 - ✅ Advertise its capabilities
 - ✅ Communicate with other agents
 
-## What You Built (Tier 1 Features)
+## What You Built (Minimal Implementation)
 
 - **Simple message format** for efficient communication
 - **Basic task processing** without contract overhead
@@ -366,14 +372,14 @@ You've built a working H.I.V.E. Protocol agent! Your agent can:
 
 ## Next Steps: Upgrade Your Agent
 
-### 🟡 Upgrade to Tier 2 (Standard)
+### 🟡 Upgrade to Standard Implementation
 
 - Add WebSocket support for real-time updates
 - Implement basic task agreements (lightweight contracts)
 - Add multiple discovery methods
 - Enhanced error handling
 
-### 🔴 Upgrade to Tier 3 (Full)
+### 🔴 Upgrade to Advanced Implementation (Full)
 
 - Complete protocol implementation
 - Advanced security features
@@ -391,7 +397,7 @@ You've built a working H.I.V.E. Protocol agent! Your agent can:
 
 ## Why This Approach Works
 
-**Tier 1 provides most benefits with minimal complexity**:
+**Minimal implementation provides most benefits with no complexity**:
 
 - ✅ **Fast to implement**: Quick setup using familiar technologies
 - ✅ **Easy to debug**: Simple message format
@@ -400,9 +406,9 @@ You've built a working H.I.V.E. Protocol agent! Your agent can:
 - ✅ **Upgrade path**: Clear path to more features
 
 <Callout type="info">
-  **Production Tip**: Many successful H.I.V.E. deployments start with Tier 1 and
-  only upgrade specific components as needed. You don't need all features to be
-  effective!
+  **Production Tip**: Many successful H.I.V.E. deployments start with minimal
+  implementation and only upgrade specific components as needed. You don't need
+  all features to be effective!
 </Callout>
 
 <Callout type="warning">
