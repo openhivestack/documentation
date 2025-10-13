@@ -129,6 +129,7 @@ async function getReadmeContent(
   branchOrTag: string
 ) {
   try {
+    console.log("Getting README content for", owner, repo, branchOrTag, process.env.GH_TOKEN);
     const octokit = new Octokit({
       auth: process.env.GH_TOKEN,
     });
