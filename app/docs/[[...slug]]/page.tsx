@@ -65,6 +65,41 @@ const REPOS = {
   },
 };
 
+export async function generateStaticParams() {
+  const pages = source.generateParams();
+  const dynamicSlugs = Object.keys(REPOS);
+
+  // Filter out the pages that should be dynamic
+  return pages.filter((page) => {
+    const slug = page.slug?.join("/") ?? "";
+    return !dynamicSlugs.includes(slug);
+  });
+}
+
+export async function generateMetadata({
+  params: paramsPromise,
+}: {
+  params: Promise<{ slug?: string[] }>;
+}) {
+  const params = await paramsPromise;
+  const slug = params.slug?.join("/") ?? "";
+  const repoConfig = REPOS[slug as keyof typeof REPOS];
+  if (repoConfig) {
+    return {
+      title: repoConfig.frontmatter.title,
+      description: repoConfig.frontmatter.description,
+    };
+  }
+
+  const page = source.getPage(params.slug);
+  if (!page) notFound();
+
+  return {
+    title: page.data.title,
+    description: page.data.description,
+  };
+}
+
 async function getLatestReleaseTag(owner: string, repo: string) {
   try {
     const response = await octokit.repos.getLatestRelease({
@@ -89,7 +124,11 @@ async function getLatestReleaseTag(owner: string, repo: string) {
   }
 }
 
-async function getReadmeContent(owner: string, repo: string, branchOrTag: string) {
+async function getReadmeContent(
+  owner: string,
+  repo: string,
+  branchOrTag: string
+) {
   try {
     const { data } = await octokit.repos.getReadme({
       owner: owner,
@@ -106,7 +145,7 @@ async function getReadmeContent(owner: string, repo: string, branchOrTag: string
   }
 }
 
-export default async function Page(props: { params: { slug?: string[] } }) {
+export default async function Page(props: { params: Promise<{ slug?: string[] }> }) {
   const params = await props.params;
   const slug = params.slug?.join("/") ?? "";
   const repoConfig = REPOS[slug as keyof typeof REPOS];
@@ -166,28 +205,4 @@ export default async function Page(props: { params: { slug?: string[] } }) {
       </DocsBody>
     </DocsPage>
   );
-}
-
-export async function generateStaticParams() {
-  return source.generateParams();
-}
-
-export async function generateMetadata(props: { params: { slug?: string[] } }) {
-  const params = await props.params;
-  const slug = params.slug?.join("/") ?? "";
-  const repoConfig = REPOS[slug as keyof typeof REPOS];
-  if (repoConfig) {
-    return {
-      title: repoConfig.frontmatter.title,
-      description: repoConfig.frontmatter.description,
-    };
-  }
-
-  const page = source.getPage(params.slug);
-  if (!page) notFound();
-
-  return {
-    title: page.data.title,
-    description: page.data.description,
-  };
 }
