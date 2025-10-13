@@ -12,6 +12,10 @@ import { createCompiler } from "@fumadocs/mdx-remote";
 import { createElement } from "react";
 import { Octokit } from "@octokit/rest";
 
+const octokit = new Octokit({
+  auth: process.env.GH_TOKEN,
+});
+
 const REPOS = {
   "cli/overview": {
     owner: "openhivestack",
@@ -98,9 +102,7 @@ export async function generateMetadata({
 
 async function getLatestReleaseTag(owner: string, repo: string) {
   try {
-    const octokit = new Octokit({
-      auth: process.env.GH_TOKEN,
-    });
+    console.log("Getting latest release tag for", owner, repo);
     const response = await octokit.repos.getLatestRelease({
       owner,
       repo,
@@ -129,10 +131,6 @@ async function getReadmeContent(
   branchOrTag: string
 ) {
   try {
-    console.log("Getting README content for", owner, repo, branchOrTag, process.env.GH_TOKEN);
-    const octokit = new Octokit({
-      auth: process.env.GH_TOKEN,
-    });
     const { data } = await octokit.repos.getReadme({
       owner: owner,
       repo: repo,
