@@ -9,6 +9,8 @@
     "postinstall": "fumadocs-mdx"
   },
   "dependencies": {
+    "@fumadocs/mdx-remote": "^1.4.2",
+    "@octokit/rest": "^21.0.1",
     "fumadocs-core": "15.5.5",
     "fumadocs-mdx": "11.6.9",
     "fumadocs-ui": "15.5.5",

@@ -1,0 +1,14 @@
+{
+  "root": true,
+  "title": "OpenHive CLI",
+  "description": "Command-line interface for OpenHive",
+  "icon": "Terminal",
+  "pages": [
+    "---Getting Started---",
+    "overview",
+    "installation",
+    "---Commands---",
+    "---Contributing---",
+    "---License---"
+  ]
+}

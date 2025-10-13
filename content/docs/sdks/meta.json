@@ -1,0 +1,13 @@
+{
+  "root": true,
+  "title": "OpenHive SDK",
+  "description": "Official OpenHive SDKs",
+  "icon": "Code",
+  "pages": [
+    "overview",
+    "---Node---",
+    "node/overview",
+    "---Python---",
+    "python/overview"
+  ]
+}
