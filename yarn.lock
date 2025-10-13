@@ -878,9 +878,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@open-hive/specification@workspace:.":
+"@open-hive/documentation@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@open-hive/specification@workspace:."
+  resolution: "@open-hive/documentation@workspace:."
   dependencies:
     "@tailwindcss/postcss": "npm:^4.1.10"
     "@types/mdx": "npm:^2.0.13"
