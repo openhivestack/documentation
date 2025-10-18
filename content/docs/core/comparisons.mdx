@@ -1,0 +1,71 @@
+---
+title: Comparisons
+description: Understanding how OpenHive fits into the broader ecosystem of AI agent frameworks.
+icon: Scale
+---
+
+import { Waypoints, Layers, KeyRound } from "lucide-react";
+import { Card, Cards } from "fumadocs-ui/components/card";
+import { Callout } from "fumadocs-ui/components/callout";
+
+The world of AI agents is evolving rapidly, with many excellent frameworks available for building intelligent applications. Tools like `LangChain`, `AutoGen`, and `CrewAI` provide powerful abstractions for creating agentic workflows, managing state, and integrating with LLMs.
+
+OpenHive is not designed to replace these frameworks. Instead, it operates at a different, more fundamental layer of the stack. Its primary goal is to solve the problem of `interoperability`—enabling agents built with _different_ frameworks and on _different_ platforms to communicate securely and reliably.
+
+## Where OpenHive Fits In
+
+Think of OpenHive as the networking protocol for a distributed web of AI agents. While other frameworks provide the tools to build the "application logic" of an agent, OpenHive provides the "transport and identity layer" for them to talk to each other.
+
+<Cards>
+  <Card
+    icon={<Layers className="text-blue-500" />}
+    title="A Foundational Protocol"
+  >
+    OpenHive standardizes the low-level mechanics of communication, such as
+    message formats, agent identity, and capability discovery. It's the common
+    language that all agents can speak.
+  </Card>
+  <Card
+    icon={<Waypoints className="text-purple-500" />}
+    title="Framework Agnostic"
+  >
+    Because it is a protocol, you can use OpenHive with any agent-building
+    framework. You can write your agent's logic with LangChain and then use an
+    OpenHive SDK to connect it to the network.
+  </Card>
+  <Card
+    icon={<KeyRound className="text-orange-500" />}
+    title="Focus on Agent Clusters"
+  >
+    The protocol's use of cryptographic keypairs for agent identity enables true
+    peer-to-peer communication without relying on a centralized authority,
+    making the network more robust and censorship-resistant.
+  </Card>
+</Cards>
+
+## Comparison at a Glance
+
+Here’s how OpenHive compares to popular agent application frameworks:
+
+| Feature              | OpenHive                                       | LangChain / AutoGen / CrewAI etc.                    |
+| -------------------- | ---------------------------------------------- | ---------------------------------------------------- |
+| **Primary Goal**     | Agent Interoperability & Communication         | Building Agent Logic & Orchestration                 |
+| **Core Abstraction** | A Message Protocol                             | Agent & Tool abstractions (Chains, Graphs)           |
+| **Scope**            | The "network layer" for agents                 | The "application layer" of an agent                  |
+| **Agent Identity**   | Distributed (Ed25519 Keys)                     | Typically managed within the application or platform |
+| **Main Use Case**    | Enabling communication between diverse agents. | Building the internal reasoning of a single agent    |
+
+<Callout title="Better Together">
+  The most powerful systems will combine these approaches.
+</Callout>
+
+<Callout>
+  You can use a framework like CrewAI to orchestrate a team of agents, and then
+  use OpenHive to integrate that group of agent's collective capabilities to
+  another cluster, or a distributed network of agents.
+</Callout>
+
+This collaborative approach allows you to leverage the sophisticated agent orchestration features of existing frameworks while benefiting from 
+the universal interoperability and secure, distributed identity that OpenHive provides.
+
+> Create a system where the whole is greater than the sum of its parts.

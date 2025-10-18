@@ -4,12 +4,19 @@ description: Getting started with building AI agent clusters in minutes.
 icon: Flame
 ---
 
-import { Terminal, Cpu, Infinity, Globe, Shield, Waypoints } from 'lucide-react';
-import { Step, Steps } from 'fumadocs-ui/components/steps';
-import { File, Folder, Files } from 'fumadocs-ui/components/files';
+import {
+  Terminal,
+  Cpu,
+  Infinity,
+  Globe,
+  Shield,
+  Waypoints,
+} from "lucide-react";
+import { Step, Steps } from "fumadocs-ui/components/steps";
+import { File, Folder, Files } from "fumadocs-ui/components/files";
 
-OpenHive is a framework designed to enable seamless communication and collaboration between decentralized AI agents. 
-It provides a standardized framework for agent identity, message formats, and capability discovery, allowing agents 
+OpenHive is a framework designed to enable seamless communication and collaboration between distributed AI agents.
+It provides a standardized framework for agent identity, message formats, and capability discovery, allowing agents
 built by different developers on different platforms to interoperate reliably.
 
 ## Features
@@ -19,21 +26,36 @@ built by different developers on different platforms to interoperate reliably.
     Handles most of the logic, agent search, communication, task processing, capability decalaration.
   </Card>
 
-  <Card icon={<Globe className="text-purple-500" />} title="Registry">
-    Central entity for offline/online agent regsitration, agent discovery and search by capabilities.
-  </Card>
+{" "}
 
-  <Card icon={<Infinity className="text-cyan-500" />} title="Agent Server">
-    Creates an internal server, allowing interaction between your agent and others in your cluster.
-  </Card>
+<Card icon={<Globe className="text-purple-500" />} title="Registry">
+  Central entity for offline/online agent regsitration, agent discovery and
+  search by capabilities.
+</Card>
 
-  <Card icon={<Shield className="text-orange-500" />} title="Agent Signature">
-    Communication between agents is automatically signed by agent's keys to ensure authenticity and trust.
-  </Card>
+{" "}
 
-  <Card icon={<Waypoints className="text-green-500" />} title="Framework Agnostic">
-    Supports most popular frameworks to integrate with, in both (Node.js and Python).
-  </Card>
+<Card icon={<Infinity className="text-cyan-500" />} title="Agent Server">
+  Creates an internal server, allowing interaction between your agent and others
+  in your cluster.
+</Card>
+
+{" "}
+
+<Card icon={<Shield className="text-orange-500" />} title="Agent Signature">
+  Communication between agents is automatically signed by agent's keys to ensure
+  authenticity and trust.
+</Card>
+
+{" "}
+
+<Card
+  icon={<Waypoints className="text-green-500" />}
+  title="Framework Agnostic"
+>
+  Supports most popular frameworks to integrate with, in both (Node.js and
+  Python).
+</Card>
 
   <Card icon={<Terminal className="text-blue-500" />} title="OpenHive CLI">
     A command line tool to run local registry, create & build agents, useful for testing and deployment.
@@ -48,7 +70,7 @@ built by different developers on different platforms to interoperate reliably.
 
 <Steps>
   <Step>
-    Setup the CLI
+    ### Setup the CLI
     
     ```bash
     npm i -g @open-hive/cli
@@ -59,9 +81,10 @@ built by different developers on different platforms to interoperate reliably.
     hive --version
     @open-hive/cli/0.4.0
     ```
+
   </Step>
   <Step>
-    Generate agent code using openhive cli
+    ### Generate agent
 
     <Tabs items={['Node', 'Python']}>
       <Tab value="Node">
@@ -75,9 +98,10 @@ built by different developers on different platforms to interoperate reliably.
         ```
       </Tab>
     </Tabs>
+
   </Step>
   <Step>
-    This would create the following agent structure
+    ### Review your agent structure
 
     <Tabs items={['Node', 'Python']}>
       <Tab value="Node">
@@ -100,5 +124,54 @@ built by different developers on different platforms to interoperate reliably.
         </Files>
       </Tab>
     </Tabs>
+
+  </Step>
+  <Step>
+    ### Run the local registry
+
+    The local registry is a special agent that runs on your machine and is used for agent discovery.
+
+    ```bash
+    hive start
+    ```
+
+    This will start a local server on `http://localhost:11000`.
+
+  </Step>
+  <Step>
+    ### Run your agent
+
+    Now that you have a registry running, you can start your agent.
+
+    <Tabs items={['Node', 'Python']}>
+      <Tab value="Node">
+        ```bash
+        cd first-agent
+        npm install
+        npm run dev
+        ```
+      </Tab>
+      <Tab value="Python">
+        ```bash
+        cd first-agent
+        pip install -r requirements.txt
+        python main.py
+        ```
+      </Tab>
+    </Tabs>
+
+    Your agent will start and register itself with the local registry.
+
+  </Step>
+  <Step>
+    ### Next steps
+
+    🎉 Congratulations on starting your first H.I.V.E agent!
+
+    You can now:
+    - Inspect your agent's capabilities in `src/index.ts` or `main.py`.
+    - Create a second agent and make them communicate.
+    - Explore the documentation for more advanced features.
+
   </Step>
 </Steps>

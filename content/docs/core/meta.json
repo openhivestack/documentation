@@ -6,6 +6,22 @@
   "pages": [
     "---Introduction---",
     "quick-start",
-    "what-is-openhive"
+    "what-is-openhive",
+    "comparisons",
+    "---Concepts---",
+    "concepts/identity",
+    "concepts/tasks",
+    "concepts/capabilities",
+    "concepts/registry",
+    "---Guides---",
+    "guides/vercel-ai-sdk",
+    "guides/langchain",
+    "guides/llamaindex",
+    "guides/auto-gen",
+    "guides/crew-ai",
+    "---API Reference---",
+    "api-reference/node",
+    "api-reference/python",
+    "api-reference/cli"
   ]
 }
