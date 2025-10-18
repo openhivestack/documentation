@@ -1,4 +1,254 @@
 ---
-title: Llamaindex
-description: capabilities
+title: LlamaIndex
+description: Learn how to build a knowledgeable agent using LlamaIndex and expose its query engine on the OpenHive network.
 ---
+
+import { Step, Steps } from "fumadocs-ui/components/steps";
+import { Callout } from "fumadocs-ui/components/callout";
+import { File, Folder, Files } from "fumadocs-ui/components/files";
+
+LlamaIndex is a leading data framework for building LLM applications, specializing in advanced Retrieval-Augmented Generation (RAG) pipelines. It makes it incredibly easy to connect your own data sources to large language models.
+
+When you combine LlamaIndex with OpenHive, you can create powerful "expert" agents that can answer questions and provide insights from private documents or databases. You can then expose this expertise as a simple, secure capability that any other agent on the OpenHive network can use.
+
+In this guide, we will build:
+
+1.  **A Responder Agent**: This agent will use LlamaIndex to build a query engine over a local text file, turning it into a knowledgeable expert.
+2.  **A Requester Agent**: This agent will ask the responder a specific question, getting an answer sourced directly from the document.
+
+<Callout title="LlamaIndex and Python">
+  LlamaIndex has both Python and TypeScript libraries (`llamaindex`). We will
+  provide examples for both, with Python being the more feature-rich
+  implementation.
+</Callout>
+
+<Steps>
+<Step>
+### 1. Setup the Responder Agent
+
+First, create a `knowledge_base` directory and a `hive_protocol.txt` file that our agent will become an expert on.
+
+<Files>
+  <Folder name="responder-agent" defaultOpen>
+    <Folder name="knowledge_base" defaultOpen>
+      <File name="hive_protocol.txt" />
+    </Folder>
+    <File name=".hive.yml" />
+  </Folder>
+</Files>
+
+```text
+# ./responder-agent/knowledge_base/hive_protocol.txt
+The H.I.V.E. protocol's core message format is immutable and MUST use a canonical 5-field structure: from, to, type, data, and sig. Agent identities MUST follow the format `hive:agentid:{uniqueIdentifier}` and use an Ed25519 key pair.
+```
+
+Next, define the agent's identity and its `ask-expert` capability in `.hive.yml`.
+
+```yaml
+# ./responder-agent/.hive.yml
+id: hive:agentid:llamaindex-responder
+name: LlamaIndexResponder
+description: An expert agent that answers questions about the H.I.V.E. protocol.
+version: 1.0.0
+endpoint: http://localhost:11105
+
+keys:
+  publicKey: "..." # Your public key
+  privateKey: "..." # Your private key
+
+capabilities:
+  - id: ask-expert
+    description: "Answers a question based on its internal H.I.V.E. protocol knowledge base."
+    input:
+      question: "string"
+    output:
+      answer: "string"
+```
+
+Finally, set up the project dependencies.
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```json
+    // ./responder-agent/package.json
+    {
+      "name": "llamaindex-responder",
+      "dependencies": {
+        "@open-hive/core": "latest",
+        "llamaindex": "latest"
+      }
+    }
+    ```
+  </Tab>
+  <Tab value="Python">
+    ```text
+    # ./responder-agent/requirements.txt
+    openhive
+    llama-index
+    # You may need specific integrations
+    llama-index-llms-openai
+    llama-index-embeddings-openai
+    ```
+  </Tab>
+</Tabs>
+
+</Step>
+
+<Step>
+### 2. Implement the LlamaIndex Query Engine
+
+Now, we'll write the code that creates a LlamaIndex query engine and exposes it through our OpenHive capability. The `ask-expert` handler will receive a `question`, pass it to the query engine, and return the answer.
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```typescript
+    // ./responder-agent/src/index.ts
+    import { Agent } from '@open-hive/core';
+    import { VectorStoreIndex, SimpleDirectoryReader, Document } from "llamaindex";
+
+    // 1. Create the LlamaIndex query engine
+    const documents = await new SimpleDirectoryReader().loadData("./knowledge_base");
+    const index = await VectorStoreIndex.fromDocuments(documents);
+    const queryEngine = index.asQueryEngine();
+
+    // 2. Create the OpenHive Agent
+    const agent = new Agent();
+
+    agent.capability('ask-expert', async (params) => {
+      const question = params.question as string;
+
+      // 3. Run the query through the engine
+      const response = await queryEngine.query({ query: question });
+
+      return { answer: response.toString() };
+    });
+
+    // 4. Start the OpenHive server
+    const server = agent.createServer();
+    server.start().then(() => {
+      console.log('Responder agent is running!');
+    });
+    ```
+
+  </Tab>
+  <Tab value="Python">
+    ```python
+    # ./responder-agent/main.py
+    from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
+    from openhive import Agent as OpenHiveAgent, AgentServer
+
+    # 1. Load documents and create the LlamaIndex query engine
+    documents = SimpleDirectoryReader("./knowledge_base").load_data()
+    index = VectorStoreIndex.from_documents(documents)
+    query_engine = index.as_query_engine()
+
+    # 2. Create the OpenHive Agent
+    agent = OpenHiveAgent()
+
+    @agent.capability('ask-expert')
+    async def ask_expert(params):
+        question = params['question']
+
+        # 3. Run the query through the engine
+        response = query_engine.query(question)
+
+        return {"answer": str(response)}
+
+    # 4. Start the OpenHive server
+    server = AgentServer(agent)
+    if __name__ == "__main__":
+        server.start()
+    ```
+
+  </Tab>
+</Tabs>
+</Step>
+
+<Step>
+### 3. Create the Requester Agent
+
+The requester agent is a standard OpenHive agent. It asks a question, completely unaware of the powerful RAG system answering it.
+
+<Files>
+  <Folder name="requester-agent" defaultOpen>
+    <File name=".hive.yml" />
+    <File name="src/index.ts or main.py" />
+  </Folder>
+</Files>
+
+Here's the code:
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```typescript
+    // ./requester-agent/src/index.ts
+    import { Agent } from '@open-hive/core';
+
+    const agent = new Agent();
+    const question = "What is the H.I.V.E. agent identity format?";
+
+    const result = await agent.run(
+      'hive:agentid:llamaindex-responder',
+      'ask-expert',
+      { question }
+    );
+
+    console.log(`Q: ${question}`);
+    console.log(`A: ${result.answer}`);
+    ```
+
+  </Tab>
+  <Tab value="Python">
+    ```python
+    # ./requester-agent/main.py
+    import asyncio
+    from openhive import Agent
+
+    agent = Agent()
+
+    async def main():
+        question = "What is the H.I.V.E. agent identity format?"
+
+        result = await agent.run(
+            'hive:agentid:llamaindex-responder',
+            'ask-expert',
+            {"question": question}
+        )
+
+        print(f"Q: {question}")
+        print(f"A: {result['answer']}")
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+    ```
+
+  </Tab>
+</Tabs>
+</Step>
+
+<Step>
+### 4. Run the Cluster
+
+You're ready to see your RAG-powered agent in action. Open three terminals and launch your cluster.
+
+1.  **Start the Registry**:
+
+    ```bash
+    hive start
+    ```
+
+2.  **Start the Responder Agent**:
+    ```bash
+    # In the responder-agent directory
+    npm run start # or python main.py
+    ```
+3.  **Run the Requester Agent**:
+    ```bash
+    # In the requester-agent directory
+    npm run start # or python main.py
+    ```
+
+The requester should print a precise answer to your question, sourced directly from the responder's LlamaIndex-powered knowledge base.
+
+</Step>
+</Steps>

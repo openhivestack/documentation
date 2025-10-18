@@ -17,7 +17,7 @@ const octokit = new Octokit({
 });
 
 const REPOS = {
-  "cli/overview": {
+  "core/api-reference/cli": {
     owner: "openhivestack",
     repo: "cli",
     frontmatter: {
@@ -39,7 +39,7 @@ const REPOS = {
       return newContent;
     },
   },
-  "sdk/node": {
+  "core/api-reference/node": {
     owner: "openhivestack",
     repo: "node-sdk",
     frontmatter: {
@@ -51,7 +51,7 @@ const REPOS = {
       return content.replace(/# Openhive \(node-sdk\)/, "");
     },
   },
-  "sdk/python": {
+  "core/api-reference/python": {
     owner: "openhivestack",
     repo: "python-sdk",
     frontmatter: {

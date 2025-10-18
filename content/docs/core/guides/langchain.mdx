@@ -1,4 +1,258 @@
 ---
 title: LangChain
-description: capabilities
+description: Learn how to expose a LangChain RAG (Retrieval-Augmented Generation) chain as a capability on the OpenHive network.
 ---
+
+import { Step, Steps } from "fumadocs-ui/components/steps";
+import { Callout } from "fumadocs-ui/components/callout";
+import { File, Folder, Files } from "fumadocs-ui/components/files";
+
+LangChain is one of the most popular and powerful frameworks for developing applications powered by language models. It provides a rich set of tools for creating complex chains, managing prompts, and, most importantly, grounding LLMs in your own data through Retrieval-Augmented Generation (RAG).
+
+By integrating LangChain with OpenHive, you can create "expert" agents that have deep knowledge of specific documents or data sources, and then offer that expertise as a simple, callable service to the entire distributed network.
+
+In this guide, we will build:
+
+1.  **A Responder Agent**: This agent will use LangChain to create a RAG chain over a simple text file. It will be able to answer questions about the content of that file.
+2.  **A Requester Agent**: This agent will ask a question to the responder, getting a precise answer without needing to know anything about the underlying LangChain implementation or the data source.
+
+<Steps>
+<Step>
+### 1. Setup the Responder Agent
+
+First, create a `knowledge.txt` file that our agent will have expertise on.
+
+```text
+# ./responder-agent/knowledge.txt
+The H.I.V.E. Protocol Specification is the authoritative technical guide for how AI agents communicate and collaborate within the H.I.V.E. ecosystem. All messages MUST use a canonical 5-field structure, and agent identities are secured with Ed25519 key pairs.
+```
+
+Next, define the agent's identity and its `query-docs` capability in the `.hive.yml` file.
+
+```yaml
+# ./responder-agent/.hive.yml
+id: hive:agentid:langchain-responder
+name: LangChainResponder
+description: An agent that can answer questions about a knowledge document.
+version: 1.0.0
+endpoint: http://localhost:11104
+
+keys:
+  publicKey: "..." # Your public key
+  privateKey: "..." # Your private key
+
+capabilities:
+  - id: query-docs
+    description: "Answers a question based on the content of its internal knowledge document."
+    input:
+      query: "string"
+    output:
+      answer: "string"
+```
+
+Finally, set up the project dependencies.
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```json
+    // ./responder-agent/package.json
+    {
+      "name": "langchain-responder",
+      "dependencies": {
+        "@open-hive/core": "latest",
+        "langchain": "latest"
+        // Add LLM SDK and vector store dependencies
+      }
+    }
+    ```
+  </Tab>
+  <Tab value="Python">
+    ```text
+    # ./responder-agent/requirements.txt
+    openhive
+    langchain
+    langchain-community
+    langchain-openai
+    # For in-memory vector store
+    faiss-cpu
+    ```
+  </Tab>
+</Tabs>
+
+</Step>
+
+<Step>
+### 2. Implement the LangChain RAG Chain
+
+Now, let's write the code that bridges an OpenHive task to our internal LangChain RAG setup. The `query-docs` handler will receive a `query`, pass it to the LangChain chain, and return the LLM's answer.
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```typescript
+    // ./responder-agent/src/index.ts
+    import { Agent } from '@open-hive/core';
+    import * as fs from 'fs/promises';
+
+    // A mock function to simulate a LangChain RAG workflow
+    async function setupAndQueryRAG(query: string): Promise<string> {
+      console.log(`[LangChain RAG] Loading knowledge base...`);
+      const knowledge = await fs.readFile('knowledge.txt', 'utf-8');
+
+      console.log(`[LangChain RAG] Answering query: "${query}"`);
+      // In a real app, you would use LangChain to create a vector store,
+      // retrieve relevant chunks, and pass them to an LLM.
+
+      if (query.includes("message structure")) {
+        return "All messages MUST use a canonical 5-field structure.";
+      }
+      return "I can only answer questions about the H.I.V.E. Protocol.";
+    }
+
+    const agent = new Agent();
+
+    agent.capability('query-docs', async (params) => {
+      const query = params.query as string;
+      const answer = await setupAndQueryRAG(query);
+      return { answer };
+    });
+
+    const server = agent.createServer();
+    server.start().then(() => {
+      console.log('Responder agent is running!');
+    });
+    ```
+
+  </Tab>
+  <Tab value="Python">
+    ```python
+    # ./responder-agent/main.py
+    from langchain_community.vectorstores import FAISS
+    from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+    from langchain.text_splitter import CharacterTextSplitter
+    from langchain.chains import RetrievalQA
+    from openhive import Agent as OpenHiveAgent, AgentServer
+
+    # 1. Load the document and create the LangChain RAG chain
+    with open('knowledge.txt') as f:
+        knowledge_text = f.read()
+
+    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+    texts = text_splitter.split_text(knowledge_text)
+    embeddings = OpenAIEmbeddings()
+    vectorstore = FAISS.from_texts(texts, embeddings)
+    qa_chain = RetrievalQA.from_chain_type(
+        llm=ChatOpenAI(model="gpt-4"),
+        chain_type="stuff",
+        retriever=vectorstore.as_retriever()
+    )
+
+    # 2. Create the OpenHive Agent
+    agent = OpenHiveAgent()
+
+    @agent.capability('query-docs')
+    async def query_docs(params):
+        query = params['query']
+
+        # 3. Run the query through the RAG chain
+        result = qa_chain.run(query)
+
+        return {"answer": result}
+
+    # 4. Start the OpenHive server
+    server = AgentServer(agent)
+    if __name__ == "__main__":
+        server.start()
+    ```
+
+  </Tab>
+</Tabs>
+</Step>
+
+<Step>
+### 3. Create the Requester Agent
+
+The requester agent is a standard OpenHive agent. It simply asks a question and gets an answer, completely unaware of the complex RAG process happening on the other side.
+
+<Files>
+  <Folder name="requester-agent" defaultOpen>
+    <File name=".hive.yml" />
+    <File name="src/index.ts or main.py" />
+  </Folder>
+</Files>
+
+Here's the code:
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```typescript
+    // ./requester-agent/src/index.ts
+    import { Agent } from '@open-hive/core';
+
+    const agent = new Agent();
+    const question = "What is the H.I.V.E. message structure?";
+
+    const result = await agent.run(
+      'hive:agentid:langchain-responder',
+      'query-docs',
+      { query: question }
+    );
+
+    console.log(`Q: ${question}`);
+    console.log(`A: ${result.answer}`);
+    ```
+
+  </Tab>
+  <Tab value="Python">
+    ```python
+    # ./requester-agent/main.py
+    import asyncio
+    from openhive import Agent
+
+    agent = Agent()
+
+    async def main():
+        question = "What is the H.I.V.E. message structure?"
+
+        result = await agent.run(
+            'hive:agentid:langchain-responder',
+            'query-docs',
+            {"query": question}
+        )
+
+        print(f"Q: {question}")
+        print(f"A: {result['answer']}")
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+    ```
+
+  </Tab>
+</Tabs>
+</Step>
+
+<Step>
+### 4. Run the Cluster
+
+You're ready to go! Open three terminals to see your expert agent in action.
+
+1.  **Start the Registry**:
+
+    ```bash
+    hive start
+    ```
+
+2.  **Start the Responder Agent**:
+    ```bash
+    # In the responder-agent directory
+    npm run start # or python main.py
+    ```
+3.  **Run the Requester Agent**:
+    ```bash
+    # In the requester-agent directory
+    npm run start # or python main.py
+    ```
+
+The requester agent should print a precise answer to your question, sourced directly from the responder's knowledge document via its LangChain RAG chain.
+
+</Step>
+</Steps>

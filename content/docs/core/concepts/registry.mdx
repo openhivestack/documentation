@@ -1,4 +1,155 @@
 ---
 title: Registry
-description: registry
+description: Learn how agents discover each other and form scalable, distributed networks using registries.
 ---
+
+import { Laptop, Globe, Search } from "lucide-react";
+import { Card, Cards } from "fumadocs-ui/components/card";
+import { Callout } from "fumadocs-ui/components/callout";
+
+So far, you've learned how to create agents with secure identities and well-defined capabilities. But how do these agents find each other in a vast, distributed network?
+
+This is where the **Registry** comes in.
+
+The Registry is the discovery layer of the OpenHive network. It acts like a decentralized phonebook where agents can publish their capabilities and find other agents to collaborate with. Without a registry, agents would be isolated islands, unable to communicate.
+
+## How It Works
+
+The discovery process is simple but powerful:
+
+1.  **Registration**: When an agent comes online, it **registers** itself with a chosen registry, publishing its ID, endpoint, and capabilities.
+2.  **Discovery**: When an agent wants to run a task (e.g., `agent.run('responder-id', ...)`), it queries its active registry to find the `responder-id`.
+3.  **Connection**: The registry returns the responder's endpoint, allowing the requester to establish a direct, peer-to-peer connection to send the task request.
+
+This model allows the network to be incredibly dynamic. Agents can join and leave the network at any time, and as long as they register themselves, they will be discoverable by others.
+
+## Registry Types
+
+The OpenHive SDKs come with two types of registries, designed for different use cases.
+
+<Cards>
+  <Card icon={<Laptop className="text-blue-500" />} title="In-Memory Registry">
+    This is a simple, local registry that runs inside your agent's own process.
+    It's the default registry and is perfect for local development and testing,
+    as it requires zero configuration. The `hive start` command you used in the
+    Quick Start guide runs an agent with an in-memory registry.
+  </Card>
+  <Card icon={<Globe className="text-purple-500" />} title="Remote Registry">
+    This is a client for connecting to a standalone, persistent registry
+    service. In a production environment, all of your agents would connect to a
+    shared remote registry, allowing them to discover each other regardless of
+    where they are deployed. This is the key to building large-scale,
+    distributed agent clusters.
+  </Card>
+</Cards>
+
+## Using Registries in Code
+
+The `Agent` class makes it easy to work with registries. By default, every agent has an `'internal'` in-memory registry.
+
+### Registering an Agent
+
+To make an agent discoverable, you must explicitly register it.
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```typescript
+    // In our responder agent...
+    import { Agent } from '@open-hive/core';
+
+    const agent = new Agent();
+    // ... define capabilities
+
+    const server = agent.createServer();
+
+    server.start().then(async () => {
+      // Register the agent with its default internal registry
+      await agent.register();
+      console.log('Agent registered and server is running!');
+    });
+    ```
+
+  </Tab>
+  <Tab value="Python">
+    ```python
+    # In our responder agent...
+    import asyncio
+    from openhive import Agent, AgentServer
+
+    agent = Agent()
+    # ... define capabilities
+
+    server = AgentServer(agent)
+
+    async def main():
+        # This will run the server in the background
+        # and then register the agent.
+        await server.start_and_register()
+        print("Agent registered and server is running!")
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+    ```
+
+  </Tab>
+</Tabs>
+
+### Using a Remote Registry
+
+To scale up, you can switch from the internal registry to a shared remote one. Imagine you have a central registry running at `http://my-hive-registry.com`.
+
+You would create a `RemoteRegistry` instance and tell your agent to use it.
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```typescript
+    import { Agent, RemoteRegistry } from '@open-hive/core';
+
+    const agent = new Agent();
+
+    // Create a client for the remote registry
+    const productionRegistry = new RemoteRegistry(
+      'production',
+      'http://my-hive-registry.com'
+    );
+
+    // Add it to the agent's list of available registries
+    agent.addRegistry(productionRegistry);
+
+    // Tell the agent to use this registry for all discovery
+    agent.useRegistry('production');
+
+    // Now, when we register, it will be with the production registry
+    await agent.register();
+    ```
+
+  </Tab>
+  <Tab value="Python">
+    ```python
+    from openhive import Agent, RemoteRegistry
+
+    agent = Agent()
+
+    # The constructor can take a default registry
+    production_registry = RemoteRegistry(
+        name="production",
+        endpoint="http://my-hive-registry.com"
+    )
+
+    # Re-initialize the agent to use the remote registry by default
+    agent = Agent(registry=production_registry)
+
+    # Now, when we register, it will be with the production registry
+    await agent.register()
+    ```
+
+  </Tab>
+</Tabs>
+
+<Callout title="The Power of Distributed Discovery">
+  By switching a single line of code, you can move your agent from a local
+  development environment to a global, distributed production network. The rest
+  of your agent's logic—its identity, capabilities, and task handling—remains
+  exactly the same. This is the power of decoupling agent logic from the
+  discovery mechanism.
+</Callout>

@@ -1,5 +1,73 @@
 ---
-title: Identity
-description: identity
+title: Agent Identity
+description: Learn how to manage and utilize agent identities in the OpenHive ecosystem.
 ---
 
+import { File, Folder, Files } from "fumadocs-ui/components/files";
+import { Callout } from "fumadocs-ui/components/callout";
+
+In OpenHive, every agent has a unique, verifiable identity. This is not just a username or an ID from a database; it's a cryptographic identity secured by a powerful public/private key pair (using the Ed25519 algorithm).
+
+This cryptographic foundation is crucial for the network's security and integrity. It ensures that when an agent sends a message, other agents can be absolutely certain who sent it, preventing impersonation and guaranteeing message authenticity.
+
+## The `.hive.yml` Configuration File
+
+While the cryptographic keys are the core of an agent's identity, you rarely interact with them directly. Instead, all aspects of an agent's identity and configuration are managed through a single, easy-to-understand file: `.hive.yml`.
+
+This file is the single source of truth for your agent. It contains its unique ID, descriptive metadata, and, most importantly, its public and private keys.
+
+<Files>
+  <Folder name="my-first-agent" defaultOpen>
+    <File name=".hive.yml" />
+    <File name="src/index.ts" />
+  </Folder>
+</Files>
+
+When you instantiate an `Agent`, the SDK reads this file, configures the agent, and prepares its cryptographic identity for secure communication.
+
+## Instantiating Your Agent
+
+The primary way you'll work with an agent's identity is by creating an instance of the `Agent` class. The constructor is designed for simplicity—just point it to your configuration file, and the SDK handles the rest.
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```typescript
+    // src/index.ts
+    import { Agent } from '@open-hive/core';
+
+    // By default, the Agent constructor looks for a `.hive.yml`
+    // file in the current working directory.
+    const agent = new Agent();
+
+    console.log(`Agent ID: ${agent.id()}`);
+    ```
+
+  </Tab>
+  <Tab value="Python">
+    ```python
+    # main.py
+    from openhive import Agent
+
+    # By default, the Agent constructor looks for a `.hive.yml`
+    # file in the current working directory.
+    agent = Agent()
+
+    print(f"Agent ID: {agent.identity.id()}")
+    ```
+
+  </Tab>
+</Tabs>
+
+When this code runs, the `Agent` class:
+
+1.  Finds and parses the `.hive.yml` file.
+2.  Loads the agent's ID, name, and other metadata.
+3.  Loads the private and public keys into memory, ready for signing and verifying messages.
+
+You now have a fully operational agent with a secure, verifiable identity, ready to communicate on the network.
+
+<Callout title="Generating Your First Identity">
+  You don't need to create keys manually. The OpenHive CLI handles it for you.
+  When you run `hive create agent`, the CLI generates a new, secure key pair and
+  saves it directly into your agent's `.hive.yml` file.
+</Callout>

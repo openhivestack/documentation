@@ -1,4 +1,261 @@
 ---
 title: Microsoft AutoGen
-description: capabilities
+description: Learn how to combine a local AutoGen agent swarm with the OpenHive network to expose complex capabilities.
 ---
+
+import { Step, Steps } from "fumadocs-ui/components/steps";
+import { Callout } from "fumadocs-ui/components/callout";
+import { File, Folder, Files } from "fumadocs-ui/components/files";
+
+Microsoft's AutoGen is a powerful framework for building and orchestrating complex workflows using multiple, collaborative AI agents. It excels at solving problems that require different roles, like a programmer writing code and a critic reviewing it.
+
+OpenHive and AutoGen are a perfect match. You can use AutoGen to handle the complex, internal logic of a task, and then use OpenHive to expose that entire multi-agent workflow as a single, simple capability on the distributed network.
+
+In this guide, we will build two agents:
+
+1.  **A Responder Agent**: This agent will use an internal AutoGen team (an Assistant and a User Proxy) to solve a math problem and save the Python code to a file.
+2.  **A Requester Agent**: This agent will ask the Responder to solve the problem, without needing to know anything about the AutoGen agents working behind the scenes.
+
+This pattern allows you to create incredibly powerful agents that can solve complex problems by delegating work to a specialized team, all while maintaining a simple, clean API on the OpenHive network.
+
+<Callout title="AutoGen and Python">
+  While AutoGen is a versatile concept, its primary and most mature
+  implementation is in Python. For the Node.js example, we will simulate a
+  similar multi-agent interaction to demonstrate the same integration pattern.
+</Callout>
+
+<Steps>
+<Step>
+### 1. Setup the Responder Agent
+
+First, let's create our AutoGen-powered responder. We'll start by defining its identity and capabilities in the `.hive.yml` file. This agent will have one capability: `solve-math-problem`.
+
+```yaml
+# ./responder-agent/.hive.yml
+id: hive:agentid:autogen-responder
+name: AutoGenResponder
+description: An agent that uses an AutoGen team to solve math problems.
+version: 1.0.0
+endpoint: http://localhost:11102
+
+keys:
+  publicKey: "..." # Your public key
+  privateKey: "..." # Your private key
+
+capabilities:
+  - id: solve-math-problem
+    description: "Solves a math problem using a team of agents and returns the generated Python code."
+    input:
+      problem: "string"
+    output:
+      code: "string"
+```
+
+Next, set up the project dependencies.
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```json
+    // ./responder-agent/package.json
+    {
+      "name": "autogen-responder",
+      "dependencies": {
+        "@open-hive/core": "latest",
+        // Add LLM SDK, e.g., @ai-sdk/openai
+      }
+    }
+    ```
+  </Tab>
+  <Tab value="Python">
+    ```text
+    # ./responder-agent/requirements.txt
+    openhive
+    pyautogen
+    # Other LLM dependencies, e.g., python-dotenv, openai
+    ```
+  </Tab>
+</Tabs>
+
+</Step>
+
+<Step>
+### 2. Implement the OpenHive Capability
+
+Now, let's write the code that bridges an incoming OpenHive task request to our internal AutoGen team.
+
+We'll define the `solve-math-problem` capability. The handler will receive the `problem` from the task `params`, pass it to the AutoGen workflow, and return the final generated code.
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```typescript
+    // ./responder-agent/src/index.ts
+    import { Agent } from '@open-hive/core';
+
+    // A mock function to simulate an AutoGen-like workflow
+    async function runAutoGenTeam(problem: string): Promise<string> {
+      console.log(`[AutoGen Team] Solving: "${problem}"`);
+      // 1. Coder Agent "writes" the code
+      const code = `
+
+# Python code to solve: ${problem}
+
+import math
+
+# Solution...
+
+print(2\*\*10)
+`.trim();
+// 2. Critic Agent "reviews" the code
+console.log('[AutoGen Team] Code review complete. Looks good!');
+return code;
+}
+
+    const agent = new Agent();
+
+    agent.capability('solve-math-problem', async (params) => {
+      const problem = params.problem as string;
+      const code = await runAutoGenTeam(problem);
+      return { code };
+    });
+
+    const server = agent.createServer();
+    server.start().then(() => {
+      console.log('Responder agent is running!');
+    });
+    ```
+
+  </Tab>
+  <Tab value="Python">
+    ```python
+    # ./responder-agent/main.py
+    import autogen
+    from openhive import Agent, AgentServer
+
+    # 1. Configure your LLM provider
+    config_list = autogen.config_list_from_json(
+        "OAI_CONFIG_LIST",
+        filter_dict={"model": ["gpt-4"]},
+    )
+
+    # 2. Create the AutoGen agents
+    assistant = autogen.AssistantAgent(name="assistant", llm_config={"config_list": config_list})
+    user_proxy = autogen.UserProxyAgent(
+        name="user_proxy",
+        code_execution_config={"work_dir": "coding", "use_docker": False}
+    )
+
+    # 3. Create the OpenHive Agent
+    agent = Agent()
+
+    @agent.capability('solve-math-problem')
+    async def solve_math_problem(params):
+        problem = params['problem']
+
+        # 4. Initiate the AutoGen conversation
+        user_proxy.initiate_chat(assistant, message=problem)
+
+        # For this example, we assume the last message is the code
+        last_message = user_proxy.last_message()
+        code = last_message['content']
+
+        return {"code": code}
+
+    # 5. Start the OpenHive server
+    server = AgentServer(agent)
+    if __name__ == "__main__":
+        server.start()
+    ```
+
+  </Tab>
+</Tabs>
+</Step>
+
+<Step>
+### 3. Create the Requester Agent
+
+The requester agent is a standard OpenHive agent. It doesn't need to know anything about AutoGen. It just needs to know the responder's ID and the capability it wants to run.
+
+<Files>
+  <Folder name="requester-agent" defaultOpen>
+    <File name=".hive.yml" />
+    <File name="src/index.ts or main.py" />
+  </Folder>
+</Files>
+
+Here's the code for the requester:
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```typescript
+    // ./requester-agent/src/index.ts
+    import { Agent } from '@open-hive/core';
+
+    const agent = new Agent();
+    const problem = "What is 2 to the power of 10?";
+
+    const result = await agent.run(
+      'hive:agentid:autogen-responder',
+      'solve-math-problem',
+      { problem }
+    );
+
+    console.log("--- Generated Code ---");
+    console.log(result.code);
+    ```
+
+  </Tab>
+  <Tab value="Python">
+    ```python
+    # ./requester-agent/main.py
+    import asyncio
+    from openhive import Agent
+
+    agent = Agent()
+
+    async def main():
+        problem = "What is 2 to the power of 10?"
+
+        result = await agent.run(
+            'hive:agentid:autogen-responder',
+            'solve-math-problem',
+            {"problem": problem}
+        )
+
+        print("--- Generated Code ---")
+        print(result['code'])
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+    ```
+
+  </Tab>
+</Tabs>
+</Step>
+
+<Step>
+### 4. Run the Cluster
+
+You're all set! Now, open three terminal windows to run your decentralized agent cluster.
+
+1.  **Start the Registry**:
+
+    ```bash
+    hive start
+    ```
+
+2.  **Start the Responder Agent**:
+    ```bash
+    # In the responder-agent directory
+    # Make sure to register the agent with the hive registry
+    npm run start # or python main.py
+    ```
+3.  **Run the Requester Agent**:
+    ```bash
+    # In the requester-agent directory
+    npm run start # or python main.py
+    ```
+
+You should see the requester agent print the Python code generated by the responder's internal AutoGen team. You've successfully exposed a complex, multi-agent workflow as a single, clean capability on the OpenHive network!
+
+</Step>
+</Steps>

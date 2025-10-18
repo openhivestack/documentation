@@ -1,5 +1,173 @@
 ---
 title: Tasks
-description: agent tasks
+description: Learn how to define, handle, and run tasks to enable communication between agents.
 ---
 
+import { Callout } from "fumadocs-ui/components/callout";
+
+Communication in OpenHive is centered around a simple and powerful concept: **tasks**. A task is a request sent from one agent to another, asking it to perform an action using one of its advertised **capabilities**.
+
+This task-based model is the foundation of all agent collaboration. One agent (the _requester_) sends a task request, and another agent (the _responder_) executes the logic defined in its capability handler and returns a result.
+
+The entire interaction is asynchronous, allowing agents to perform complex, long-running operations without blocking.
+
+## 1. Defining a Capability
+
+Before an agent can respond to a task request, it needs to define what it can do. This is done by registering a **capability** and providing a handler function that contains the logic to be executed.
+
+You register capabilities using the `agent.capability()` method. This method takes two arguments:
+
+1.  The `id` of the capability (which must be predefined in your `.hive.yml`).
+2.  An `async` handler function that receives `params` and returns a result.
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```typescript
+    // src/index.ts
+    import { Agent } from '@open-hive/core';
+
+    const agent = new Agent();
+
+    // Define a handler for the "summarize-text" capability
+    agent.capability('summarize-text', async (params) => {
+      const text = params.text as string;
+      console.log(`Summarizing text: "${text.substring(0, 20)}..."`);
+
+      // In a real agent, you would call an LLM here.
+      // For this example, we'll just return a mock summary.
+      const summary = `Summary of: ${text}`;
+
+      return { summary };
+    });
+    ```
+
+  </Tab>
+  <Tab value="Python">
+    ```python
+    # main.py
+    from openhive import Agent
+    import asyncio
+
+    agent = Agent()
+
+    # Define a handler for the "summarize-text" capability
+    @agent.capability('summarize-text')
+    async def summarize_text(params):
+        text = params['text']
+        print(f"Summarizing text: '{text[:20]}...'")
+
+        # In a real agent, you would call an LLM here.
+        await asyncio.sleep(1) # Simulate async work
+
+        summary = f"Summary of: {text}"
+        return {"summary": summary}
+    ```
+
+  </Tab>
+</Tabs>
+
+## 2. Creating a Server
+
+Defining a capability only registers the handler logic. To make the agent available on the network to receive task requests, you need to start a server.
+
+The SDKs make this incredibly simple:
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```typescript
+    // ... capability definition from above
+
+    const server = agent.createServer();
+
+    server.start().then(() => {
+      console.log(`Agent server running at ${agent.endpoint()}`);
+    });
+    ```
+
+  </Tab>
+  <Tab value="Python">
+    ```python
+    # ... capability definition from above
+    from openhive import AgentServer
+
+    server = AgentServer(agent)
+
+    if __name__ == "__main__":
+        server.start()
+    ```
+
+  </Tab>
+</Tabs>
+
+With the server running, your agent is now live, listening for incoming HTTP requests on its configured endpoint, ready to execute the `summarize-text` capability.
+
+## 3. Running a Task
+
+Now, let's see how a different agent would request this capability. To run a task, you use the `agent.run()` method, which requires three arguments:
+
+1.  The `id` of the target agent you want to communicate with.
+2.  The `id` of the capability you want to run.
+3.  The `params` object containing the input data for the task.
+
+Here’s how a requester agent would call the `summarize-text` capability on our responder agent:
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```typescript
+    // In a different agent's code...
+    import { Agent } from '@open-hive/core';
+
+    const requester = new Agent();
+
+    const textToSummarize = "OpenHive is a protocol for decentralized AI agents...";
+
+    // The ID of the agent we set up in the previous steps
+    const responderAgentId = 'hive:agentid:responder-agent';
+
+    const result = await requester.run(
+      responderAgentId,
+      'summarize-text',
+      { text: textToSummarize }
+    );
+
+    console.log('Got summary:', result.summary);
+    // Output: "Summary of: OpenHive is a protocol..."
+    ```
+
+  </Tab>
+  <Tab value="Python">
+    ```python
+    # in a different agent's code...
+    import asyncio
+    from openhive import Agent
+
+    requester = Agent()
+
+    async def main():
+        text_to_summarize = "OpenHive is a protocol for decentralized AI agents..."
+
+        # The ID of the agent we set up in the previous steps
+        responder_agent_id = 'hive:agentid:responder-agent'
+
+        result = await requester.run(
+            responder_agent_id,
+            'summarize-text',
+            {"text": text_to_summarize}
+        )
+
+        print(f"Got summary: {result['summary']}")
+        # Output: "Summary of: OpenHive is a protocol..."
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+    ```
+
+  </Tab>
+</Tabs>
+
+<Callout>
+  Behind the scenes, the `agent.run()` method creates a valid H.I.V.E. message,
+  signs it with the requester's private key, sends it to the responder's
+  endpoint, and verifies the signature on the returned result. The SDKs handle
+  all this complexity for you.
+</Callout>

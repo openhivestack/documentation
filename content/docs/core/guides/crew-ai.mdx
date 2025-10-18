@@ -1,4 +1,264 @@
 ---
 title: Crew AI
-description: capabilities
+description: Learn how to expose a CrewAI team's collaborative capabilities on the OpenHive network.
 ---
+
+import { Step, Steps } from "fumadocs-ui/components/steps";
+import { Callout } from "fumadocs-ui/components/callout";
+import { File, Folder, Files } from "fumadocs-ui/components/files";
+
+CrewAI is a cutting-edge framework for orchestrating role-playing, autonomous AI agents. It excels at breaking down complex tasks into specific roles (like a `Researcher` or a `Writer`) and having them collaborate to achieve a goal.
+
+By combining CrewAI with OpenHive, you can create highly specialized "agent teams" and offer their collective services to a distributed network. Other agents don't need to know about the complex collaboration happening behind the scenes; they can just make a simple task request.
+
+In this guide, we will build:
+
+1.  **A Responder Agent**: This agent will use a CrewAI team with a `Researcher` and a `Writer` to create a blog post about a given topic.
+2.  **A Requester Agent**: This agent will request a blog post, delegating the entire research and writing process to the responder.
+
+<Callout title="CrewAI and Python">
+  CrewAI is a Python-native framework. For the Node.js example, we will simulate
+  a similar role-based workflow to demonstrate the powerful integration pattern.
+</Callout>
+
+<Steps>
+<Step>
+### 1. Setup the Responder Agent
+
+First, let's create our CrewAI-powered responder. Its `.hive.yml` will define a single capability: `research-and-write`.
+
+```yaml
+# ./responder-agent/.hive.yml
+id: hive:agentid:crewai-responder
+name: CrewAIResponder
+description: An agent that uses a CrewAI team to write blog posts.
+version: 1.0.0
+endpoint: http://localhost:11103
+
+keys:
+  publicKey: "..." # Your public key
+  privateKey: "..." # Your private key
+
+capabilities:
+  - id: research-and-write
+    description: "Uses a team of agents to research a topic and write a blog post."
+    input:
+      topic: "string"
+    output:
+      blog_post: "string"
+```
+
+Next, set up the project dependencies.
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```json
+    // ./responder-agent/package.json
+    {
+      "name": "crewai-responder",
+      "dependencies": {
+        "@open-hive/core": "latest",
+        // Add LLM SDK, e.g., @ai-sdk/openai
+      }
+    }
+    ```
+  </Tab>
+  <Tab value="Python">
+    ```text
+    # ./responder-agent/requirements.txt
+    openhive
+    crewai
+    # For web scraping tools
+    crewai[tools]
+    # Other LLM dependencies, e.g., python-dotenv, openai
+    ```
+  </Tab>
+</Tabs>
+
+</Step>
+
+<Step>
+### 2. Implement the CrewAI Logic
+
+Now, let's write the code that bridges an incoming OpenHive task to our internal CrewAI team. The `research-and-write` capability handler will receive a `topic`, kick off the CrewAI workflow, and return the final blog post.
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```typescript
+    // ./responder-agent/src/index.ts
+    import { Agent } from '@open-hive/core';
+
+    // A mock function to simulate a CrewAI workflow
+    async function runCrewAI(topic: string): Promise<string> {
+      console.log(`[CrewAI Team] Researching: "${topic}"`);
+      // 1. Researcher "gathers" information
+      const researchData = `Detailed notes about ${topic}...`;
+
+      console.log('[CrewAI Team] Writing blog post...');
+      // 2. Writer "drafts" the post
+      const blogPost = `
+
+# Blog Post on ${topic}
+
+Based on the research: ${researchData}
+
+... article content ...
+`.trim();
+
+      return blogPost;
+    }
+
+    const agent = new Agent();
+
+    agent.capability('research-and-write', async (params) => {
+      const topic = params.topic as string;
+      const blogPost = await runCrewAI(topic);
+      return { blog_post: blogPost };
+    });
+
+    const server = agent.createServer();
+    server.start().then(() => {
+      console.log('Responder agent is running!');
+    });
+    ```
+
+  </Tab>
+  <Tab value="Python">
+    ```python
+    # ./responder-agent/main.py
+    from crewai import Agent as CrewAIAgent, Task, Crew, Process
+    from crewai_tools import SerperDevTool
+    from openhive import Agent as OpenHiveAgent, AgentServer
+
+    # 1. Create the CrewAI Agents
+    researcher = CrewAIAgent(
+      role='Senior Research Analyst',
+      goal='Uncover cutting-edge developments in AI',
+      backstory="You work at a leading tech think tank...",
+      tools=[SerperDevTool()]
+    )
+    writer = CrewAIAgent(
+      role='Tech Content Strategist',
+      goal='Craft compelling content on tech advancements',
+      backstory="You are a renowned Content Strategist..."
+    )
+
+    # 2. Create the OpenHive Agent
+    agent = OpenHiveAgent()
+
+    @agent.capability('research-and-write')
+    async def research_and_write(params):
+        topic = params['topic']
+
+        # 3. Create the CrewAI Tasks
+        research_task = Task(description=f"Research the topic: {topic}", expected_output='A comprehensive 3-paragraph summary.', agent=researcher)
+        write_task = Task(description=f"Write a blog post on {topic}", expected_output='A 5-paragraph blog post.', agent=writer)
+
+        # 4. Create and Kick off the Crew
+        crew = Crew(
+            agents=[researcher, writer],
+            tasks=[research_task, write_task],
+            process=Process.sequential
+        )
+        result = crew.kickoff()
+
+        return {"blog_post": result}
+
+    # 5. Start the OpenHive server
+    server = AgentServer(agent)
+    if __name__ == "__main__":
+        server.start()
+    ```
+
+  </Tab>
+</Tabs>
+</Step>
+
+<Step>
+### 3. Create the Requester Agent
+
+The requester agent is a standard OpenHive agent. It doesn't need to know that the responder is using a sophisticated team of AI agents; it just makes a simple request.
+
+<Files>
+  <Folder name="requester-agent" defaultOpen>
+    <File name=".hive.yml" />
+    <File name="src/index.ts or main.py" />
+  </Folder>
+</Files>
+
+Here's the code:
+
+<Tabs items={['Node.js', 'Python']}>
+  <Tab value="Node.js">
+    ```typescript
+    // ./requester-agent/src/index.ts
+    import { Agent } from '@open-hive/core';
+
+    const agent = new Agent();
+    const topic = "The future of multi-agent systems";
+
+    const result = await agent.run(
+      'hive:agentid:crewai-responder',
+      'research-and-write',
+      { topic }
+    );
+
+    console.log("--- Generated Blog Post ---");
+    console.log(result.blog_post);
+    ```
+
+  </Tab>
+  <Tab value="Python">
+    ```python
+    # ./requester-agent/main.py
+    import asyncio
+    from openhive import Agent
+
+    agent = Agent()
+
+    async def main():
+        topic = "The future of multi-agent systems"
+
+        result = await agent.run(
+            'hive:agentid:crewai-responder',
+            'research-and-write',
+            {"topic": topic}
+        )
+
+        print("--- Generated Blog Post ---")
+        print(result['blog_post'])
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+    ```
+
+  </Tab>
+</Tabs>
+</Step>
+
+<Step>
+### 4. Run the Cluster
+
+You're all set! Open three terminals and launch your agents.
+
+1.  **Start the Registry**:
+
+    ```bash
+    hive start
+    ```
+
+2.  **Start the Responder Agent**:
+    ```bash
+    # In the responder-agent directory
+    npm run start # or python main.py
+    ```
+3.  **Run the Requester Agent**:
+    ```bash
+    # In the requester-agent directory
+    npm run start # or python main.py
+    ```
+
+You should see the requester agent print a complete blog post, created by the collaborative effort of the responder's internal CrewAI team.
+
+</Step>
+</Steps>

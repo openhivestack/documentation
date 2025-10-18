@@ -1,4 +1,173 @@
 ---
 title: Vercel AI SDK
-description: vercel ai sdk
+description: Learn how to use the Vercel AI SDK to generate streaming text and expose it as a service on the OpenHive network.
 ---
+
+import { Step, Steps } from "fumadocs-ui/components/steps";
+import { Callout } from "fumadocs-ui/components/callout";
+import { File, Folder, Files } from "fumadocs-ui/components/files";
+
+The Vercel AI SDK is a powerful open-source library for building AI-powered applications. It provides a single, intuitive API for interacting with a wide range of language models, with first-class support for streaming responses.
+
+Integrating the Vercel AI SDK with OpenHive allows you to create agents that can perform complex, streaming generation tasks internally and then offer the final, complete result as a simple, reliable capability on the distributed network.
+
+In this guide, we will build:
+
+1.  **A Responder Agent**: This agent will use the AI SDK and a provider like OpenAI to stream the generation of a short story.
+2.  **A Requester Agent**: This agent will request a story on a given topic, receiving the complete text once the responder has finished its internal streaming process.
+
+<Steps>
+<Step>
+### 1. Setup the Responder Agent
+
+First, let's define our storyteller agent's identity and its `generate-story` capability in the `.hive.yml` file.
+
+```yaml
+# ./responder-agent/.hive.yml
+id: hive:agentid:aisdk-responder
+name: AISDKResponder
+description: An agent that uses the Vercel AI SDK to write stories.
+version: 1.0.0
+endpoint: http://localhost:11106
+
+keys:
+  publicKey: "..." # Your public key
+  privateKey: "..." # Your private key
+
+capabilities:
+  - id: generate-story
+    description: "Generates a short story about a given topic."
+    input:
+      topic: "string"
+    output:
+      story: "string"
+```
+
+Next, set up the project dependencies in `package.json`.
+
+```json
+// ./responder-agent/package.json
+{
+  "name": "aisdk-responder",
+  "dependencies": {
+    "@open-hive/core": "latest",
+    "@ai-sdk/openai": "latest",
+    "ai": "latest",
+    "dotenv": "latest"
+  }
+}
+```
+
+<Callout>
+  Don't forget to create a `.env` file with your `OPENAI_API_KEY`.
+</Callout>
+</Step>
+
+<Step>
+### 2. Implement the AI SDK Streaming Logic
+
+Now, let's write the code that connects an OpenHive task to the Vercel AI SDK. The `generate-story` handler will receive a `topic`, use the `streamText` function to generate a story, assemble the complete text from the stream, and then return it.
+
+```typescript
+// ./responder-agent/src/index.ts
+import { Agent } from "@open-hive/core";
+import { createOpenAI } from "@ai-sdk/openai";
+import { streamText } from "ai";
+import "dotenv/config";
+
+// 1. Configure your LLM provider
+const openai = createOpenAI({
+  // apiKey: process.env.OPENAI_API_KEY, // Assumes OPENAI_API_KEY is in your environment
+});
+
+// 2. Create the OpenHive Agent
+const agent = new Agent();
+
+agent.capability("generate-story", async (params) => {
+  const topic = params.topic as string;
+  console.log(`[AI SDK] Generating story about: "${topic}"`);
+
+  // 3. Use the AI SDK to generate text via streaming
+  const { textStream } = await streamText({
+    model: openai("gpt-4-turbo"),
+    prompt: `Write a short, three-paragraph story about ${topic}.`,
+  });
+
+  // 4. Assemble the full story from the stream
+  let story = "";
+  for await (const textPart of textStream) {
+    story += textPart;
+  }
+
+  console.log(`[AI SDK] Story generation complete.`);
+  return { story };
+});
+
+// 5. Start the OpenHive server
+const server = agent.createServer();
+server.start().then(() => {
+  console.log("Responder agent is running!");
+});
+```
+
+</Step>
+
+<Step>
+### 3. Create the Requester Agent
+
+The requester agent is a standard OpenHive agent. It asks for a story and gets the complete text back, with no knowledge of the streaming that happened on the responder.
+
+<Files>
+  <Folder name="requester-agent" defaultOpen>
+    <File name=".hive.yml" />
+    <File name="src/index.ts" />
+  </Folder>
+</Files>
+
+Here's the code:
+
+```typescript
+// ./requester-agent/src/index.ts
+import { Agent } from "@open-hive/core";
+
+const agent = new Agent();
+const topic = "a robot who dreams of being a chef";
+
+const result = await agent.run(
+  "hive:agentid:aisdk-responder",
+  "generate-story",
+  { topic }
+);
+
+console.log(`--- Story about: ${topic} ---`);
+console.log(result.story);
+```
+
+</Step>
+
+<Step>
+### 4. Run the Cluster
+
+You're all set to run your AI-powered storyteller. Open three terminals to get your cluster running.
+
+1.  **Start the Registry**:
+
+    ```bash
+    hive start
+    ```
+
+2.  **Start the Responder Agent**:
+    ```bash
+    # In the responder-agent directory
+    npm run start
+    ```
+3.  **Run the Requester Agent**:
+    ```bash
+    # In the requester-agent directory
+    npm run start
+    ```
+
+After a moment, the requester agent will print the complete, multi-paragraph story generated by the responder's Vercel AI SDK integration.
+
+</Step>
+</Steps>

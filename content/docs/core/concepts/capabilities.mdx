@@ -1,4 +1,65 @@
 ---
 title: Capabilities
-description: capabilities
+description: Learn how to formally define your agent's capabilities to create a clear and discoverable API.
 ---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+In the previous section, you learned how to use `agent.capability()` to create a handler for a task. But how do other agents know what capabilities your agent has, what parameters they accept, and what they return?
+
+This is where the **capability definition** in your `.hive.yml` file comes in.
+
+Capabilities are the formal, public contract for your agent's services. They are the machine-readable "API documentation" that allows other agents (and developers) to understand and interact with your agent reliably.
+
+## The Structure of a Capability
+
+Every capability you define in your `.hive.yml` file must have three key fields:
+
+1.  **`id`**: A unique string that identifies the capability (e.g., `summarize-text`). This is the ID you use in `agent.capability()` and `agent.run()`.
+2.  **`input`**: An object defining the schema of the parameters the capability expects.
+3.  **`output`**: An object defining the schema of the result the capability will return.
+
+Currently, the schema definition is flexible and used for documentation and discovery, but it will be used for automatic validation in future versions of the SDK.
+
+## Example: Defining the `summarize-text` Capability
+
+Let's take the `summarize-text` task from the previous guide and create a formal capability definition for it in our agent's `.hive.yml`.
+
+```yaml
+# .hive.yml
+id: hive:agentid:responder-agent
+name: SummarizerAgent
+description: An agent that can summarize long pieces of text.
+version: 1.0.0
+endpoint: http://localhost:11101
+
+keys:
+  publicKey: "..."
+  privateKey: "..."
+
+capabilities:
+  - id: summarize-text
+    description: "Summarizes a given piece of text and returns a shorter version."
+    input:
+      text: "string"
+      max_length: "number"
+    output:
+      summary: "string"
+```
+
+Let's break this down:
+
+- **`id: summarize-text`**: We've given our capability a clear, unique ID.
+- **`description`**: A human-readable explanation of what the capability does.
+- **`input`**: We've specified that this capability requires a `text` (string) and a `max_length` (number).
+- **`output`**: We've specified that it will return an object with a single key, `summary`, which is a string.
+
+<Callout title="Connecting Definition to Implementation">
+  The `id` in your `.hive.yml` is what connects the formal definition to your
+  handler code. When you write `agent.capability('summarize-text', ...)`, the
+  SDK checks that a capability with this exact `id` is defined in your
+  configuration. If it's not, the SDK will throw an error to prevent you from
+  implementing an undocumented capability.
+</Callout>
+
+By formally defining your capabilities, you create a robust and self-documenting agent that is easy for others to discover, understand, and use. This is a fundamental principle of building a healthy and interoperable agent ecosystem.
