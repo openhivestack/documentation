@@ -10,31 +10,24 @@
   },
   "dependencies": {
     "@fumadocs/mdx-remote": "^1.4.2",
-    "@octokit/rest": "^21.0.1",
-    "dotenv": "^17.2.3",
-    "fumadocs-core": "15.5.5",
-    "fumadocs-mdx": "11.6.9",
-    "fumadocs-ui": "15.5.5",
-    "lucide-react": "^0.525.0",
-    "mermaid": "^11.7.0",
-    "next": "15.3.4",
-    "playwright": "^1.53.2",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "rehype-mermaid": "^3.0.0"
+    "@octokit/rest": "^22.0.0",
+    "fumadocs-core": "15.8.5",
+    "fumadocs-mdx": "12.0.3",
+    "fumadocs-ui": "15.8.5",
+    "lucide-react": "^0.544.0",
+    "mermaid": "^11.12.0",
+    "next": "15.5.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.10",
+    "@tailwindcss/postcss": "^4.1.14",
     "@types/mdx": "^2.0.13",
-    "@types/node": "24.0.3",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
-    "eslint": "^8",
-    "eslint-config-next": "15.3.4",
+    "@types/node": "24.6.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "postcss": "^8.5.6",
-    "prettier": "^3.6.2",
-    "tailwindcss": "^4.1.10",
-    "typescript": "^5.8.3"
-  },
-  "packageManager": "yarn@4.9.2"
+    "tailwindcss": "^4.1.14",
+    "typescript": "^5.9.3"
+  }
 }

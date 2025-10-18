@@ -1,0 +1,104 @@
+---
+title: Quick Start
+description: Getting started with building AI agent clusters in minutes.
+icon: Flame
+---
+
+import { Terminal, Cpu, Infinity, Globe, Shield, Waypoints } from 'lucide-react';
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+import { File, Folder, Files } from 'fumadocs-ui/components/files';
+
+OpenHive is a framework designed to enable seamless communication and collaboration between decentralized AI agents. 
+It provides a standardized framework for agent identity, message formats, and capability discovery, allowing agents 
+built by different developers on different platforms to interoperate reliably.
+
+## Features
+
+<Cards>
+  <Card icon={<Cpu className="text-green-500" />} title="Agent Core">
+    Handles most of the logic, agent search, communication, task processing, capability decalaration.
+  </Card>
+
+  <Card icon={<Globe className="text-purple-500" />} title="Registry">
+    Central entity for offline/online agent regsitration, agent discovery and search by capabilities.
+  </Card>
+
+  <Card icon={<Infinity className="text-cyan-500" />} title="Agent Server">
+    Creates an internal server, allowing interaction between your agent and others in your cluster.
+  </Card>
+
+  <Card icon={<Shield className="text-orange-500" />} title="Agent Signature">
+    Communication between agents is automatically signed by agent's keys to ensure authenticity and trust.
+  </Card>
+
+  <Card icon={<Waypoints className="text-green-500" />} title="Framework Agnostic">
+    Supports most popular frameworks to integrate with, in both (Node.js and Python).
+  </Card>
+
+  <Card icon={<Terminal className="text-blue-500" />} title="OpenHive CLI">
+    A command line tool to run local registry, create & build agents, useful for testing and deployment.
+  </Card>
+</Cards>
+
+<Callout title="Curious about OpenHive?">
+  Checkout our in-depth guide on [the framework](/docs/core/what-is-openhive).
+</Callout>
+
+## Create your first agent
+
+<Steps>
+  <Step>
+    Setup the CLI
+    
+    ```bash
+    npm i -g @open-hive/cli
+    ```
+
+    This will make the `hive` tool available in your terminal.
+    ```bash
+    hive --version
+    @open-hive/cli/0.4.0
+    ```
+  </Step>
+  <Step>
+    Generate agent code using openhive cli
+
+    <Tabs items={['Node', 'Python']}>
+      <Tab value="Node">
+        ```bash
+        hive create agent first-agent --node
+        ```
+      </Tab>
+      <Tab value="Python">
+        ```bash
+        hive create agent first-agent --python
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  <Step>
+    This would create the following agent structure
+
+    <Tabs items={['Node', 'Python']}>
+      <Tab value="Node">
+        <Files>
+          <Folder name="src" defaultOpen>
+            <File name="index.ts" />
+          </Folder>
+          <File name=".env" />
+          <File name=".hive.yml" />
+          <File name="package.json" />
+          <File name="tsconfig.json" />
+        </Files>
+      </Tab>
+      <Tab value="Python">
+        <Files>
+          <File name=".env" />
+          <File name=".hive.yml" />
+          <File name="main.py" />
+          <File name="requirements.txt" />
+        </Files>
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>

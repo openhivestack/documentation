@@ -39,11 +39,11 @@ const REPOS = {
       return newContent;
     },
   },
-  "sdks/node/overview": {
+  "sdk/node": {
     owner: "openhivestack",
     repo: "node-sdk",
     frontmatter: {
-      title: "Overview",
+      title: "Node.js SDK",
       description:
         "Official TypeScript/JavaScript SDK for the H.I.V.E. Protocol",
     },
@@ -51,11 +51,11 @@ const REPOS = {
       return content.replace(/# Openhive \(node-sdk\)/, "");
     },
   },
-  "sdks/python/overview": {
+  "sdk/python": {
     owner: "openhivestack",
     repo: "python-sdk",
     frontmatter: {
-      title: "Overview",
+      title: "Python SDK",
       description:
         "The official core library for building agents on the H.I.V.E. Protocol in Python.",
     },

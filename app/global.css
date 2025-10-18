@@ -1,10 +1,18 @@
 @import 'tailwindcss';
-@import 'fumadocs-ui/css/black.css';
+@import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
 
+.core {
+  --color-fd-primary: var(--core-color);
+}
+
+.protocol {
+  --color-fd-primary: var(--protocol-color);
+}
+
 :root {
-    --cli-color: hsl(250, 80%, 54%);
-    --protocol-color: hsl(220, 91%, 54%);
+  --core-color: hsl(220, 91%, 54%);
+  --protocol-color: hsl(220, 91%, 54%);
 }
 
 body {
@@ -12,14 +20,6 @@ body {
 }
 
 .dark {
-    --cli-color: hsl(250 100% 80%);
+    --core-color: hsl(220 91% 54%);
     --protocol-color: hsl(217 92% 76%);
-}
-
-.protocol {
-    --color-fd-primary: var(--protocol-color);
-}
-
-.cli {
-    --color-fd-primary: var(--cli-color);
 }

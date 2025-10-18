@@ -1,0 +1,11 @@
+{
+  "root": true,
+  "title": "OpenHive Core",
+  "description": "Official SDK",
+  "icon": "Code",
+  "pages": [
+    "---Introduction---",
+    "quick-start",
+    "what-is-openhive"
+  ]
+}
