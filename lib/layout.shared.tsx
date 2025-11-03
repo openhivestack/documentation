@@ -1,7 +1,7 @@
 import type { BaseLayoutProps, LinkItemType } from 'fumadocs-ui/layouts/shared';
 import Image from 'next/image';
 import Logo from '@/app/logo.png';
-import { AlbumIcon, Heart, HexagonIcon, LayoutTemplate } from 'lucide-react';
+import { AlbumIcon, BookIcon, Heart, HexagonIcon, LayoutTemplate, TerminalIcon, DatabaseIcon, SparklesIcon } from 'lucide-react';
 
 /**
  * Shared layout configurations
@@ -21,7 +21,29 @@ export function baseOptions(): BaseLayoutProps {
       ),
     },
     // see https://fumadocs.dev/docs/ui/navigation/links
-    links: [],
+    links: [
+      {
+        icon: <TerminalIcon />,
+        text: 'Quick Start',
+        url: '/docs/core/quick-start',
+        // secondary items will be displayed differently on navbar
+        secondary: false,
+      },
+      {
+        icon: <BookIcon />,
+        text: 'Procotol',
+        url: '/docs/protocol/introduction',
+        // secondary items will be displayed differently on navbar
+        secondary: false,
+      },
+      {
+        icon: <DatabaseIcon />,
+        text: 'Registry',
+        url: '/docs/core/concepts/registry',
+        // secondary items will be displayed differently on navbar
+        secondary: false,
+      },
+    ],
   };
 }
 
